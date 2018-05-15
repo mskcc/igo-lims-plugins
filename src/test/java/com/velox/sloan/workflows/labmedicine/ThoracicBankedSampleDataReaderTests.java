@@ -7,10 +7,12 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+
+import static org.junit.Assert.*;
 
 public class ThoracicBankedSampleDataReaderTests {
     private ThoracicBankedSampleDataReader dataReader = new ThoracicBankedSampleDataReader();

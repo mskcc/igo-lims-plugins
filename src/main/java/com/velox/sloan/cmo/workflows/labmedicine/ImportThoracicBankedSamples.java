@@ -1,15 +1,22 @@
 package com.velox.sloan.cmo.workflows.labmedicine;
 
-import com.velox.api.datarecord.*;
+import com.velox.api.datarecord.DataRecord;
+import com.velox.api.datarecord.IoError;
+import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
-import java.io.*;
-import java.rmi.RemoteException;
-import java.util.*;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.rmi.RemoteException;
+import java.util.*;
 
 /*
  @description This plugin is designed to read Thoracic Banked Sample information from an excel file and assign unique Id's to the samples.
@@ -46,7 +53,7 @@ public class ImportThoracicBankedSamples extends DefaultGenericPlugin {
             long mostRecentRecordId = getMostRecentlyAddedLabMedicineRecordId();
             List<DataRecord> labMedicineRecord = dataRecordManager.queryDataRecords(LAB_MEDICINE_TRANSFER, "RecordId= '" + mostRecentRecordId + "'", user);
             if (labMedicineRecord.isEmpty()) {
-                clientCallback.displayError("There are no records under '"+ LAB_MEDICINE_TRANSFER +"'. Please create a record under '"+LAB_MEDICINE_TRANSFER+ "' and then try again.");
+                clientCallback.displayError("There are no records under '" + LAB_MEDICINE_TRANSFER + "'. Please create a record under '" + LAB_MEDICINE_TRANSFER + "' and then try again.");
                 return new PluginResult(false);
             }
             if (!shouldAddChildRecordsToLabMedicineRecord(labMedicineRecord.get(0))) {
@@ -102,7 +109,7 @@ public class ImportThoracicBankedSamples extends DefaultGenericPlugin {
             listOfLabMedicineRecordId.add(recordId);
         }
         if (listOfLabMedicineRecordId.isEmpty()) {
-            clientCallback.displayError("There are no records under "+ LAB_MEDICINE_TRANSFER +". Please create a record under '"+ LAB_MEDICINE_TRANSFER + "' and then try again.");
+            clientCallback.displayError("There are no records under " + LAB_MEDICINE_TRANSFER + ". Please create a record under '" + LAB_MEDICINE_TRANSFER + "' and then try again.");
         }
         return Collections.max(listOfLabMedicineRecordId);
     }

@@ -4,6 +4,7 @@ import com.velox.util.DateFormatter;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -30,9 +31,8 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
             do {
                 uniqueId = generateNewIdForThoracicBankedSample();
             } while (existingUuids.contains(uniqueId));
-        }
-        else{
-            uniqueId=generateNewIdForThoracicBankedSample();
+        } else {
+            uniqueId = generateNewIdForThoracicBankedSample();
         }
         return uniqueId;
     }
