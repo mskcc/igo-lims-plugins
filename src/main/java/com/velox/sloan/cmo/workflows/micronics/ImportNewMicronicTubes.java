@@ -31,14 +31,15 @@ public class ImportNewMicronicTubes extends DefaultGenericPlugin {
         try {
             String excelFilePath = clientCallback.showFileDialog("Upload File with micronic tube information.", null);
             byte[] fileToBytes = clientCallback.readBytes(excelFilePath);
-            if (StringUtils.isEmpty(excelFilePath) || !isValidFileWithValidData(excelFilePath, fileToBytes)) {
-                logError("Error: File path not provided. Either file is empty or task canceled by user.");
+            if (StringUtils.isEmpty(excelFilePath)) {
+                logError("File path not provided. Task canceled by user.");
                 return new PluginResult(false);
             }
-            String[] fileData = new String(fileToBytes).split("\r\n");
+            if (!isValidFileWithValidData(excelFilePath, fileToBytes)) {
+                return new PluginResult(false);
+            }
+            String[] fileData = new String(fileToBytes).split("\r\n|\r|\n");
             List<Map<String, Object>> micronicTubes = getMicronicTubeRecordsFromFile(fileData);
-            logInfo(micronicTubes.toString());
-
             if (shouldAddNewMicronicRecords(micronicTubes)) {
                 dataRecordManager.addDataRecords("MicronicTubesTareWeight", micronicTubes, user);
                 dataRecordManager.storeAndCommit(String.format("Added %d new micronic tubes with weights.", micronicTubes.size()), user);
@@ -47,8 +48,8 @@ public class ImportNewMicronicTubes extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
         } catch (Exception e) {
-            clientCallback.displayError(String.format("Error Reading information from file:", e));
-            logError(String.format("Error Reading information from file:\n"), e);
+            clientCallback.displayError(String.format("cannot read information from file:\n%s", e));
+            logError(String.format("cannot read information from file:"), e);
             return new PluginResult(false);
         }
         return new PluginResult(true);
@@ -71,21 +72,27 @@ public class ImportNewMicronicTubes extends DefaultGenericPlugin {
     }
 
     private boolean isValidFileWithValidData(String filePath, byte[] fileDataToBytes) throws ServerException {
-        String[] rowData = new String(fileDataToBytes).split("\r\n");
+        String[] rowData = new String(fileDataToBytes).split("\r\n|\r|\n");
         if (!isValidCsvFile(filePath)) {
+            logError(String.format("Invalid file format %s. The file must be a '.csv' file", filePath));
             clientCallback.displayError(String.format("Invalid file format %s. The file must be a '.csv' file", filePath));
             return false;
         }
         if (!fileHasData(rowData)) {
+            logError(String.format("Uploaded file '%s' is empty. Please check the file.", filePath));
             clientCallback.displayError(String.format("Uploaded file '%s' is empty. Please check the file.", filePath));
             return false;
         }
         if (!hasValidMicronicFileHeader(rowData)) {
+            logError(String.format("Invalid file format. Please make sure that the file '%s' has valid header row \n" +
+                    "Expected header: 'Rack','Tube','Barcode','Weight'\n" + "followed by rows with 'Micronic Tube' information.", filePath));
             clientCallback.displayError(String.format("Invalid file format. Please make sure that the file '%s' has valid header row \n" +
                     "Expected header: 'Rack','Tube','Barcode','Weight'\n" + "followed by rows with 'Micronic Tube' information.", filePath));
             return false;
         }
         if (!allRowsContainValidData(rowData)) {
+            logError(String.format("Some rows contain invalid data in file '%s'. Make sure that Micronic Barcode is present and " +
+                    "weight is > 0.", filePath));
             clientCallback.displayError(String.format("Some rows contain invalid data in file '%s'. Make sure that Micronic Barcode is present and " +
                     "weight is > 0.", filePath));
             return false;
@@ -126,13 +133,7 @@ public class ImportNewMicronicTubes extends DefaultGenericPlugin {
     }
 
     private String convertListToString(List<String> listWithValues) {
-        StringBuilder listToString = new StringBuilder();
-        if (listWithValues.size() > 0) {
-            for (String value : listWithValues) {
-                listToString.append(value).append("\n");
-            }
-        }
-        return listToString.toString();
+        return StringUtils.join(listWithValues, "\n");
     }
 
     private boolean shouldAddNewMicronicRecords(List<Map<String, Object>> micronicTubes) throws ServerException, IoError, RemoteException, NotFound {

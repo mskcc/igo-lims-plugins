@@ -5,18 +5,18 @@ import java.util.Map;
 
 public interface MicronicTubeTareWeightDataValidator {
 
-    public boolean isCsvFile(String file);
+    boolean isCsvFile(String file);
 
-    public boolean dataFileHasValidHeader(String[] fileData);
+    boolean dataFileHasValidHeader(String[] fileData);
 
-    public boolean dataFileHasValidData(String[] fileData);
+    boolean dataFileHasValidData(String[] fileData);
 
-    public boolean rowsInFileHasValidData(String[] fileData);
+    boolean rowsInFileHasValidData(String[] fileData);
 
-    public List<String> getMicronicTubeBarcodesFromTubeRecords(List<Map<String, Object>> micronicTubeRecords);
+    List<String> getMicronicTubeBarcodesFromTubeRecords(List<Map<String, Object>> micronicTubeRecords);
 
-    public List<String> getDuplicateBarcodesInExistingBarcodes(List<String> existingBarcodesList, List<String> newBarcodesList);
+    List<String> getDuplicateBarcodesInExistingBarcodes(List<String> existingBarcodesList, List<String> newBarcodesList);
 
-    public List<String> getDuplicateValuesInNewBarcodesList(List<String> newBarcodesList);
+    List<String> getDuplicateValuesInNewBarcodesList(List<String> newBarcodesList);
 
 }

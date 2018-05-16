@@ -8,7 +8,7 @@ public class NewMicronicTubeTareWeightImporter implements MicronicTubeTareWeight
 
     @Override
     public boolean isCsvFile(String file) {
-        return (file.endsWith(".csv"));
+        return file.endsWith(".csv");
     }
 
     @Override
@@ -29,7 +29,7 @@ public class NewMicronicTubeTareWeightImporter implements MicronicTubeTareWeight
     public boolean rowsInFileHasValidData(String[] fileData) {
         int firstRowAfterHeader = 1;
         for (int rowNum = firstRowAfterHeader; rowNum <= fileData.length - 1; rowNum++) {
-            if (StringUtils.isEmpty(fileData[rowNum].split(",")[2]) || StringUtils.isEmpty(fileData[rowNum].split(",")[3])
+            if (fileData[rowNum].split(",").length < 4 || StringUtils.isEmpty(fileData[rowNum].split(",")[2]) || StringUtils.isEmpty(fileData[rowNum].split(",")[3])
                     || Double.parseDouble(fileData[rowNum].split(",")[3]) < 0) {
                 return false;
             }
@@ -42,11 +42,13 @@ public class NewMicronicTubeTareWeightImporter implements MicronicTubeTareWeight
         List<Map<String, Object>> micronicTubes = new ArrayList<>();
         int firstRowAfterHeader = 1;
         for (int rowNum = firstRowAfterHeader; rowNum <= fileData.length - 1; rowNum++) {
-            String rowData = fileData[rowNum];
-            Map<String, Object> newMicronicTube = new HashMap<>();
-            newMicronicTube.put("MicronicTubeBarcode", rowData.split(",")[2]);
-            newMicronicTube.put("MicronicTubeWeight", Double.parseDouble(rowData.split(",")[3]));
-            micronicTubes.add(newMicronicTube);
+            if (!StringUtils.isEmpty(fileData[rowNum].split(",")[3]) && !StringUtils.isEmpty(fileData[rowNum].split(",")[2])) {
+                String rowData = fileData[rowNum];
+                Map<String, Object> newMicronicTube = new HashMap<>();
+                newMicronicTube.put("MicronicTubeBarcode", rowData.split(",")[2]);
+                newMicronicTube.put("MicronicTubeWeight", Double.parseDouble(rowData.split(",")[3]));
+                micronicTubes.add(newMicronicTube);
+            }
         }
         return micronicTubes;
     }
@@ -62,15 +64,10 @@ public class NewMicronicTubeTareWeightImporter implements MicronicTubeTareWeight
 
     @Override
     public List<String> getDuplicateBarcodesInExistingBarcodes(List<String> existingTubeBarcodesList, List<String> newTubeBarcodesList) {
-        List<String> commonBarcodes = new ArrayList<>();
-        if (existingTubeBarcodesList.size() > 0) {
-            for (String newBarcode : newTubeBarcodesList) {
-                if (existingTubeBarcodesList.contains(newBarcode)) {
-                    commonBarcodes.add(newBarcode);
-                }
-            }
-        }
-        return commonBarcodes;
+        List<String> existingBarcodes = new ArrayList<>(existingTubeBarcodesList);
+        List<String> newBarcodes = new ArrayList<>(newTubeBarcodesList);
+        existingBarcodes.retainAll(newBarcodes);
+        return existingBarcodes;
     }
 
     @Override
