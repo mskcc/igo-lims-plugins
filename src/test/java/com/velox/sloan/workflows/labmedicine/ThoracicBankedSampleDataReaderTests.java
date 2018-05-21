@@ -26,7 +26,7 @@ public class ThoracicBankedSampleDataReaderTests {
     private Sheet sheetWithInvalidHeader;
 
     @Before
-    public void SetUp() {
+    public void setUp() {
 
         expectedHeaderValues = Arrays.asList("Accession#", "DrawDate", "DrawTime", "Pi", "TubeType", "#ofTubes", "BoxDate", "SpecimenType", "Aliquot#", "Comments");
         existingRecordUuids = createBulkUuids();
@@ -37,12 +37,12 @@ public class ThoracicBankedSampleDataReaderTests {
                     .class.getClassLoader().getResource("EmptyFile_Test.xlsx")).getPath()));
             invalidHeaderWorkbook = WorkbookFactory.create(new File(Objects.requireNonNull(ThoracicBankedSampleDataReaderTests
                     .class.getClassLoader().getResource("Invalid_FileHeaders_test.xlsx")).getPath()));
+            sheetWithValidData = validFileWorkbook.getSheetAt(0);
+            emptySheet = emptyFileWorkbook.getSheetAt(0);
+            sheetWithInvalidHeader = invalidHeaderWorkbook.getSheetAt(0);
         } catch (IOException | InvalidFormatException | RuntimeException e) {
             e.printStackTrace();
         }
-        sheetWithValidData = validFileWorkbook.getSheetAt(0);
-        emptySheet = emptyFileWorkbook.getSheetAt(0);
-        sheetWithInvalidHeader = invalidHeaderWorkbook.getSheetAt(0);
     }
 
     @Test
@@ -72,16 +72,8 @@ public class ThoracicBankedSampleDataReaderTests {
     }
 
     @Test
-    public void generateNewIdForThoracicBankedSample_shouldFailIfDuplicateIds() {
-        List<String> bulkIdsGeneratedByMethod = Arrays.asList("AB123456C", "AB123456D", "AB123456D", "AB123456E");
-        Set<String> uniqueIdsSet = new HashSet<>(bulkIdsGeneratedByMethod);
-        assertNotEquals(bulkIdsGeneratedByMethod.size(), uniqueIdsSet.size());
-    }
-
-    @Test
     public void compareIdToExistingIdsAndReturnUniqueId_shouldReturnUniqueIds() {
-        List<String> listOfExistingIds = existingRecordUuids;
-        Set<String> uniqueIdsSet = new HashSet<>(listOfExistingIds);
+        Set<String> uniqueIdsSet = new HashSet<>(existingRecordUuids);
         for (int i = 0; i < 10000; i++) {
             assertTrue(uniqueIdsSet.add(dataReader.generateNewIdForThoracicBankedSample()));
         }

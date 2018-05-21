@@ -15,10 +15,10 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
         Random random = new Random();
         int uuidSubstringLength = 6;
         String alphabets = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        int lengthOfAlphabets = 26;
+        int lengthOfAlphabets = alphabets.length();
         StringBuilder uuidCharacterString = new StringBuilder();
         for (int i = 0; i < 2; i++) {
-            uuidCharacterString.append(alphabets.charAt(random.nextInt(alphabets.length())));
+            uuidCharacterString.append(alphabets.charAt(random.nextInt(lengthOfAlphabets)));
         }
         String time = Long.toString(System.nanoTime());
         return String.format("%s%s%s", uuidCharacterString, time.substring(time.length() - uuidSubstringLength), alphabets.charAt(random.nextInt(lengthOfAlphabets)));
@@ -77,7 +77,7 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
 
     @Override
     public List<Map<String, Object>> readThoracicBankedSampleRecordsFromFile(Sheet sheet, Map<String, Integer> fileHeader, List<String> existingUuids) {
-        List<Map<String, Object>> thoracicBankSampleRecord = new ArrayList<>();
+        List<Map<String, Object>> thoracicBankSampleRecords = new ArrayList<>();
         int firstRowAfterHeaderRowWithData = 1;
         for (int rowNum = firstRowAfterHeaderRowWithData; rowNum < sheet.getPhysicalNumberOfRows(); rowNum++) {
             Map<String, Object> newThoracicSampleRecord = new HashMap<>();
@@ -93,8 +93,8 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
             newThoracicSampleRecord.put("DrawTime", new SimpleDateFormat("HH:mm:ss").format(row.getCell(fileHeader.get("DrawTime")).getDateCellValue()));
             newThoracicSampleRecord.put("BoxDate", DateFormatter.formatDate(row.getCell(fileHeader.get("BoxDate")).getDateCellValue()));
             newThoracicSampleRecord.put("Comments", row.getCell(fileHeader.get("Comments")).getStringCellValue());
-            thoracicBankSampleRecord.add(newThoracicSampleRecord);
+            thoracicBankSampleRecords.add(newThoracicSampleRecord);
         }
-        return thoracicBankSampleRecord;
+        return thoracicBankSampleRecords;
     }
 }

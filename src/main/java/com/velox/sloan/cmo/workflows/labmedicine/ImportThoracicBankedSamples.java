@@ -34,7 +34,7 @@ public class ImportThoracicBankedSamples extends DefaultGenericPlugin {
     }
 
     public boolean onTableToolbar(String dataTypeName) {
-        return dataTypeName.equals(LAB_MEDICINE_TRANSFER);
+        return LAB_MEDICINE_TRANSFER.equals(dataTypeName);
     }
 
     public PluginResult run() {
@@ -49,18 +49,19 @@ public class ImportThoracicBankedSamples extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
             Map<String, Integer> headerNames = parseHeader(sheet, excelFileHeaderValues);
-            List<Map<String, Object>> thoracicBankSampleRecord = getThoracicBankedSampleRecordsFromFile(sheet, headerNames);
+            List<Map<String, Object>> thoracicBankSampleRecords = getThoracicBankedSampleRecordsFromFile(sheet, headerNames);
             long mostRecentRecordId = getMostRecentlyAddedLabMedicineRecordId();
-            List<DataRecord> labMedicineRecord = dataRecordManager.queryDataRecords(LAB_MEDICINE_TRANSFER, "RecordId= '" + mostRecentRecordId + "'", user);
-            if (labMedicineRecord.isEmpty()) {
+            List<DataRecord> labMedicineRecords = dataRecordManager.queryDataRecords(LAB_MEDICINE_TRANSFER, "RecordId= '" + mostRecentRecordId + "'", user);
+            if (labMedicineRecords.isEmpty()) {
                 clientCallback.displayError("There are no records under '" + LAB_MEDICINE_TRANSFER + "'. Please create a record under '" + LAB_MEDICINE_TRANSFER + "' and then try again.");
                 return new PluginResult(false);
             }
-            if (!shouldAddChildRecordsToLabMedicineRecord(labMedicineRecord.get(0))) {
+            if (!shouldAddChildRecordsToLabMedicineRecord(labMedicineRecords.get(0))) {
                 return new PluginResult(false);
             } else {
-                labMedicineRecord.get(0).addChildren("ThoracicBankTransfer", thoracicBankSampleRecord, user);
-                dataRecordManager.storeAndCommit(String.format("Added %d ThoracicBankTransfer samples", thoracicBankSampleRecord.size()), user);
+                labMedicineRecords.get(0).addChildren("ThoracicBankTransfer", thoracicBankSampleRecords, user);
+                dataRecordManager.storeAndCommit(String.format("Added %d ThoracicBankTransfer samples", thoracicBankSampleRecords.size()), user);
+                clientCallback.displayInfo(String.format("Added %d new ThoracicBankTransfer sample records.", thoracicBankSampleRecords.size()));
             }
         } catch (Exception e) {
             logError(String.format("Error reading Thoracic Sample Information\n"), e);
@@ -76,16 +77,18 @@ public class ImportThoracicBankedSamples extends DefaultGenericPlugin {
     }
 
     private boolean isValidFile(Sheet sheet, List<String> headerValues, String fileName) throws ServerException {
-
         if (!dataReader.excelFileHasData(sheet)) {
+            logError(String.format("uploaded File '%s' is Empty. File must have more than 1 rows with data.", fileName));
             clientCallback.displayError(String.format("uploaded File '%s' is Empty. File must have more than 1 rows with data.", fileName));
             return false;
         }
         if (!dataReader.excelFileHasValidHeader(sheet, headerValues, fileName)) {
+            logError(String.format("Uploaded file '%s' Has invalid header row.", fileName));
             clientCallback.displayError(String.format("Uploaded file '%s' Has invalid header row.", fileName));
             return false;
         }
         if (!dataReader.isValidExcelFile(fileName)) {
+            logError(String.format("File '%s' is invalid file type. Only excel file with '.xls' or '.xlsx' extensions are acceptable.", fileName));
             clientCallback.displayError(String.format("File '%s' is invalid file type. Only excel file with '.xls' or '.xlsx' extensions are acceptable.", fileName));
             return false;
         }
@@ -103,36 +106,38 @@ public class ImportThoracicBankedSamples extends DefaultGenericPlugin {
 
     private long getMostRecentlyAddedLabMedicineRecordId() throws ServerException, NotFound, RemoteException, IoError {
         List<DataRecord> listOfRecords = dataRecordManager.queryDataRecords(LAB_MEDICINE_TRANSFER, null, user);
-        List<Long> listOfLabMedicineRecordId = new ArrayList<>();
+        List<Long> listOfLabMedicineRecordIds = new ArrayList<>();
         for (DataRecord record : listOfRecords) {
             Long recordId = record.getLongVal("RecordId", user);
-            listOfLabMedicineRecordId.add(recordId);
+            listOfLabMedicineRecordIds.add(recordId);
         }
-        if (listOfLabMedicineRecordId.isEmpty()) {
-            clientCallback.displayError("There are no records under " + LAB_MEDICINE_TRANSFER + ". Please create a record under '" + LAB_MEDICINE_TRANSFER + "' and then try again.");
+        String errorMessage = "There are no records under " + LAB_MEDICINE_TRANSFER + ". Please create a record under '" + LAB_MEDICINE_TRANSFER + "' and then try again.";
+        if (listOfLabMedicineRecordIds.isEmpty()) {
+            clientCallback.displayError(errorMessage);
+            throw new NotFound(errorMessage);
         }
-        return Collections.max(listOfLabMedicineRecordId);
+        return Collections.max(listOfLabMedicineRecordIds);
     }
 
     private List<String> getExistingUuids() throws RemoteException, NotFound, IoError {
-        List<String> existingUuid = new ArrayList<>();
+        List<String> existingUuids = new ArrayList<>();
         List<DataRecord> thoracicBankedSamples = dataRecordManager.queryDataRecords("ThoracicBankTransfer", null, user);
         for (DataRecord record : thoracicBankedSamples) {
-            existingUuid.add(record.getStringVal("Uuid", user));
+            existingUuids.add(record.getStringVal("Uuid", user));
         }
-        return existingUuid;
+        return existingUuids;
     }
 
     private String getUuidForExistingChildRecords(List<DataRecord> existingRecord) {
-        StringBuilder existingRecordsUuid = new StringBuilder();
+        StringBuilder existingRecordsUuids = new StringBuilder();
         for (DataRecord record : existingRecord) {
             try {
-                existingRecordsUuid.append(record.getStringVal("Uuid", user)).append("\n");
+                existingRecordsUuids.append(record.getStringVal("Uuid", user)).append("\n");
             } catch (NotFound | RemoteException e) {
-                logError(e.getMessage());
+                logError(String.format("Error retrieving UUID for existing records."),e);
             }
         }
-        return existingRecordsUuid.toString();
+        return existingRecordsUuids.toString();
     }
 
     private boolean shouldAddChildRecordsToLabMedicineRecord(DataRecord mostRecentLabMedicineRecord) throws IoError, RemoteException, NotFound, ServerException {
