@@ -6,11 +6,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class MicronicTubeVolumeDataReader implements MicronicTubeWeightFileDataValidator {
-    @Override
-    public boolean isValidHeader(String[] fileData) {
-        String[] headerRow = fileData[0].split(",");
-        return headerRow[0].equals("Rack") && headerRow[1].equals("Tube") && headerRow[2].equals("Barcode") && headerRow[3].equals("Weight");
-    }
 
     @Override
     public boolean rowInFileHasValues(String row) {

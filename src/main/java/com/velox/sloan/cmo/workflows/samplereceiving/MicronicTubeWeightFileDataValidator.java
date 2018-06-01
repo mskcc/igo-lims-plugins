@@ -3,7 +3,6 @@ package com.velox.sloan.cmo.workflows.samplereceiving;
 import java.util.Map;
 
 public interface MicronicTubeWeightFileDataValidator {
-    boolean isValidHeader(String[] fileData);
 
     boolean rowInFileHasValues(String row);
 

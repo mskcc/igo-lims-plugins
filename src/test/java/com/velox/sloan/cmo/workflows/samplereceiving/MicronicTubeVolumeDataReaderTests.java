@@ -15,17 +15,6 @@ public class MicronicTubeVolumeDataReaderTests {
     String[] validFileData = {"Rack,Tube,Barcode,Weight", "7000137444,A01,8027127479,793.5", "7000137444,B01,8027127478,788.5", "7000137444,C01,8027127480,783.5"};
 
     @Test
-    public void isValidHeader_shouldReturnTrueIfFileHasValidHeader(){
-        assertTrue(volumeDataReader.isValidHeader(validFileData));
-    }
-
-    @Test
-    public void isValidHeader_shouldReturnFalseIfFileDoesNotHaveValidHeader(){
-        String[] invalidHeaderData = {"Rack,Tube,Barcode,Snack", "7000137444,A01,8027127479,793.5", "7000137444,B01,8027127478,788.5"};
-        assertFalse(volumeDataReader.isValidHeader(invalidHeaderData));
-    }
-
-    @Test
     public void rowInFileHasValues_shouldReturnTrueIfRowHasValues(){
         assertTrue(volumeDataReader.rowInFileHasValues(validFileData[2]));
     }
