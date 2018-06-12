@@ -135,7 +135,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
             try {
                 return sample.getBooleanVal("Promoted", user);
             } catch (Exception e) {
-                logInfo(e.getMessage());
+                logError(e.getMessage());
                 return false;
             }
         }).collect(Collectors.toList());
@@ -146,7 +146,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
             try {
                 return !sample.getBooleanVal("Promoted", user);
             } catch (Exception e) {
-                logInfo(e.getMessage());
+                logError(e.getMessage());
                 return false;
             }
         }).collect(Collectors.toList());
@@ -157,7 +157,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
             try {
                 return workflow.getWorkflowName().equals("Webform Receiving");
             } catch (Exception e) {
-                logInfo(e.getMessage());
+                logError(e.getMessage());
                 return false;
             }
         }).collect(Collectors.toList());
@@ -199,4 +199,3 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
         return StringUtils.join(listWithValues, "\n");
     }
 }
-
