@@ -5,6 +5,9 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.*;
 import java.util.*;
 
+/*
+ This class will contain all the common methods which are often used repeatedly across different plugins.
+ */
 public class IgoLimsPluginUtils {
 
     public boolean isCsvFile(String fileName) {
@@ -14,14 +17,14 @@ public class IgoLimsPluginUtils {
     public List<String> readDataFromCsvFile(byte[] fileContent) throws IOException {
         List<String> rowDataValues = new ArrayList<>();
         InputStream dataStream = new ByteArrayInputStream(fileContent);
-        BufferedReader fileReader = new BufferedReader(new InputStreamReader(dataStream));
-        String temp = null;
-        while ((temp = fileReader.readLine()) != null) {
-            String rowData = null;
-            rowData = temp;
-            rowDataValues.add(rowData);
+        try (BufferedReader fileReader = new BufferedReader(new InputStreamReader(dataStream))) {
+            String temp;
+            while ((temp = fileReader.readLine()) != null) {
+                String rowData;
+                rowData = temp;
+                rowDataValues.add(rowData);
+            }
         }
-        fileReader.close();
         return rowDataValues;
     }
 

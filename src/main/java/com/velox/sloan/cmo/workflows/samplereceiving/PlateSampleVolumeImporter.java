@@ -12,7 +12,6 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import java.io.InputStream;
 import java.rmi.RemoteException;
 import java.util.*;
 
@@ -76,7 +75,7 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
             }
 
             Map<String, Integer> headerValuesMap = commonMethods.getCsvHeaderValueMap(fileData);
-            if (fileDataHasDuplicateRecords(fileData, headerValuesMap, plateVolumeFile)){
+            if (fileDataHasDuplicateRecords(fileData, headerValuesMap, plateVolumeFile)) {
                 return new PluginResult(false);
             }
 
@@ -123,11 +122,11 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
         return true;
     }
 
-    private double getVolumeFromRowData(String [] rowData, Map <String, Integer> header) throws ServerException {
+    private double getVolumeFromRowData(String[] rowData, Map<String, Integer> header) throws ServerException {
         double volume = Double.parseDouble(rowData[header.get("VOLMED")]);
         String plateId = rowData[header.get("RACKID")].trim();
         String wellPosition = rowData[header.get("TUBE")].trim();
-        if(volume < 0 ){
+        if (volume < 0) {
             clientCallback.displayWarning(String.format("Volume for plate %s, well %s is less than 0.0. It will be set to 0.0 ", plateId, wellPosition));
             return 0.0;
         }
@@ -138,10 +137,10 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
         List<Map<String, Object>> volumeDataRecords = new ArrayList<>();
         int minimumValuesInRow = 5;
         int rowNumAfterHeader = 1;
-        for (int i = rowNumAfterHeader; i<=fileData.size()-1;i++) {
+        for (int i = rowNumAfterHeader; i <= fileData.size() - 1; i++) {
             Map<String, Object> volumeData = new HashMap<>();
             String[] rowValues = fileData.get(i).split(",");
-            if (rowValues.length >= minimumValuesInRow){
+            if (rowValues.length >= minimumValuesInRow) {
                 volumeData.put("RelatedRecord23", String.valueOf(rowValues[header.get("RACKID")]).trim());
                 volumeData.put("RowPosition", commonMethods.getPlateWellRowPosition(rowValues[header.get("TUBE")]).trim());
                 volumeData.put("ColPosition", commonMethods.getPlateWellColumnPosition(rowValues[header.get("TUBE")]).trim());
@@ -156,10 +155,10 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
         Set<String> uniqueRecords = new HashSet<>();
         List<String> duplicateRecords = new ArrayList<>();
         int firstRowNumAfterHeader = 1;
-        for (int i = firstRowNumAfterHeader; i <= fileData.size()-1; i++) {
+        for (int i = firstRowNumAfterHeader; i <= fileData.size() - 1; i++) {
             String[] rowData = fileData.get(i).split(",");
             String data = rowData[header.get("RACKID")].trim() + " " + rowData[header.get("TUBE")].trim();
-            if (!uniqueRecords.add(data)){
+            if (!uniqueRecords.add(data)) {
                 duplicateRecords.add(fileData.get(i).trim());
             }
         }
@@ -176,15 +175,15 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
             String samplePlateId = sample.getStringVal("RelatedRecord23", user);
             String sampleRowPosition = sample.getSelectionVal("RowPosition", user).trim();
             String sampleColumnPosition = sample.getSelectionVal("ColPosition", user).trim();
-            boolean found=false;
+            boolean found = false;
             for (Map<String, Object> volumeData : volumeRecordsFromFile) {
                 if (!(StringUtils.isBlank(samplePlateId)) && samplePlateId.equals(String.valueOf(volumeData.get("RelatedRecord23")))
-                        && sampleRowPosition.equals(String.valueOf(volumeData.get("RowPosition"))) && sampleColumnPosition.equals(String.valueOf(volumeData.get("ColPosition")))){
+                        && sampleRowPosition.equals(String.valueOf(volumeData.get("RowPosition"))) && sampleColumnPosition.equals(String.valueOf(volumeData.get("ColPosition")))) {
                     sample.setDataField("Volume", volumeData.get("Volume"), user);
                     found = true;
                 }
             }
-            if(!found){
+            if (!found) {
                 clientCallback.displayWarning(String.format("Volume data not found in file records for sample: %s", sampleId));
             }
         }
