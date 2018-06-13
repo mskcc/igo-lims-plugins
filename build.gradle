@@ -1,0 +1,32 @@
+group 'lims-plugins'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile files('lib/veloxapi-8.0.1.jar', 'lib/sloancmo.jar', 'lib/sapio-commons-3.1.jar', 'lib/sapioutils-5.1.4-LIMS8.0.0.jar', 'lib/accessionservice-1.3.2-LIMS8.0.1.jar', 'lib/sapiogeneric-7.7.1-LIMS8.0.1.jar'),
+            ('org.apache.poi:poi-ooxml:3.9'),('org.apache.commons:commons-lang3:3.0')
+
+    compile ('junit:junit:4.12') {
+        exclude group: 'org.hamcrest'
+    }
+    compile ('org.mockito:mockito-all:1.10.19') {
+        exclude group: 'org.hamcrest'
+    }
+    testCompile 'org.assertj:assertj-core:3.9.0'
+}
+
+jar {
+    manifest {
+        attributes("Implementation-Title": "Lims Plugin",
+                "Implementation-Version": version,
+                'Class-Path': configurations.compile.collect { '../lib/' + it.getName() }.join(' ')
+        )
+    }
+}
