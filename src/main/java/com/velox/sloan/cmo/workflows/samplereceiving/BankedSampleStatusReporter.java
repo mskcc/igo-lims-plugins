@@ -47,18 +47,17 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
             String samplesNotFound = String.format("No Banked Samples found for the entered request ID '%s'.\n" +
                     "Please make sure you have correct iLabs request ID.", iLabsRequestId);
             if (bankedSamples == null || bankedSamples.size() == 0) {
-                clientCallback.displayError(samplesNotFound);
+                clientCallback.displayWarning(samplesNotFound);
+                logInfo(samplesNotFound);
                 return new PluginResult(false);
             }
             List<DataRecord> promotedBankedSamples = getPromotedBankedSamples(bankedSamples);
             List<DataRecord> notPromotedBankedSamples = getNonPromotedBankedSamples(bankedSamples);
             if (promotedBankedSamples.isEmpty()) {
-                logInfo(String.format("None of the Samples associated with Request ID '%s' have been promoted.", iLabsRequestId));
                 clientCallback.displayWarning(String.format("None of the Samples associated with Request ID '%s' have been promoted.", iLabsRequestId));
                 return new PluginResult(false);
             }
             if (!notPromotedBankedSamples.isEmpty()) {
-                logInfo("Found " + notPromotedBankedSamples.size() + " for this Request that are not promoted " + getBankedSamplesIds(notPromotedBankedSamples));
                 clientCallback.displayWarning("Found " + notPromotedBankedSamples.size() + " for this Request that are not promoted " + getBankedSamplesIds(notPromotedBankedSamples));
             }
             List<String> limsRequestIdForPromotedSamples = getLimsRequestId(promotedBankedSamples).stream().distinct().collect(Collectors.toList());
@@ -70,8 +69,8 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
             }
         } catch (Exception e) {
             clientCallback.displayError(String.format("Error while retrieving promoted samples for request: %s. " +
-                    "Cause: %s", iLabsRequestId, e.getMessage()));
-            logError(String.format(""), e);
+                    "Cause: %s", iLabsRequestId, e));
+            logError(e);
             return new PluginResult(false);
         }
         return new PluginResult(true, new PluginDirective(PluginDirective.Action.RUN_ACTIVE_WORKFLOW, activeWebFormReceivingWorkflow));
@@ -79,14 +78,11 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
 
     private boolean isValidRequestIdForSamples(List<String> limsRequestIdForPromotedSamples, List<DataRecord> promotedBankedSamples, String iLabsRequestId) throws NotFound, RemoteException, ServerException {
         if (limsRequestIdForPromotedSamples.size() > 1) {
-            logError(String.format("iLabs Request ID %s has more than one assigned requestId\n%s", iLabsRequestId,
-                    convertListToString(getLimsRequestId(promotedBankedSamples))));
             clientCallback.displayError(String.format("iLabs Request ID %s has more than one assigned requestId\n%s", iLabsRequestId,
                     convertListToString(getLimsRequestId(promotedBankedSamples))));
             return false;
         }
         if (limsRequestIdForPromotedSamples.isEmpty()) {
-            logError(String.format("LIMS RequestID NOT FOUND for this iLabs Request: %s", iLabsRequestId));
             clientCallback.displayError(String.format("LIMS RequestID NOT FOUND for this iLabs Request: %s", iLabsRequestId));
             return false;
         }
@@ -97,7 +93,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
         clientCallback.displayInfo(String.format("LIMS Request ID for %d Promoted Samples:\n%s",
                 promotedBankedSamples.size(), convertListToString(limsRequestIdForPromotedSamples)));
         String dialogBoxTitle = "Launch Sample Receiving Workflow";
-        String dialogBoxMessage = "Do you want to launch the Sample Receiving Workflow for this request?\n" +
+        String dialogBoxMessage = "Do you want to launch the 'Webform Receiving Workflow' for this request?\n" +
                 "Click 'OK' to launch or 'CANCEL' to exit.";
         return clientCallback.showOkCancelDialog(dialogBoxTitle, dialogBoxMessage);
     }
@@ -106,6 +102,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
         List<String> cmoSampleIds = new ArrayList<>();
         for (DataRecord promotedBankedSample : promotedBankedSamples) {
             String cmoSampleId = promotedBankedSample.getStringVal("OtherSampleId", user);
+            logInfo(String.format("CMO Sample ID: %s", cmoSampleId));
             cmoSampleIds.add(cmoSampleId);
         }
         return StringUtils.join(cmoSampleIds, "\n");
@@ -124,15 +121,10 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
         List<DataRecord> request;
         List<DataRecord> samples = new ArrayList<>();
         request = dataRecordManager.queryDataRecords("Request", "RequestId = '" + requestId + "'", user);
-        if (request.size() == 1) {
+        if (!request.isEmpty() && request.size() == 1) {
             samples = Arrays.asList(request.get(0).getChildrenOfType("Sample", user));
         }
-        if (request.isEmpty()){
-            logError(String.format("Cannot find Request %s.", requestId));
-            throw new NotFound(String.format("Cannot find Request %s.", requestId));
-        }
         if (samples.size() == 0) {
-            logError(String.format("No child samples were found attached to request: %s", requestId));
             clientCallback.displayError(String.format("No child samples were found attached to request: %s", requestId));
         }
         return samples;
@@ -143,7 +135,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
             try {
                 return sample.getBooleanVal("Promoted", user);
             } catch (Exception e) {
-                logError(String.format(""),e);
+                logError(e.getMessage());
                 return false;
             }
         }).collect(Collectors.toList());
@@ -154,7 +146,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
             try {
                 return !sample.getBooleanVal("Promoted", user);
             } catch (Exception e) {
-                logError(String.format(""),e);
+                logError(e.getMessage());
                 return false;
             }
         }).collect(Collectors.toList());
@@ -165,24 +157,24 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
             try {
                 return workflow.getWorkflowName().equals("Webform Receiving");
             } catch (Exception e) {
-                logError(String.format(""),e);
+                logError(e.getMessage());
                 return false;
             }
         }).collect(Collectors.toList());
     }
 
-    private ActiveTask getWorkflowTaskToAttachSamples(List<ActiveTask> workflowTasks) throws ServerException, RemoteException, NotFound {
+    private ActiveTask getWorkflowTaskToAttachSamples(List<ActiveTask> workflowTasks) throws ServerException, RemoteException {
         ActiveTask workflowTask = null;
         for (ActiveTask task : workflowTasks) {
             if (task.getTaskName().equalsIgnoreCase("Select Received Samples")) {
                 workflowTask = task;
+                logInfo("Task to attach samples: " + workflowTask.getTaskName());
                 break;
             }
         }
         if (workflowTask == null) {
             clientCallback.displayError("'Select Received Samples' task not found in 'Webform Receiving' workflow.\n" +
                     "Please make sure that the task names for this workflow did not change.");
-            throw new NotFound("'Select Received Samples' task not found on the 'Webform Receiving workflow'");
         }
         return workflowTask;
     }
@@ -192,7 +184,6 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
         List<Workflow> webformReceivingWorkflow = getWebformReceivingWorkflow(workflows);
         if (webformReceivingWorkflow.isEmpty()) {
             clientCallback.displayError("'Webform Receiving' workflow not found. Please check if the workflow name has changed.");
-            logError("'Webform Receiving' workflow not found. Please check if the workflow name has changed.");
         }
         ActiveWorkflow activeWebFormReceivingWorkflow = dataMgmtServer.getWorkflowManager(user).createActiveWorkflow(user, webformReceivingWorkflow.get(0));
         activeWebFormReceivingWorkflow.setActiveWorkflowName(activeWebFormReceivingWorkflow.getActiveWorkflowName());
