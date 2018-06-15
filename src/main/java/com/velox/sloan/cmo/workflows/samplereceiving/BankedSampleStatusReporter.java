@@ -163,7 +163,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
         }).collect(Collectors.toList());
     }
 
-    private ActiveTask getWorkflowTaskToAttachSamples(List<ActiveTask> workflowTasks) throws ServerException, RemoteException {
+    private ActiveTask getWorkflowTaskToAttachSamples(List<ActiveTask> workflowTasks) throws ServerException, RemoteException, NotFound {
         ActiveTask workflowTask = null;
         for (ActiveTask task : workflowTasks) {
             if (task.getTaskName().equalsIgnoreCase("Select Received Samples")) {
@@ -175,6 +175,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
         if (workflowTask == null) {
             clientCallback.displayError("'Select Received Samples' task not found in 'Webform Receiving' workflow.\n" +
                     "Please make sure that the task names for this workflow did not change.");
+            throw new NotFound("Select Received Samples not found.");
         }
         return workflowTask;
     }
@@ -184,6 +185,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
         List<Workflow> webformReceivingWorkflow = getWebformReceivingWorkflow(workflows);
         if (webformReceivingWorkflow.isEmpty()) {
             clientCallback.displayError("'Webform Receiving' workflow not found. Please check if the workflow name has changed.");
+            throw new NotFound("'Webform Receiving' workflow not found.");
         }
         ActiveWorkflow activeWebFormReceivingWorkflow = dataMgmtServer.getWorkflowManager(user).createActiveWorkflow(user, webformReceivingWorkflow.get(0));
         activeWebFormReceivingWorkflow.setActiveWorkflowName(activeWebFormReceivingWorkflow.getActiveWorkflowName());

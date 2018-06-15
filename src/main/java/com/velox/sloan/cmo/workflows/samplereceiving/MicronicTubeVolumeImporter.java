@@ -9,6 +9,7 @@ import com.velox.api.util.ServerException;
 import com.velox.api.workflow.ActiveTask;
 import com.velox.api.workflow.ActiveWorkflow;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
+import com.velox.sloan.cmo.workflows.micronics.NewMicronicTubeTareWeightImporter;
 import org.apache.commons.lang3.StringUtils;
 
 import java.rmi.RemoteException;
@@ -17,6 +18,7 @@ import java.util.*;
 public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
     private String[] permittedUsers = {"Sample Receiving", "Sapio Admin", "Admin"};
     private MicronicTubeVolumeDataReader volumeDataReader = new MicronicTubeVolumeDataReader();
+    private NewMicronicTubeTareWeightImporter excelFileValidator = new NewMicronicTubeTareWeightImporter();
 
     public MicronicTubeVolumeImporter() {
         setTaskTableToolbar(true);
@@ -78,7 +80,7 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
                 assignNewVolumeAndStorageToSamples(samples, micronicTubeDataReadFromFile, existingMicronicTubes);
             }
         } catch (Exception e) {
-            logError(String.format("cannot read data from file."), e);
+            logError(e);
             clientCallback.displayWarning(String.format("%s", e));
             return new PluginResult(false);
         }
@@ -86,7 +88,7 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
     }
 
     private boolean isValidCsvFile(String fileName) throws ServerException {
-        if (!volumeDataReader.isValidFile(fileName)) {
+        if (!excelFileValidator.isCsvFile(fileName)) {
             clientCallback.displayError(String.format("Uploaded file '%s' is not a '.csv' file", fileName));
             logError(String.format("Uploaded file '%s' is not a '.csv' file", fileName));
             return false;
@@ -95,7 +97,7 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
     }
 
     private boolean fileHasData(String[] fileData, String fileName) throws ServerException {
-        if (!volumeDataReader.fileHasData(fileData)) {
+        if (!excelFileValidator.dataFileHasValidData(fileData)) {
             clientCallback.displayError(String.format("Uploaded file '%s' is empty. Please check the file.", fileName));
             logError(String.format("Uploaded file '%s' is empty. Please check the file.", fileName));
             return false;
@@ -104,7 +106,7 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
     }
 
     private boolean fileHasValidHeader(String[] fileData, String fileName) throws ServerException {
-        if (!volumeDataReader.isValidHeader(fileData)) {
+        if (!excelFileValidator.dataFileHasValidHeader(fileData)) {
             clientCallback.displayError(String.format("Uploaded file '%s' has incorrect header. Please check the file", fileName));
             logError(String.format("Uploaded file '%s' has incorrect header. Please check the file", fileName));
             return false;

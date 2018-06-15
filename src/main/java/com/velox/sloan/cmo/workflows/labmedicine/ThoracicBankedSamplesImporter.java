@@ -44,6 +44,9 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
                 logInfo("Path to excel file is empty. Or file not uploaded and process canceled by the usr.");
                 return new PluginResult(false);
             }
+            if(!isValidExcelFile(excelFilePath)){
+                return new PluginResult(false);
+            }
             Sheet sheet = getSheetFromFile(excelFilePath);
             if (!isValidFile(sheet, excelFileHeaderValues, excelFilePath)) {
                 return new PluginResult(false);
@@ -77,6 +80,15 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
         return workbook.getSheetAt(0);
     }
 
+    private boolean isValidExcelFile(String fileName) throws ServerException {
+        if (!dataReader.isValidExcelFile(fileName)) {
+            logError(String.format("File '%s' is invalid file type. Only excel file with '.xls' or '.xlsx' extensions are acceptable.", fileName));
+            clientCallback.displayError(String.format("File '%s' is invalid file type. Only excel file with '.xls' or '.xlsx' extensions are acceptable.", fileName));
+            return false;
+        }
+        return true;
+    }
+
     private boolean isValidFile(Sheet sheet, List<String> headerValues, String fileName) throws ServerException {
         if (!dataReader.excelFileHasData(sheet)) {
             logError(String.format("uploaded File '%s' is Empty. File must have more than 1 rows with data.", fileName));
@@ -86,11 +98,6 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
         if (!dataReader.excelFileHasValidHeader(sheet, headerValues, fileName)) {
             logError(String.format("Uploaded file '%s' Has invalid header row.", fileName));
             clientCallback.displayError(String.format("Uploaded file '%s' Has invalid header row.", fileName));
-            return false;
-        }
-        if (!dataReader.isValidExcelFile(fileName)) {
-            logError(String.format("File '%s' is invalid file type. Only excel file with '.xls' or '.xlsx' extensions are acceptable.", fileName));
-            clientCallback.displayError(String.format("File '%s' is invalid file type. Only excel file with '.xls' or '.xlsx' extensions are acceptable.", fileName));
             return false;
         }
         return true;
