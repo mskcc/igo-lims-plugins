@@ -13,11 +13,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class ImportNewMicronicTubes extends DefaultGenericPlugin {
+public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
     private String[] permittedUsers = {"Sample Receiving", "Sapio Admin"};
     private NewMicronicTubeTareWeightImporter fileDataReader = new NewMicronicTubeTareWeightImporter();
 
-    public ImportNewMicronicTubes() {
+    public NewMicronicTubeRecordGenerator() {
         setActionMenu(true);
         setLine1Text("Import New");
         setLine2Text("Micronic Tubes");

@@ -15,12 +15,12 @@ import org.apache.commons.lang3.StringUtils;
 import java.rmi.RemoteException;
 import java.util.*;
 
-public class CalculateVolumeUsingMicronicTareWeight extends DefaultGenericPlugin {
+public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
     private String[] permittedUsers = {"Sample Receiving", "Sapio Admin", "Admin"};
     private NewMicronicTubeTareWeightImporter fileDataImporter = new NewMicronicTubeTareWeightImporter();
     private MicronicTubeVolumeDataReader volumeDataReader = new MicronicTubeVolumeDataReader();
 
-    public CalculateVolumeUsingMicronicTareWeight() {
+    public MicronicTubeVolumeImporter() {
         setTaskTableToolbar(true);
         setLine1Text("Calculate Volumes");
         setDescription("Upload file to calculate volumes using micronic tube tare weights.");

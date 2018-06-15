@@ -21,12 +21,12 @@ import java.util.*;
 /*
  @description This plugin is designed to read Thoracic Banked Sample information from an excel file and assign unique Id's to the samples.
  */
-public class ImportThoracicBankedSamples extends DefaultGenericPlugin {
+public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
     private final List<String> excelFileHeaderValues = Arrays.asList("Accession#", "DrawDate", "DrawTime", "Pi", "TubeType", "#ofTubes", "BoxDate", "SpecimenType", "Aliquot#", "Comments");
     private final String LAB_MEDICINE_TRANSFER = "LabMedicineTransfer";
     private ThoracicBankedSampleDataReader dataReader = new ThoracicBankedSampleDataReader();
 
-    public ImportThoracicBankedSamples() {
+    public ThoracicBankedSamplesImporter() {
         setTableToolbar(true);
         setLine1Text("Upload Thoracic Bank");
         setLine2Text("Samples");

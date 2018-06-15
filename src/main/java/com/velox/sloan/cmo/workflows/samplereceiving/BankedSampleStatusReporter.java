@@ -24,10 +24,10 @@ import java.util.stream.Collectors;
  *              If the request is promoted, the plugin will return the list of samples in the request and prompt user to launch the
  *              "Webform receiving" workflow with promoted samples attached to the task "Select Received Samples" in the workflow.
  */
-public class CheckBankedSampleStatus extends DefaultGenericPlugin {
+public class BankedSampleStatusReporter extends DefaultGenericPlugin {
     private String[] permittedUsers = {"Sample Receiving", "Sapio Admin"};
 
-    public CheckBankedSampleStatus() {
+    public BankedSampleStatusReporter() {
         setActionMenu(true);
         setLine1Text("Banked Sample");
         setLine2Text("Status Check");
