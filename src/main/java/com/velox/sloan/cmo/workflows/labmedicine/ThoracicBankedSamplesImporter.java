@@ -37,7 +37,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
         return LAB_MEDICINE_TRANSFER.equals(dataTypeName);
     }
 
-    public PluginResult run() throws ServerException{
+    public PluginResult run() throws ServerException {
         try {
             String excelFilePath = clientCallback.showFileDialog("Upload File with Thoracic bank sample information.", null);
             if (StringUtils.isBlank(excelFilePath)) {
@@ -64,8 +64,8 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
                 clientCallback.displayInfo(String.format("Added %d new ThoracicBankTransfer sample records.", thoracicBankSampleRecords.size()));
             }
         } catch (Exception e) {
-            clientCallback.displayError(String.format("Error reading Thoracic Sample Information: %s", e));
-            logError("Error reading Thoracic Sample Information", e);
+            clientCallback.displayError(String.format("Error reading Thoracic Sample Information", e));
+            logError(String.format("Error reading Thoracic Sample Information"), e);
             return new PluginResult(false);
         }
         return new PluginResult(true);
