@@ -8,25 +8,6 @@ import java.util.Map;
 public class MicronicTubeVolumeDataReader implements MicronicTubeWeightFileDataValidator {
 
     @Override
-    public boolean isValidFile(String fileName) {
-        return fileName.endsWith(".csv");
-    }
-
-    @Override
-    public boolean fileHasData(String[] fileData) {
-        if (fileData.length <= 1 || fileData == null) {
-            return false;
-        }
-        return true;
-    }
-
-    @Override
-    public boolean isValidHeader(String[] fileData) {
-        String[] headerRow = fileData[0].split(",");
-        return headerRow[0].equals("Rack") && headerRow[1].equals("Tube") && headerRow[2].equals("Barcode") && headerRow[3].equals("Weight");
-    }
-
-    @Override
     public boolean rowInFileHasValues(String row) {
         String[] cellValues = row.split(",");
         return cellValues.length == 4 && !(StringUtils.isEmpty(cellValues[0]) || StringUtils.isEmpty(cellValues[1]) || StringUtils.isEmpty(cellValues[2]) || StringUtils.isEmpty(cellValues[3]));

@@ -15,38 +15,6 @@ public class MicronicTubeVolumeDataReaderTests {
     String[] validFileData = {"Rack,Tube,Barcode,Weight", "7000137444,A01,8027127479,793.5", "7000137444,B01,8027127478,788.5", "7000137444,C01,8027127480,783.5"};
 
     @Test
-    public void isValidFile_shouldReturnFalseIfNotCsvFile(){
-        assertFalse(volumeDataReader.isValidFile("abc.xlsx"));
-    }
-
-    @Test
-    public void isValidFile_shouldReturnTrueIfCsvFile(){
-        assertTrue(volumeDataReader.isValidFile("abc.csv"));
-    }
-
-    @Test
-    public void fileHasData_shouldReturnTrueIfFileHasData(){
-        assertTrue(volumeDataReader.fileHasData(validFileData));
-    }
-
-    @Test
-    public void fileHasData_shouldReturnFalseIfFileDoesNotHaveData(){
-        String[] emptyFileMockData = {"Rack,Tube,Barcode,Weight"};
-        assertFalse(volumeDataReader.fileHasData(emptyFileMockData));
-    }
-
-    @Test
-    public void isValidHeader_shouldReturnTrueIfFileHasValidHeader(){
-        assertTrue(volumeDataReader.isValidHeader(validFileData));
-    }
-
-    @Test
-    public void isValidHeader_shouldReturnFalseIfFileDoesNotHaveValidHeader(){
-        String[] invalidHeaderData = {"Rack,Tube,Barcode,Snack", "7000137444,A01,8027127479,793.5", "7000137444,B01,8027127478,788.5"};
-        assertFalse(volumeDataReader.isValidHeader(invalidHeaderData));
-    }
-
-    @Test
     public void rowInFileHasValues_shouldReturnTrueIfRowHasValues(){
         assertTrue(volumeDataReader.rowInFileHasValues(validFileData[2]));
     }
