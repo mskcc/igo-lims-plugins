@@ -1,5 +1,6 @@
-package com.velox.sloan.cmo.workflows.labmedicine;
+package com.velox.sloan.workflows.labmedicine;
 
+import com.velox.sloan.cmo.workflows.labmedicine.ThoracicBankedSampleDataReader;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
