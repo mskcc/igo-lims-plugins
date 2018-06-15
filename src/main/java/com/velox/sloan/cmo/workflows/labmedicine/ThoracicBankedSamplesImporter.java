@@ -64,7 +64,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
                 clientCallback.displayInfo(String.format("Added %d new ThoracicBankTransfer sample records.", thoracicBankSampleRecords.size()));
             }
         } catch (Exception e) {
-            clientCallback.displayError(String.format("Error reading Thoracic Sample Information", e));
+            clientCallback.displayError(String.format("Error reading Thoracic Sample Information",e));
             logError(String.format("Error reading Thoracic Sample Information"), e);
             return new PluginResult(false);
         }
@@ -135,7 +135,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
             try {
                 existingRecordsUuids.append(record.getStringVal("Uuid", user)).append("\n");
             } catch (NotFound | RemoteException e) {
-                logError(String.format("Error retrieving UUID for existing records."), e);
+                logError(String.format("Error retrieving UUID for existing records."),e);
             }
         }
         return existingRecordsUuids.toString();
