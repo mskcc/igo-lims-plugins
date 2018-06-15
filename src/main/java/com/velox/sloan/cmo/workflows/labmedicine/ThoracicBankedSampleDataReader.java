@@ -39,7 +39,7 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
 
     @Override
     public boolean isValidExcelFile(String fileName) {
-        return fileName.endsWith(".xlsx") || fileName.endsWith(".xls");
+        return fileName.toLowerCase().endsWith(".xlsx") || fileName.toLowerCase().endsWith(".xls");
     }
 
     @Override
