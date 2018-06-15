@@ -21,12 +21,12 @@ import java.util.*;
 /*
  @description This plugin is designed to read Thoracic Banked Sample information from an excel file and assign unique Id's to the samples.
  */
-public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
+public class ImportThoracicBankedSamples extends DefaultGenericPlugin {
     private final List<String> excelFileHeaderValues = Arrays.asList("Accession#", "DrawDate", "DrawTime", "Pi", "TubeType", "#ofTubes", "BoxDate", "SpecimenType", "Aliquot#", "Comments");
     private final String LAB_MEDICINE_TRANSFER = "LabMedicineTransfer";
     private ThoracicBankedSampleDataReader dataReader = new ThoracicBankedSampleDataReader();
 
-    public ThoracicBankedSamplesImporter() {
+    public ImportThoracicBankedSamples() {
         setTableToolbar(true);
         setLine1Text("Upload Thoracic Bank");
         setLine2Text("Samples");
@@ -37,7 +37,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
         return LAB_MEDICINE_TRANSFER.equals(dataTypeName);
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() {
         try {
             String excelFilePath = clientCallback.showFileDialog("Upload File with Thoracic bank sample information.", null);
             if (StringUtils.isBlank(excelFilePath)) {
@@ -64,8 +64,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
                 clientCallback.displayInfo(String.format("Added %d new ThoracicBankTransfer sample records.", thoracicBankSampleRecords.size()));
             }
         } catch (Exception e) {
-            clientCallback.displayError(String.format("Error reading Thoracic Sample Information", e));
-            logError(String.format("Error reading Thoracic Sample Information"), e);
+            logError(String.format("Error reading Thoracic Sample Information\n"), e);
             return new PluginResult(false);
         }
         return new PluginResult(true);
@@ -135,7 +134,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
             try {
                 existingRecordsUuids.append(record.getStringVal("Uuid", user)).append("\n");
             } catch (NotFound | RemoteException e) {
-                logError(String.format("Error retrieving UUID for existing records."), e);
+                logError(String.format("Error retrieving UUID for existing records."),e);
             }
         }
         return existingRecordsUuids.toString();

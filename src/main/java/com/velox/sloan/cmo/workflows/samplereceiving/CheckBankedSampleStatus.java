@@ -24,10 +24,10 @@ import java.util.stream.Collectors;
  *              If the request is promoted, the plugin will return the list of samples in the request and prompt user to launch the
  *              "Webform receiving" workflow with promoted samples attached to the task "Select Received Samples" in the workflow.
  */
-public class BankedSampleStatusReporter extends DefaultGenericPlugin {
+public class CheckBankedSampleStatus extends DefaultGenericPlugin {
     private String[] permittedUsers = {"Sample Receiving", "Sapio Admin"};
 
-    public BankedSampleStatusReporter() {
+    public CheckBankedSampleStatus() {
         setActionMenu(true);
         setLine1Text("Banked Sample");
         setLine2Text("Status Check");
@@ -68,9 +68,9 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
         } catch (Exception e) {
-            clientCallback.displayError(String.format("Error while retrieving promoted samples for request: %s. " +
-                    "Cause: %s", iLabsRequestId, e));
-            logError(e);
+            clientCallback.displayWarning(String.format("Error while retrieving promoted samples for request: %s. " +
+                    "Cause: %s", iLabsRequestId, e.getMessage()));
+            logError(String.format("Error: %s", e));
             return new PluginResult(false);
         }
         return new PluginResult(true, new PluginDirective(PluginDirective.Action.RUN_ACTIVE_WORKFLOW, activeWebFormReceivingWorkflow));
@@ -93,7 +93,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
         clientCallback.displayInfo(String.format("LIMS Request ID for %d Promoted Samples:\n%s",
                 promotedBankedSamples.size(), convertListToString(limsRequestIdForPromotedSamples)));
         String dialogBoxTitle = "Launch Sample Receiving Workflow";
-        String dialogBoxMessage = "Do you want to launch the 'Webform Receiving Workflow' for this request?\n" +
+        String dialogBoxMessage = "Do you want to launch the Sample Receiving Workflow for this request?\n" +
                 "Click 'OK' to launch or 'CANCEL' to exit.";
         return clientCallback.showOkCancelDialog(dialogBoxTitle, dialogBoxMessage);
     }
@@ -135,7 +135,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
             try {
                 return sample.getBooleanVal("Promoted", user);
             } catch (Exception e) {
-                logError(e.getMessage());
+                logInfo(e.getMessage());
                 return false;
             }
         }).collect(Collectors.toList());
@@ -146,7 +146,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
             try {
                 return !sample.getBooleanVal("Promoted", user);
             } catch (Exception e) {
-                logError(e.getMessage());
+                logInfo(e.getMessage());
                 return false;
             }
         }).collect(Collectors.toList());
@@ -157,7 +157,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
             try {
                 return workflow.getWorkflowName().equals("Webform Receiving");
             } catch (Exception e) {
-                logError(e.getMessage());
+                logInfo(e.getMessage());
                 return false;
             }
         }).collect(Collectors.toList());
@@ -199,3 +199,4 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
         return StringUtils.join(listWithValues, "\n");
     }
 }
+

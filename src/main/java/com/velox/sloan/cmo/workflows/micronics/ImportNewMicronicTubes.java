@@ -13,11 +13,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
+public class ImportNewMicronicTubes extends DefaultGenericPlugin {
     private String[] permittedUsers = {"Sample Receiving", "Sapio Admin"};
     private NewMicronicTubeTareWeightImporter fileDataReader = new NewMicronicTubeTareWeightImporter();
 
-    public NewMicronicTubeRecordGenerator() {
+    public ImportNewMicronicTubes() {
         setActionMenu(true);
         setLine1Text("Import New");
         setLine2Text("Micronic Tubes");
@@ -48,7 +48,7 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
         } catch (Exception e) {
-            clientCallback.displayError(String.format("cannot read information from file:%s", e));
+            clientCallback.displayError(String.format("cannot read information from file:\n%s", e));
             logError(String.format("cannot read information from file:"), e);
             return new PluginResult(false);
         }
@@ -120,13 +120,13 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
         List<String> duplicatesWithExistingBarcodes = fileDataReader.getDuplicateBarcodesInExistingBarcodes(micronicTubeBarcodesAlreadyInLims, newMicronicTubeBarcodes);
         List<String> duplicatesInNewBarcodes = fileDataReader.getDuplicateValuesInNewBarcodesList(newMicronicTubeBarcodes);
         if (duplicatesWithExistingBarcodes.size() > 0) {
-            clientCallback.displayError(String.format("Following barcodes already exist: %s", convertListToString(duplicatesWithExistingBarcodes)));
-            logError(String.format("Following barcodes already exist: %s", convertListToString(duplicatesWithExistingBarcodes)));
+            clientCallback.displayError(String.format("Following barcodes already exist:\n%s", convertListToString(duplicatesWithExistingBarcodes)));
+            logError(String.format("Following barcodes already exist:\n%s", convertListToString(duplicatesWithExistingBarcodes)));
             return true;
         }
         if (duplicatesInNewBarcodes.size() > 0) {
-            clientCallback.displayError(String.format("Following duplicate barcodes found in the uploaded file %s", convertListToString(duplicatesInNewBarcodes)));
-            logError(String.format("Folloeing duplicate barcodes found in the uploaded file %s", convertListToString(duplicatesInNewBarcodes)));
+            clientCallback.displayError(String.format("Following duplicate barcodes found in the uploaded file\n%s", convertListToString(duplicatesInNewBarcodes)));
+            logError(String.format("Folloeing duplicate barcodes found in the uploaded file\n%s", convertListToString(duplicatesInNewBarcodes)));
             return true;
         }
         return false;

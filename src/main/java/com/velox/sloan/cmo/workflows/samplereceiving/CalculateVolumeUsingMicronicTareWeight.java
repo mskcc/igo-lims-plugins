@@ -14,15 +14,13 @@ import org.apache.commons.lang3.StringUtils;
 import java.rmi.RemoteException;
 import java.util.*;
 
-public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
+public class CalculateVolumeUsingMicronicTareWeight extends DefaultGenericPlugin {
     private String[] permittedUsers = {"Sample Receiving", "Sapio Admin", "Admin"};
     private MicronicTubeVolumeDataReader volumeDataReader = new MicronicTubeVolumeDataReader();
 
-    public MicronicTubeVolumeImporter() {
+    public CalculateVolumeUsingMicronicTareWeight() {
         setTaskTableToolbar(true);
-        setTaskFormToolbar(true);
         setLine1Text("Calculate Volumes");
-        setLine2Text("for micronics");
         setDescription("Upload file to calculate volumes using micronic tube tare weights.");
         setUserGroupList(permittedUsers);
     }
@@ -118,9 +116,9 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
 
     private boolean allRowsHaveValidValues(String[] fileData, String fileName) throws ServerException {
         if (!volumeDataReader.allRowsHaveValidData(fileData)) {
-            clientCallback.displayError(String.format("Invalid row values in '%s'. Please make sure that all rows have values" +
+            clientCallback.displayError(String.format("Invalid row values in '%s'.\nPlease make sure that all rows have values" +
                     "and Weight values are > 0.0.", fileName));
-            logError(String.format("Invalid row values in '%s'. Please make sure that all rows have values" +
+            logError(String.format("Invalid row values in '%s'.\nPlease make sure that all rows have values" +
                     "and Weight values are > 0.0.", fileName));
             return false;
         }
@@ -206,6 +204,7 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
             Map<String, Object> newTube;
             String row = fileData[i];
             String tubeBarcodeInRow = row.split(",")[header.get("Barcode")];
+            logInfo(tubeBarcodeInRow);
             if (rowHasAllValues(row) && sampleMicronicBarcodes.contains(tubeBarcodeInRow) && !isMicronicTubeAssignedToSample(tubeBarcodeInRow, micronicTubeRecordsInLims)) {
                 newTube = getTubeValueMapFromFileRowData(row, header, micronicTubeRecordsInLims);
                 micronicTubeData.add(newTube);
@@ -215,8 +214,8 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
             }
         }
         if (micronicTubeData.isEmpty()) {
-            logError("Uploaded file does not contain micronic barcodes matching attached samples. Please check the file.");
-            clientCallback.displayError("Uploaded file does not contain micronic barcodes matching attached samples. Please check the file.");
+            logError("Uploaded file does not contain micronic barcodes matching attached samples.\nPlease check the file.");
+            clientCallback.displayError("Uploaded file does not contain micronic barcodes matching attached samples.\nPlease check the file.");
         }
         return micronicTubeData;
     }
