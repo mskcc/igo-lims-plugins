@@ -37,7 +37,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
         return LAB_MEDICINE_TRANSFER.equals(dataTypeName);
     }
 
-    public PluginResult run() {
+    public PluginResult run() throws ServerException{
         try {
             String excelFilePath = clientCallback.showFileDialog("Upload File with Thoracic bank sample information.", null);
             if (StringUtils.isBlank(excelFilePath)) {
@@ -64,7 +64,8 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
                 clientCallback.displayInfo(String.format("Added %d new ThoracicBankTransfer sample records.", thoracicBankSampleRecords.size()));
             }
         } catch (Exception e) {
-            logError(String.format("Error reading Thoracic Sample Information\n"), e);
+            clientCallback.displayError(String.format("Error reading Thoracic Sample Information: %s", e));
+            logError("Error reading Thoracic Sample Information", e);
             return new PluginResult(false);
         }
         return new PluginResult(true);
@@ -134,7 +135,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
             try {
                 existingRecordsUuids.append(record.getStringVal("Uuid", user)).append("\n");
             } catch (NotFound | RemoteException e) {
-                logError(String.format("Error retrieving UUID for existing records."),e);
+                logError(String.format("Error retrieving UUID for existing records."), e);
             }
         }
         return existingRecordsUuids.toString();
