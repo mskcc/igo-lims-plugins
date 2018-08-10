@@ -354,17 +354,17 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         String attachedSampleTypes = samples.get(0).getStringVal("ExemplarSampleType", user);
         if (DNA_SAMPLE_TYPES.contains(attachedSampleTypes.toLowerCase())) {
             List<Map<String, Object>> dnaQcRecords = generateDnaQcReportFieldValuesMap(samples, qcRecords, qcProtocolRecords);
-            TaskUtilManager.attachRecordsToTask(activeTask, dataRecordManager.addDataRecords("QcReportForDna", dnaQcRecords, user));
+            TaskUtilManager.attachRecordsToTask(activeTask, dataRecordManager.addDataRecords("QcReportDna", dnaQcRecords, user));
             activeTask.getTask().setTaskOption("QC REPORT GENERATED", "");
         }
         if (RNA_SAMPLE_TYPES.contains(attachedSampleTypes.toLowerCase())) {
             List<Map<String, Object>> rnaQcRecords = generateRnaQcReportFieldValuesMap(samples, qcRecords, qcProtocolRecords);
-            TaskUtilManager.attachRecordsToTask(activeTask, dataRecordManager.addDataRecords("QcReportForRna", rnaQcRecords, user));
+            TaskUtilManager.attachRecordsToTask(activeTask, dataRecordManager.addDataRecords("QcReportRna", rnaQcRecords, user));
             activeTask.getTask().setTaskOption("QC REPORT GENERATED", "");
         }
         if (LIBRARY_SAMPLE_TYPES.contains(attachedSampleTypes.toLowerCase())) {
             List<Map<String, Object>> libraryQcRecords = generateLibraryQcReportFieldValuesMap(samples, qcRecords, qcProtocolRecords);
-            TaskUtilManager.attachRecordsToTask(activeTask, dataRecordManager.addDataRecords("QcReportForLibrary", libraryQcRecords, user));
+            TaskUtilManager.attachRecordsToTask(activeTask, dataRecordManager.addDataRecords("QcReportLibrary", libraryQcRecords, user));
             activeTask.getTask().setTaskOption("QC REPORT GENERATED", "");
         }
     }
