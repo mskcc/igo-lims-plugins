@@ -330,7 +330,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             qcRecord.put("Concentration", sample.getDoubleVal("Concentration", user));
             qcRecord.put("ConcentrationUnits", sample.getStringVal("ConcentrationUnits", user));
             qcRecord.put("Volume", sample.getDoubleVal("Volume", user));
-            qcRecord.put("TotalMass", sample.getDoubleVal("TotalMass", user));
+            qcRecord.put("TotalMass", sample.getDoubleVal("TotalMass", user) * 1000000.00); //convert nM to fM by multiplying by 1000000
             qcRecord.put("TumorOrNormal", sample.getStringVal("TumorOrNormal", user));
             qcRecord.put("Recipe", sample.getStringVal("Recipe", user));
             Double averageBpSize = getAverageLibrarySizeValue(sampleId, qcRecords);
