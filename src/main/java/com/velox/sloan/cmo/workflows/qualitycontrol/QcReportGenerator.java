@@ -31,6 +31,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
     private final List<String> DNA_SAMPLE_TYPES = Arrays.asList("cdna", "cfdna", "dna");
     private final List<String> RNA_SAMPLE_TYPES = Arrays.asList("rna");
     private final List<String> LIBRARY_SAMPLE_TYPES = Arrays.asList("dna library", "pooled library", "cdna library");
+    private final double NANOMOLAR_TO_FEMTOMOLAR_CONVERSION_FACTOR = 1000000.00;
 
     public QcReportGenerator() {
         setTaskEntry(true);
@@ -330,7 +331,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             qcRecord.put("Concentration", sample.getDoubleVal("Concentration", user));
             qcRecord.put("ConcentrationUnits", sample.getStringVal("ConcentrationUnits", user));
             qcRecord.put("Volume", sample.getDoubleVal("Volume", user));
-            qcRecord.put("TotalMass", sample.getDoubleVal("TotalMass", user) * 1000000.00); //convert nM to fM by multiplying by 1000000
+            qcRecord.put("TotalMass", sample.getDoubleVal("TotalMass", user) * NANOMOLAR_TO_FEMTOMOLAR_CONVERSION_FACTOR); //convert nM to fM by multiplying by 1000000
             qcRecord.put("TumorOrNormal", sample.getStringVal("TumorOrNormal", user));
             qcRecord.put("Recipe", sample.getStringVal("Recipe", user));
             Double averageBpSize = getAverageLibrarySizeValue(sampleId, qcRecords);
