@@ -154,6 +154,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
         Map<String, Object> sequencingRequirementsPooled = new HashMap<>();
         String requestId = getRequestIdForSample(userPoolSamples.get(0));
         String sampleId = getPoolId(requestId, counter);
+        String altId = concatenateStringValues(userPoolSamples,"AltId");
         String otherSampleId = concatenateStringValues(userPoolSamples, "OtherSampleId");
         String userSampleId = concatenateStringValues(userPoolSamples, "UserSampleID");
         String species = userPoolSamples.get(0).getStringVal("Species", user);
@@ -165,7 +166,9 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
         poolValuesMap.put("SampleId", sampleId);
         sequencingRequirementsPooled.put("SampleId", sampleId);
         poolValuesMap.put("OtherSampleId", otherSampleId);
+        poolValuesMap.put("AltId", altId);
         sequencingRequirementsPooled.put("OtherSampleId", otherSampleId);
+        sequencingRequirementsPooled.put("AltId", altId);
         sequencingRequirementsPooled.put("SequencingRunType",sequencingRunType);
         sequencingRequirementsPooled.put("RequestedReads",totalRequestedReadsForPool);
         poolValuesMap.put("UserSampleID", userSampleId);
