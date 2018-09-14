@@ -196,13 +196,9 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
             counter++;
         }
         List<ActiveTask> activeTasks = activeWorkflow.getActiveTaskList();
-        String workflowName = activeWorkflow.getActiveWorkflowName();
-        logInfo("workflow name is" + workflowName);
         for (ActiveTask task: activeTasks){
-            logInfo("active task name " + task.getTaskName());
-            if ("Webform Receiving".equals(workflowName) && "Downstream Process Assignment".equals(task.getTaskName()) ||
-                    "Webform Receiving".equals(workflowName) && "Store Samples".equals(task.getTaskName()) ||
-                    task.getTask().getTaskOptions().keySet().contains("CREATE USER LIBRARY POOLS")) {
+            if (task.getTask().getTaskOptions().keySet().contains("CREATE USER LIBRARY POOLS") || "Store Samples".equals(task.getTaskName()) ||
+                    "Downstream Process Assignment".equals(task.getTaskName())) {
                 TaskUtilManager.removeRecordsFromTask(task, attachedSamples);
                 TaskUtilManager.attachRecordsToTask(task, sampleIdsForSamplePools);
             }
