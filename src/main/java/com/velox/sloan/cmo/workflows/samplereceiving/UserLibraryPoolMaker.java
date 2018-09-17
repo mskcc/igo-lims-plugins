@@ -46,6 +46,10 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
 
+            if (!isValidMicronicTubeBarcode(attachedSamples)){
+                return new PluginResult(false);
+            }
+
             List<String> uniqueMicronicBarcodesOnAttachedSamples = getUniqueMicronicTubeBarcodesInAttachedSamples(attachedSamples);
             List<List<DataRecord>> samplesSeparatedByPools = getListOfSamplesToPoolTogether(attachedSamples, uniqueMicronicBarcodesOnAttachedSamples);
 
@@ -66,10 +70,24 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
         for (DataRecord sample: attachedSamples){
             String sampleId = sample.getStringVal("SampleId", user);
             String sampleType = sample.getStringVal("ExemplarSampleType", user);
-                if(!"Pooled Library".equals(sampleType)){
-                    clientCallback.displayError(String.format("Sample %s has invalid sample type %s for pooling. Expected Sample Type is 'Pooled Library'.", sampleId, sampleType));
-                    return false;
-                }
+            if(!"Pooled Library".equals(sampleType)){
+                clientCallback.displayError(String.format("Sample %s has invalid sample type %s for pooling. Expected Sample Type is 'Pooled Library'.", sampleId, sampleType));
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isValidMicronicTubeBarcode(List<DataRecord> attachedSamples) throws NotFound, RemoteException, ServerException {
+        for (DataRecord sample : attachedSamples) {
+            String micronicBarcode = sample.getStringVal("MicronicTubeBarcode", user);
+            logInfo("Micronic Barcode: " + micronicBarcode);
+            String sampleId = sample.getStringVal("SampleId", user);
+            logInfo("Sample ID: " + sampleId);
+            if (StringUtils.isEmpty(micronicBarcode)) {
+                clientCallback.displayError(String.format("Sample %s is missing 'MicronicTubeBarcode' value.", sampleId));
+                return false;
+            }
         }
         return true;
     }
