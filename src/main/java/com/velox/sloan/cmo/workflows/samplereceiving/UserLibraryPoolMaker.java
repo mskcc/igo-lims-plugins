@@ -81,9 +81,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
     private boolean isValidMicronicTubeBarcode(List<DataRecord> attachedSamples) throws NotFound, RemoteException, ServerException {
         for (DataRecord sample : attachedSamples) {
             String micronicBarcode = sample.getStringVal("MicronicTubeBarcode", user);
-            logInfo("Micronic Barcode: " + micronicBarcode);
             String sampleId = sample.getStringVal("SampleId", user);
-            logInfo("Sample ID: " + sampleId);
             if (StringUtils.isEmpty(micronicBarcode)) {
                 clientCallback.displayError(String.format("Sample %s is missing 'MicronicTubeBarcode' value.", sampleId));
                 return false;
