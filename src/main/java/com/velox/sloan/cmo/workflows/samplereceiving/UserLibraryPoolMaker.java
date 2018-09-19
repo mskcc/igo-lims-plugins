@@ -1,6 +1,8 @@
 package com.velox.sloan.cmo.workflows.samplereceiving;
 
-import com.velox.api.datarecord.*;
+import com.velox.api.datarecord.DataRecord;
+import com.velox.api.datarecord.IoError;
+import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.api.workflow.ActiveTask;
@@ -17,9 +19,9 @@ import java.util.Map;
 
 /**
  * @author Ajay Sharma on 6/26/18.
- *         This plugin is designed to convert user submitted libraries into pools. "Micronic Tube barcode" is used to
- *         to identify the library samples that should be pooled together. Currently, user submitted pooled libraries are not imported as
- *         pools. Libraries present in the pools are imported as individual samples and pooled together during pooling workflow.
+ * This plugin is designed to convert user submitted libraries into pools. "Micronic Tube barcode" is used to
+ * to identify the library samples that should be pooled together. Currently, user submitted pooled libraries are not imported as
+ * pools. Libraries present in the pools are imported as individual samples and pooled together during pooling workflow.
  */
 
 public class UserLibraryPoolMaker extends DefaultGenericPlugin {
@@ -46,7 +48,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
 
-            if (!isValidMicronicTubeBarcode(attachedSamples)){
+            if (!isValidMicronicTubeBarcode(attachedSamples)) {
                 return new PluginResult(false);
             }
 
@@ -67,10 +69,10 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
     }
 
     private boolean isValidSampleType(List<DataRecord> attachedSamples) throws NotFound, RemoteException, ServerException {
-        for (DataRecord sample: attachedSamples){
+        for (DataRecord sample : attachedSamples) {
             String sampleId = sample.getStringVal("SampleId", user);
             String sampleType = sample.getStringVal("ExemplarSampleType", user);
-            if(!"Pooled Library".equals(sampleType)){
+            if (!"Pooled Library".equals(sampleType)) {
                 clientCallback.displayError(String.format("Sample %s has invalid sample type %s for pooling. Expected Sample Type is 'Pooled Library'.", sampleId, sampleType));
                 return false;
             }
@@ -152,13 +154,13 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
     }
 
     private String getSequencingRunType(List<DataRecord> userPoolSamples) throws RemoteException, NotFound {
-        return userPoolSamples.get(0).getDescendantsOfType("SeqRequirement",user).get(0).getStringVal("SequencingRunType",user);
+        return userPoolSamples.get(0).getDescendantsOfType("SeqRequirement", user).get(0).getStringVal("SequencingRunType", user);
     }
 
-    private double getTotalRequestedReadsForPool(List<DataRecord>userPoolSamples) throws RemoteException, NotFound {
+    private double getTotalRequestedReadsForPool(List<DataRecord> userPoolSamples) throws RemoteException, NotFound {
         double totalReads = 0.0;
-        for(DataRecord sample :userPoolSamples){
-            double readsRequestedForSample = sample.getDescendantsOfType("SeqRequirement",user).get(0).getDoubleVal("RequestedReads",user);
+        for (DataRecord sample : userPoolSamples) {
+            double readsRequestedForSample = sample.getDescendantsOfType("SeqRequirement", user).get(0).getDoubleVal("RequestedReads", user);
             totalReads += readsRequestedForSample;
         }
         return totalReads;
@@ -170,7 +172,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
         Map<String, Object> sequencingRequirementsPooled = new HashMap<>();
         String requestId = getRequestIdForSample(userPoolSamples.get(0));
         String sampleId = getPoolId(requestId, counter);
-        String altId = concatenateStringValues(userPoolSamples,"AltId");
+        String altId = concatenateStringValues(userPoolSamples, "AltId");
         String otherSampleId = concatenateStringValues(userPoolSamples, "OtherSampleId");
         String userSampleId = concatenateStringValues(userPoolSamples, "UserSampleID");
         String species = userPoolSamples.get(0).getStringVal("Species", user);
@@ -185,8 +187,8 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
         poolValuesMap.put("AltId", altId);
         sequencingRequirementsPooled.put("OtherSampleId", otherSampleId);
         sequencingRequirementsPooled.put("AltId", altId);
-        sequencingRequirementsPooled.put("SequencingRunType",sequencingRunType);
-        sequencingRequirementsPooled.put("RequestedReads",totalRequestedReadsForPool);
+        sequencingRequirementsPooled.put("SequencingRunType", sequencingRunType);
+        sequencingRequirementsPooled.put("RequestedReads", totalRequestedReadsForPool);
         poolValuesMap.put("UserSampleID", userSampleId);
         poolValuesMap.put("ExemplarSampleType", sampleType);
         poolValuesMap.put("Species", species);
@@ -194,12 +196,12 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
         poolValuesMap.put("MicronicTubeBarcode", micronicTubeBarcode);
         poolValuesMapList.add(poolValuesMap);
 
-        dataRecordManager.addDataRecords("Sample", poolValuesMapList,user);
-        dataRecordManager.storeAndCommit(String.format("Created user pool %s", sampleId),user);
-        List<DataRecord> pooledSampleRecord = dataRecordManager.queryDataRecords("Sample", "SampleId= '" + sampleId + "'",user);
-        pooledSampleRecord.get(0).addChild("SeqRequirementPooled", sequencingRequirementsPooled,user);
-        for (DataRecord sample:userPoolSamples){
-            sample.addChildIfNotExists(pooledSampleRecord.get(0),user);
+        dataRecordManager.addDataRecords("Sample", poolValuesMapList, user);
+        dataRecordManager.storeAndCommit(String.format("Created user pool %s", sampleId), user);
+        List<DataRecord> pooledSampleRecord = dataRecordManager.queryDataRecords("Sample", "SampleId= '" + sampleId + "'", user);
+        pooledSampleRecord.get(0).addChild("SeqRequirementPooled", sequencingRequirementsPooled, user);
+        for (DataRecord sample : userPoolSamples) {
+            sample.addChildIfNotExists(pooledSampleRecord.get(0), user);
         }
         return pooledSampleRecord.get(0);
     }
@@ -212,7 +214,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
             counter++;
         }
         List<ActiveTask> activeTasks = activeWorkflow.getActiveTaskList();
-        for (ActiveTask task: activeTasks){
+        for (ActiveTask task : activeTasks) {
             if (task.getTask().getTaskOptions().keySet().contains("CREATE USER LIBRARY POOLS") || "Store Samples".equals(task.getTaskName()) ||
                     "Downstream Process Assignment".equals(task.getTaskName())) {
                 TaskUtilManager.removeRecordsFromTask(task, attachedSamples);
