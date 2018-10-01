@@ -93,6 +93,7 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
             newThoracicSampleRecord.put("DrawTime", new SimpleDateFormat("HH:mm:ss").format(row.getCell(fileHeader.get("DrawTime")).getDateCellValue()));
             newThoracicSampleRecord.put("BoxDate", DateFormatter.formatDate(row.getCell(fileHeader.get("BoxDate")).getDateCellValue()));
             newThoracicSampleRecord.put("Comments", row.getCell(fileHeader.get("Comments")).getStringCellValue());
+            newThoracicSampleRecord.put("ExemplarSampleStatus", "Received");
             thoracicBankSampleRecords.add(newThoracicSampleRecord);
         }
         return thoracicBankSampleRecords;
