@@ -60,6 +60,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
             createPoolsForAllSamples(samplesSeparatedByPools, attachedSamples);
+            setSampleStatusForSamples(attachedSamples);
             activeTask.getTask().getTaskOptions().put("USER POOLS CREATED", "");
         } catch (Exception e) {
             clientCallback.displayError(String.format("Error while creating user pools. CAUSE:\n%s", e));
@@ -221,5 +222,15 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
                 TaskUtilManager.attachRecordsToTask(task, sampleIdsForSamplePools);
             }
         }
+    }
+
+    private void setSampleStatusForSamples(List<DataRecord> attachedSamples) throws ServerException, RemoteException {
+        List<Map<String, Object>> sampleStatusFields = new ArrayList<>();
+        for (DataRecord sample : attachedSamples){
+            Map<String,Object> sampleStatus = new HashMap<>();
+            sampleStatus.put("ExemplarSampleStatus", "Processing Completed");
+            sampleStatusFields.add(sampleStatus);
+        }
+        dataRecordManager.setFieldsForRecords(attachedSamples, sampleStatusFields, user);
     }
 }
