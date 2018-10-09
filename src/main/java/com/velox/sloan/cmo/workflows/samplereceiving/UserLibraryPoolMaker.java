@@ -224,10 +224,12 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
         }
     }
 
-    private void setSampleStatusForSamples(List<DataRecord> attachedSamples) throws ServerException, RemoteException {
+    private void setSampleStatusForSamples(List<DataRecord> attachedSamples) throws ServerException, RemoteException, NotFound {
         List<Map<String, Object>> sampleStatusFields = new ArrayList<>();
         for (DataRecord sample : attachedSamples){
             Map<String,Object> sampleStatus = new HashMap<>();
+            String sampleId = sample.getStringVal("SampleId", user);
+            sampleStatus.put("SampleId", sampleId);
             sampleStatus.put("ExemplarSampleStatus", "Processing Completed");
             sampleStatusFields.add(sampleStatus);
         }
