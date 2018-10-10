@@ -32,12 +32,43 @@ public class SampleControlMaker extends DefaultGenericPlugin{
         return false;
     }
 
+    private boolean isRecipeImpactOrHemepact(List<DataRecord> attachedSamples) throws NotFound, RemoteException {
+        List<String> recipes = getRecipeForAttachedSamples(attachedSamples);
+        for (String recipe: recipes){
+            if (recipe.toLowerCase().contains("impact") || recipe.toLowerCase().contains("hemepact")){
+                return true;
+            }
+        }
+        return false;
+    }
+
     public PluginResult run() throws RemoteException, NotFound, com.velox.api.util.ServerException, InvalidValue, IoError {
         // recipe verified in shouldRun() as IMPACT or HEMEPACT
         List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
+        // if any samples are FFPE add FFPE pooled normal sample
+        // if any samples are not FFPE add frozen pooled normal sample
+        String recipe = getRecipeForAttachedSamples(attachedSampleRecords).get(0);
+        boolean addFrozen = isControlTypeFrozen(attachedSampleRecords);
+        int maxRecordId = getMostRecentPooledRecordId(attachedSampleRecords, "frozenPooledNormal");
+        List<DataRecord> mostRecentPooledNormalRecord = dataRecordManager.queryDataRecords("Sample","RecordId = '" + Integer.toString(maxRecordId) + "'", user);
+        String sampleId = mostRecentPooledNormalRecord.get(0).getStringVal("SampleId", user);
+        String nextFrozenId = getNextFrozenPooledNormalSampleId(sampleId);
 
-        logInfo("SampleControlMaker adding samples.");
-        addControlsToProtocol(getRecipeForAttachedSamples(attachedSampleRecords).get(0));
+        List<Map<String,Object>> newPooledSampleFields = new ArrayList<>();
+        Map<String, Object> newSampleFields = new HashMap<>();
+        newSampleFields.put("SampleId", nextFrozenId);
+        newSampleFields.put("OtherSampleId", nextFrozenId);
+        newSampleFields.put("ContainerType", "Plate");
+        newSampleFields.put("Recipe", recipe);
+        newPooledSampleFields.add(newSampleFields);
+        dataRecordManager.addDataRecords("Sample", newPooledSampleFields, user);
+        dataRecordManager.storeAndCommit("Created new Control samples" + nextFrozenId.toString(), user);
+        List<DataRecord> r = dataRecordManager.queryDataRecords("Sample", "SampleId", Collections.singletonList(nextFrozenId), user);
+        for (DataRecord x : r) {
+            logInfo(x.getStringVal("SampleId", user));
+        }
+        TaskUtilManager.attachRecordsToTask(activeTask, r);
+
         logInfo("Controls added.");
         return new PluginResult(true);
     }
@@ -53,23 +84,12 @@ public class SampleControlMaker extends DefaultGenericPlugin{
         return recipes;
     }
 
-
-    private boolean isRecipeImpactOrHemepact(List<DataRecord> attachedSamples) throws NotFound, RemoteException {
-        List<String> recipes = getRecipeForAttachedSamples(attachedSamples);
-        for (String recipe: recipes){
-            if (recipe.toLowerCase().contains("impact") || recipe.toLowerCase().contains("hemepact")){
-                return true;
-            }
-        }
-        return false;
-    }
-
     private List<DataRecord> getPooledNormalControlRecords() throws IoError, RemoteException, NotFound {
         List <DataRecord> normalControlSampleRecords = dataRecordManager.queryDataRecords("Sample", "IsControl = 1", user);
         List<DataRecord> impactHemepactControlRecords = new ArrayList<>();
         for(DataRecord pooledRecord: normalControlSampleRecords){
             String otherSampleId = pooledRecord.getStringVal("OtherSampleId", user);
-            if(otherSampleId.toLowerCase().contains("ffpepoolednormal") || otherSampleId.toLowerCase().contains("frozenpoolednormal")){
+            if (otherSampleId.toLowerCase().contains("ffpepoolednormal") || otherSampleId.toLowerCase().contains("frozenpoolednormal")) {
                 impactHemepactControlRecords.add(pooledRecord);
             }
         }
@@ -79,24 +99,21 @@ public class SampleControlMaker extends DefaultGenericPlugin{
     private int getMostRecentPooledRecordId(List <DataRecord> impactHemepactControlRecords, String controlType) throws NotFound, RemoteException {
         List <Integer> recordIds = new ArrayList<>();
         for (DataRecord record: impactHemepactControlRecords) {
-            if (record.getStringVal("SampleId", user).contains(controlType))
+            if (record.getStringVal("OtherSampleId", user).toLowerCase().contains(controlType.toLowerCase()))
                 recordIds.add(((Long)record.getLongVal("RecordId",user)).intValue());
         }
         return Collections.max(recordIds);
     }
 
-    protected static List<String> getNextPooledNormalSampleIds(String mostRecentPooledNormalSampleId){
+    protected static String getNextFrozenPooledNormalSampleId(String previous){
         List<String> newPooledIds = new ArrayList<>();
-        if (mostRecentPooledNormalSampleId.toLowerCase().contains("ffpepoolednormal") || mostRecentPooledNormalSampleId.toLowerCase().contains("frozenpoolednormal")){
-            List<String> idSplitted = Arrays.asList(mostRecentPooledNormalSampleId.split("-"));
-            newPooledIds.add("FROZENPOOLEDNORMAL-" + (Integer.parseInt(idSplitted.get(1)) + 1));
-            newPooledIds.add("FFPEPOOLEDNORMAL-" + (Integer.parseInt(idSplitted.get(1)) + 1));
-        } else {
-            newPooledIds.add("FROZENPOOLEDNORMAL-1");
-            newPooledIds.add("FFPEPOOLEDNORMAL-1");
+        if (previous.toLowerCase().contains("frozenpoolednormal")){
+            String[] split = previous.split("-");
+            Integer last = Integer.parseInt(split[1]);
+            return split[0] + "-" + last+1;
         }
 
-        return newPooledIds;
+        return "FROZENPOOLEDNORMAL-1";
     }
 
     public static List<String> getControlPrefix(String recipe, boolean addFrozen, boolean addFFPE) {
@@ -117,18 +134,12 @@ public class SampleControlMaker extends DefaultGenericPlugin{
      * Adds one or both - FROZENPOOLEDNORMAL or FFPEPOOLEDNORMAL
      */
     private void addControlsToProtocol(String recipe, String control, List<DataRecord> attachedSamples) throws IoError, RemoteException, NotFound, ServerException, ServerException {
-        // for impact or hemepact recipe
-        // if any samples are FFPE add FFPE pooled normal sample
-        // if any samples are not FFPE add frozen pooled normal sample
-        boolean addFrozen = isControlTypeFrozen(attachedSamples);
-        boolean addFFPE = isControlTypeFFPEorFrozen(attachedSamples);
-        List<String> controlPrefixes = getControlPrefix(recipe, addFrozen, addFFPE);
-
         List<DataRecord> pooledNormalRecords = getPooledNormalControlRecords();
+
         int mostRecentPooleNormalRecordId = getMostRecentPooledRecordId(pooledNormalRecords, "");
         List<DataRecord> mostRecentPooledNormalRecord = dataRecordManager.queryDataRecords("Sample","RecordId = '" + Integer.toString(mostRecentPooleNormalRecordId) + "'", user);
         String mostRecentPooledNormalSampleId = mostRecentPooledNormalRecord.get(0).getStringVal("SampleId", user);
-        List<String> nextPooledNormalSampleIds = getNextPooledNormalSampleIds(mostRecentPooledNormalSampleId);
+        List<String> nextPooledNormalSampleIds = null; //getNextPooledNormalSampleIds(mostRecentPooledNormalSampleId);
         List<Map<String,Object>> newPooledSampleFields = new ArrayList<>();
         for (String id: nextPooledNormalSampleIds) {
             Map<String, Object> newSampleFields = new HashMap<>();
