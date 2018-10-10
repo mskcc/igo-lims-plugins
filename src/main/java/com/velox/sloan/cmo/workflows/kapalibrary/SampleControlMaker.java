@@ -76,10 +76,11 @@ public class SampleControlMaker extends DefaultGenericPlugin{
         return impactHemepactControlRecords;
     }
 
-    private int getMostRecentPooledRecordId(List <DataRecord> impactHemepactControlRecords) throws NotFound, RemoteException {
+    private int getMostRecentPooledRecordId(List <DataRecord> impactHemepactControlRecords, String controlType) throws NotFound, RemoteException {
         List <Integer> recordIds = new ArrayList<>();
-        for(DataRecord record: impactHemepactControlRecords){
-            recordIds.add(((Long)record.getLongVal("RecordId",user)).intValue());
+        for (DataRecord record: impactHemepactControlRecords) {
+            if (record.getStringVal("SampleId", user).contains(controlType))
+                recordIds.add(((Long)record.getLongVal("RecordId",user)).intValue());
         }
         return Collections.max(recordIds);
     }
@@ -98,15 +99,33 @@ public class SampleControlMaker extends DefaultGenericPlugin{
         return newPooledIds;
     }
 
+    public static List<String> getControlPrefix(String recipe, boolean addFrozen, boolean addFFPE) {
+        List<String> r = new ArrayList<>();
+        if (recipe.toLowerCase().contains("impact") || recipe.toLowerCase().contains("hemepact")){
+            if (addFrozen)
+                r.add("FROZENPOOLEDNORMAL");
+            if (addFFPE)
+                r.add("FFPEPOOLEDNORMAL");
+            return r;
+        } else {
+            // add controls for impact & hemepact, user must drag and drop for other recipes
+            return r;
+        }
+    }
+
     /**
-     * Adds one or both - FROZENPOOLEDNORMAL or FFBEPOOLEDNORMAL
+     * Adds one or both - FROZENPOOLEDNORMAL or FFPEPOOLEDNORMAL
      */
-    private void addControlsToProtocol(String recipe) throws IoError, RemoteException, NotFound, ServerException, ServerException {
+    private void addControlsToProtocol(String recipe, String control, List<DataRecord> attachedSamples) throws IoError, RemoteException, NotFound, ServerException, ServerException {
         // for impact or hemepact recipe
         // if any samples are FFPE add FFPE pooled normal sample
         // if any samples are not FFPE add frozen pooled normal sample
+        boolean addFrozen = isControlTypeFrozen(attachedSamples);
+        boolean addFFPE = isControlTypeFFPEorFrozen(attachedSamples);
+        List<String> controlPrefixes = getControlPrefix(recipe, addFrozen, addFFPE);
+
         List<DataRecord> pooledNormalRecords = getPooledNormalControlRecords();
-        int mostRecentPooleNormalRecordId = getMostRecentPooledRecordId(pooledNormalRecords);
+        int mostRecentPooleNormalRecordId = getMostRecentPooledRecordId(pooledNormalRecords, "");
         List<DataRecord> mostRecentPooledNormalRecord = dataRecordManager.queryDataRecords("Sample","RecordId = '" + Integer.toString(mostRecentPooleNormalRecordId) + "'", user);
         String mostRecentPooledNormalSampleId = mostRecentPooledNormalRecord.get(0).getStringVal("SampleId", user);
         List<String> nextPooledNormalSampleIds = getNextPooledNormalSampleIds(mostRecentPooledNormalSampleId);
@@ -128,5 +147,24 @@ public class SampleControlMaker extends DefaultGenericPlugin{
             logInfo(x.getStringVal("SampleId", user));
         }
         TaskUtilManager.attachRecordsToTask(activeTask, r);
+    }
+
+    private boolean isControlTypeFrozen(List<DataRecord> attachedSamples) throws NotFound, RemoteException {
+        // if there is any sample that is not FFPE then attach frozen control
+        for (DataRecord r: attachedSamples) {
+            if (!r.getStringVal("SampleOrigin", user).toLowerCase().contains("ffpe")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected boolean isControlTypeFFPEorFrozen(List<DataRecord> attachedSamples) throws NotFound, RemoteException {
+        for (DataRecord r: attachedSamples) {
+            if (r.getStringVal("SampleOrigin", user).toLowerCase().contains("ffpe")) {
+                return true;
+            }
+        }
+        return false;
     }
 }
