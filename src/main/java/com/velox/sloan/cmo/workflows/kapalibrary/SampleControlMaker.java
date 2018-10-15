@@ -12,7 +12,11 @@ import com.velox.sapioutils.shared.managers.TaskUtilManager;
 import java.rmi.RemoteException;
 import java.util.*;
 
-/*
+/**
+ * @author Ajay Sharma
+ * To create and add control samples for IMPACT and HEMEPACT and attach them to active task.
+ * It can be extended to create controls for other recipes.
+ *
  * Strategy:
  * 1. First get the type of all the controls that we need to add.
  * 2. Iterate over the list of Pools needed to add, and get the values needed to create new controls.
@@ -20,7 +24,6 @@ import java.util.*;
  */
 
 public class SampleControlMaker extends DefaultGenericPlugin {
-
     public SampleControlMaker() {
         setTaskEntry(true);
         setOrder(PluginOrder.EARLY.getOrder());
@@ -39,12 +42,23 @@ public class SampleControlMaker extends DefaultGenericPlugin {
         return false;
     }
 
-    public PluginResult run() throws RemoteException, com.velox.api.util.ServerException, IoError, NotFound {
-        boolean addControls = clientCallback.showYesNoDialog("AUTO-ASSIGN CONTROLS?", "DO YOU WANT LIMS TO AUTO-ASSIGN CONTROLS FOR IMPACT AND HEMEPACT.");
-        List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
-        addControlsToProtocol(attachedSampleRecords);
+    public PluginResult run() throws com.velox.api.util.ServerException{
+        try {
+            boolean addControls = clientCallback.showYesNoDialog("CREATE NEW CONTROLS FOR IMPACT AND HEMEPACT?", "DO YOU WANT LIMS TO AUTO-ASSIGN CONTROLS FOR IMPACT AND HEMEPACT.");
+            if (!addControls) {
+                logInfo("Client canceled the plugin that creates the Control samples.");
+                return new PluginResult(false);
+            }
+            List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
+            addControls(attachedSampleRecords);
+        }catch(Exception e){
+            clientCallback.displayError(String.format("Error while sample assignment to plates. CAUSE:\n%s", e));
+            logError(String.format("Error while sample assignment to plates. CAUSE:\n%s", e));
+            return new PluginResult(false);
+        }
         return new PluginResult(true);
     }
+
 
     /**
      * Get unique recipe value list for attached samples
@@ -65,7 +79,6 @@ public class SampleControlMaker extends DefaultGenericPlugin {
         return recipes;
     }
 
-
     /**
      * Confirm if the recipe for one of the attached samples is IMPACT or HEMEPACT. Run plugin only if this is true
      *
@@ -84,7 +97,6 @@ public class SampleControlMaker extends DefaultGenericPlugin {
         return false;
     }
 
-
     /**
      * Get the list of control types to add based on recipes for attached samples. Currently this is configured only for IMPACT and HEMEPACT.
      * This method could be extended to facilitate addition of more controls.
@@ -98,7 +110,7 @@ public class SampleControlMaker extends DefaultGenericPlugin {
         List<String> controlTypesToAdd = new ArrayList<>();
         for (DataRecord sample : attachedSamples) {
             String recipe = sample.getStringVal("Recipe", user);
-            String sampleOrigin = sample.getStringVal("SampleOrigin", user);
+            String sampleOrigin = sample.getStringVal("Preservation", user);
             if ((recipe.toLowerCase().contains("impact") || recipe.toLowerCase().contains("hemepact")) && sampleOrigin.toLowerCase().contains("ffpe")) {
                 if (!controlTypesToAdd.contains("FFPEPOOLEDNORMAL")) {
                     controlTypesToAdd.add("FFPEPOOLEDNORMAL");
@@ -169,7 +181,8 @@ public class SampleControlMaker extends DefaultGenericPlugin {
     private String getNextControlSampleId(int recordId, String controlType) throws IoError, RemoteException, NotFound {
         String previousSampleId = dataRecordManager.queryDataRecords("Sample", "RecordId = '" + (long) recordId + "'", user).get(0).getStringVal("SampleId", user);
         if (previousSampleId.toLowerCase().contains(controlType.toLowerCase())) {
-            String[] splitPreviousSampleId = previousSampleId.split("-");
+            String basePreviousSampleId = previousSampleId.split("_")[0]; // in case previous controls were aliquoted eg FFPEPOOLEDNORMAL-1_1_1_1
+            String[] splitPreviousSampleId = basePreviousSampleId.split("-");
             String sampleIdPrefix = splitPreviousSampleId[0];
             String sampleIdSuffix = Integer.toString(Integer.parseInt(splitPreviousSampleId[1]) + 1);
             return sampleIdPrefix + "-" + sampleIdSuffix;
@@ -177,7 +190,6 @@ public class SampleControlMaker extends DefaultGenericPlugin {
             return controlType + "-" + "1";
         }
     }
-
 
     /**
      * Create new control values and add to the attached Sample DataFields and attached Protocol Datatype Datafield List.
@@ -189,7 +201,7 @@ public class SampleControlMaker extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws ServerException
      */
-    private void addControlsToProtocol(List<DataRecord> attachedSamples) throws IoError, RemoteException, NotFound, ServerException {
+    private void addControls(List<DataRecord> attachedSamples) throws IoError, RemoteException, NotFound, ServerException {
         List<String> controlTypesToAdd = getControlTypesToAdd(attachedSamples);
         List<DataRecord> allControlSampleRecords = getAllControlRecordsByTypesToAdd(controlTypesToAdd);
         String recipe = attachedSamples.get(0).getStringVal("Recipe", user);
@@ -200,27 +212,19 @@ public class SampleControlMaker extends DefaultGenericPlugin {
             int lastControlRecordId = getMostRecentPooledRecordId(allControlSampleRecords, controlType);
             String nextControlSampleId = getNextControlSampleId(lastControlRecordId, controlType);
             Map<String, Object> newSampleFields = new HashMap<>();
-            // Map<String, Object> newProtocolRecordFields = new HashMap<>();
             newSampleFields.put("SampleId", nextControlSampleId);
             logInfo(nextControlSampleId);
             newSampleFields.put("OtherSampleId", nextControlSampleId.split("-")[0]);
             newSampleFields.put("ContainerType", "Plate");
             newSampleFields.put("Recipe", recipe);
             newSampleFields.put("IsControl", yes);
-//            newProtocolRecordFields.put("SampleId", nextControlSampleId);
-//            newProtocolRecordFields.put("OtherSampleId", nextControlSampleId.split("-")[0]);
-//            newProtocolRecordFields.put("ControlType", controlType);
-//            newProtocolRecordFields.put("IsNewControl", yes);
             newControlSampleFields.add(newSampleFields);
             newControlSampleIds.add(nextControlSampleId);
         }
         dataRecordManager.addDataRecords("Sample", newControlSampleFields, user);
-        //dataRecordManager.addDataRecords(activeTask.getDataTypeName(),newControlProtocolFields,user);
         dataRecordManager.storeAndCommit(String.format("Added Controls : %s", newControlSampleFields.toString()), user);
         List<DataRecord> updatedControlRecords = dataRecordManager.queryDataRecords("Sample", "SampleId", newControlSampleIds, user);
-        //List<DataRecord> updatedProtocolRecords = dataRecordManager.queryDataRecords(activeTask.getDataTypeName(), "SampleId", newControlSampleIds, user);
         TaskUtilManager.attachRecordsToTask(activeTask, updatedControlRecords);
-        //TaskUtilManager.attachRecordsToTask(activeTask, updatedProtocolRecords);
         activeTask.getTask().getTaskOptions().put("_CONTROLS_ADDED", "");
     }
 }
