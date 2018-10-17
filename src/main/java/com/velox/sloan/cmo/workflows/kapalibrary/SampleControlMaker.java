@@ -14,25 +14,29 @@ import java.util.*;
 
 /**
  * @author Ajay Sharma
- * To create and add control samples for IMPACT and HEMEPACT and attach them to active task.
- * It can be extended to create controls for other recipes.
- *
- * Strategy:
- * 1. First get the type of all the controls that we need to add.
- * 2. Iterate over the list of Pools needed to add, and get the values needed to create new controls.
- * 3. Create new controls.
+ *         To create and add control samples for IMPACT and HEMEPACT and attach them to active task.
+ *         It can be extended to create controls for other recipes.
+ *         <p>
+ *         Strategy:
+ *         1. First get the type of all the controls that we need to add.
+ *         2. Iterate over the list of Pools needed to add, and get the values needed to create new controls.
+ *         3. Create new controls.
  */
 
 public class SampleControlMaker extends DefaultGenericPlugin {
     public SampleControlMaker() {
         setTaskEntry(true);
-        setOrder(PluginOrder.EARLY.getOrder());
+        setOrder(PluginOrder.MIDDLE.getOrder());
     }
 
     @Override
     public boolean shouldRun() throws RemoteException, com.velox.api.util.ServerException, NotFound {
-        if (activeTask.getTask().getTaskOptions().containsKey("CREATE AND AUTO ASSIGN CONTROLS") &&
-                !activeTask.getTask().getTaskOptions().containsKey("_CONTROLS_ADDED")) {
+        if (activeTask.getTask().getTaskOptions().containsKey("CREATE AND AUTO ASSIGN CONTROLS") && !activeTask.getTask().getTaskOptions().containsKey("CONTROLS_ADDED")) {
+            boolean shouldAddControls = clientCallback.showYesNoDialog("CREATE NEW CONTROLS FOR IMPACT AND HEMEPACT?", "DO YOU WANT LIMS TO AUTO-ASSIGN CONTROLS FOR IMPACT AND HEMEPACT.");
+            if (!shouldAddControls) {
+                logInfo(String.format("User %s canceled the option to autoassign controls.", user.getUsername()));
+                return false;
+            }
             List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
             if (isRecipeImpactOrHemepact(attachedSampleRecords)) {
                 logInfo("Need to add controls for IMPACT or HEMEPACT recipe.");
@@ -42,18 +46,13 @@ public class SampleControlMaker extends DefaultGenericPlugin {
         return false;
     }
 
-    public PluginResult run() throws com.velox.api.util.ServerException{
+    public PluginResult run() throws com.velox.api.util.ServerException {
         try {
-            boolean addControls = clientCallback.showYesNoDialog("CREATE NEW CONTROLS FOR IMPACT AND HEMEPACT?", "DO YOU WANT LIMS TO AUTO-ASSIGN CONTROLS FOR IMPACT AND HEMEPACT.");
-            if (!addControls) {
-                logInfo("Client canceled the plugin that creates the Control samples.");
-                return new PluginResult(false);
-            }
             List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
             addControls(attachedSampleRecords);
-        }catch(Exception e){
-            clientCallback.displayError(String.format("Error while sample assignment to plates. CAUSE:\n%s", e));
-            logError(String.format("Error while sample assignment to plates. CAUSE:\n%s", e));
+        } catch (Exception e) {
+            clientCallback.displayError(String.format("Error while creating new Controls. CAUSE:\n%s", e));
+            logError(String.format("Error while creating new Controls. CAUSE:\n%s", e));
             return new PluginResult(false);
         }
         return new PluginResult(true);
@@ -146,6 +145,7 @@ public class SampleControlMaker extends DefaultGenericPlugin {
                 }
             }
         }
+        logInfo(controlRecordsByTypesToAdd.toString());
         return controlRecordsByTypesToAdd;
     }
 
@@ -180,11 +180,14 @@ public class SampleControlMaker extends DefaultGenericPlugin {
      */
     private String getNextControlSampleId(int recordId, String controlType) throws IoError, RemoteException, NotFound {
         String previousSampleId = dataRecordManager.queryDataRecords("Sample", "RecordId = '" + (long) recordId + "'", user).get(0).getStringVal("SampleId", user);
+        logInfo("Previous sampleId: " + previousSampleId);
         if (previousSampleId.toLowerCase().contains(controlType.toLowerCase())) {
             String basePreviousSampleId = previousSampleId.split("_")[0]; // in case previous controls were aliquoted eg FFPEPOOLEDNORMAL-1_1_1_1
+            logInfo("split base: " + basePreviousSampleId);
             String[] splitPreviousSampleId = basePreviousSampleId.split("-");
             String sampleIdPrefix = splitPreviousSampleId[0];
             String sampleIdSuffix = Integer.toString(Integer.parseInt(splitPreviousSampleId[1]) + 1);
+            logInfo("new control ID: " + sampleIdPrefix + "-" + sampleIdSuffix);
             return sampleIdPrefix + "-" + sampleIdSuffix;
         } else {
             return controlType + "-" + "1";
@@ -211,20 +214,22 @@ public class SampleControlMaker extends DefaultGenericPlugin {
         for (String controlType : controlTypesToAdd) {
             int lastControlRecordId = getMostRecentPooledRecordId(allControlSampleRecords, controlType);
             String nextControlSampleId = getNextControlSampleId(lastControlRecordId, controlType);
+            logInfo(" New control: " + nextControlSampleId);
             Map<String, Object> newSampleFields = new HashMap<>();
             newSampleFields.put("SampleId", nextControlSampleId);
             logInfo(nextControlSampleId);
             newSampleFields.put("OtherSampleId", nextControlSampleId.split("-")[0]);
             newSampleFields.put("ContainerType", "Plate");
             newSampleFields.put("Recipe", recipe);
+            newSampleFields.put("ExemplarSampleType", "DNA");
             newSampleFields.put("IsControl", yes);
             newControlSampleFields.add(newSampleFields);
             newControlSampleIds.add(nextControlSampleId);
         }
         dataRecordManager.addDataRecords("Sample", newControlSampleFields, user);
         dataRecordManager.storeAndCommit(String.format("Added Controls : %s", newControlSampleFields.toString()), user);
+        activeTask.getTask().getTaskOptions().put("CONTROLS_ADDED", "");
         List<DataRecord> updatedControlRecords = dataRecordManager.queryDataRecords("Sample", "SampleId", newControlSampleIds, user);
         TaskUtilManager.attachRecordsToTask(activeTask, updatedControlRecords);
-        activeTask.getTask().getTaskOptions().put("_CONTROLS_ADDED", "");
     }
 }
