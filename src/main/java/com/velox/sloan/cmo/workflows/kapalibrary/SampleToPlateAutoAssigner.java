@@ -60,10 +60,10 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
                 logError("Process canceled by user.");
                 return new PluginResult(false);
             }
-
+            List<String> recipes = getRecipesForAttachedSamples(attachedSampleRecords);
             if (destinationPlateSize.equals(PLATE_SIZES.get(0))) {
                 int plateSizeDestination = Integer.parseInt(destinationPlateSize);
-                List<String> sortedSampleIds = getSortedSampleIds(attachedSampleRecords);
+                List<String> sortedSampleIds = getSampleIdsSortedSeparatedByRecipe(attachedSampleRecords, recipes);
                 List<String> newPlateIds = getNewPlateIdsFromUserFor96To96Transfer(attachedSampleRecords, plateSizeDestination);
                 assignWellPositionsFor96WellPlate(sortedSampleIds, plateSizeDestination, newPlateIds, destinationPlateFieldName, destinationWellFieldName, attachedProtocolRecords);
             }
@@ -228,6 +228,52 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
     }
 
     /**
+     * Get unique recipe value list for attached samples
+     *
+     * @param attachedSamples
+     * @return List<String>
+     * @throws NotFound
+     * @throws RemoteException
+     */
+    private List<String> getRecipesForAttachedSamples(List<DataRecord> attachedSamples) throws NotFound, RemoteException {
+        List<String> recipes = new ArrayList<>();
+        for (DataRecord sample : attachedSamples) {
+            String recipe = sample.getStringVal("Recipe", user);
+            if (!recipes.contains(recipe)) {
+                recipes.add(recipe);
+            }
+        }
+        Collections.sort(recipes);
+        return recipes;
+    }
+
+    /**
+     * Sort sample Ids using alphanumeric sorting methods.
+     *
+     * @param attachedSamples
+     * @return List<String>
+     * @throws NotFound
+     * @throws RemoteException
+     */
+    private List<String> getSampleIdsSortedSeparatedByRecipe(List<DataRecord> attachedSamples, List<String>recipes ) throws NotFound, RemoteException {
+        List<String> sampleIds = new ArrayList<>();
+        for(String recipe : recipes){
+            List<String> sampleIdsForRecipe = new ArrayList<>();
+            for (DataRecord sample: attachedSamples){
+                String sampleId = sample.getStringVal("SampleId", user);
+                String sampleRecipe = sample.getStringVal("Recipe",user);
+                if (sampleRecipe.toLowerCase().equals(recipe.toLowerCase())){
+                    sampleIdsForRecipe.add(sampleId);
+                }
+            }
+            List<String> sortedSampleIdsForRecipe = sampleIdsForRecipe.stream().sorted(new AlphaNumericComparator()).collect(Collectors.toList());
+            sampleIds.addAll(sortedSampleIdsForRecipe);
+            logInfo(sampleIds.toString());
+        }
+        return sampleIds;
+    }
+
+    /**
      * Sort sample Ids using alphanumeric sorting methods.
      *
      * @param dataRecords
@@ -235,13 +281,13 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws RemoteException
      */
-    private List<String> getSortedSampleIds(List<DataRecord> dataRecords) throws NotFound, RemoteException {
-        List<String> sampleIds = new ArrayList<>();
-        for (DataRecord sample : dataRecords) {
-            sampleIds.add(sample.getStringVal("SampleId", user));
-        }
-        return sampleIds.stream().sorted(new AlphaNumericComparator()).collect(Collectors.toList());
-    }
+//    private List<String> getSortedSampleIds(List<DataRecord> dataRecords) throws NotFound, RemoteException {
+//        List<String> sampleIds = new ArrayList<>();
+//        for (DataRecord sample : dataRecords) {
+//            sampleIds.add(sample.getStringVal("SampleId", user));
+//        }
+//        return sampleIds.stream().sorted(new AlphaNumericComparator()).collect(Collectors.toList());
+//    }
 
     /**
      * Get the destination plate size from user to which samples will be assigned.
@@ -268,10 +314,17 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * @throws ServerException
      */
     private String getSourcePlateSize(List<DataRecord> attachedSamples) throws IoError, RemoteException, NotFound, ServerException {
-        String plate = attachedSamples.get(0).getParentsOfType("Plate", user).get(0).getStringVal("PlateId", user);
-        Object plateSize = attachedSamples.get(0).getParentsOfType("Plate", user).get(0).getShortVal("PlateWellCnt", user);
-        if (plateSize == null) {
-            clientCallback.displayError(String.format("Plate well count not defined for plate '%s'", plate));
+        Object plateSize = null;
+        for(DataRecord sample : attachedSamples){
+            String containerType = sample.getStringVal("ContainerType",user);
+            if (containerType.toLowerCase().equals("plate")){
+                String plateName = sample.getParentsOfType("Plate", user).get(0).getStringVal("PlateId", user);
+                plateSize = sample.getParentsOfType("Plate",user).get(0).getShortVal("PlateWellCnt", user);
+                if (plateSize == null) {
+                    clientCallback.displayError(String.format("Plate well count not defined for plate '%s'\nSetting plate size to 96.", plateName));
+                    return "96";
+                }
+            }
         }
         return PLATE_SIZES.get((short) plateSize);
     }
@@ -589,7 +642,3 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
         }
     }
 }
-
-
-
-
