@@ -36,7 +36,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
 
     @Override
     public boolean shouldRun() throws RemoteException {
-        return activeTask.getTask().getTaskOptions().keySet().contains("SORT AND ASSIGN SAMPLES TO PLATE");
+        return activeTask.getStatus() != activeTask.COMPLETE && activeTask.getTask().getTaskOptions().keySet().contains("SORT AND ASSIGN SAMPLES TO PLATE");
     }
 
     @Override
@@ -257,37 +257,31 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      */
     private List<String> getSampleIdsSortedSeparatedByRecipe(List<DataRecord> attachedSamples, List<String>recipes ) throws NotFound, RemoteException {
         List<String> sampleIds = new ArrayList<>();
+        List<String> controlSampleIds = new ArrayList<>();
         for(String recipe : recipes){
             List<String> sampleIdsForRecipe = new ArrayList<>();
             for (DataRecord sample: attachedSamples){
                 String sampleId = sample.getStringVal("SampleId", user);
                 String sampleRecipe = sample.getStringVal("Recipe",user);
-                if (sampleRecipe.toLowerCase().equals(recipe.toLowerCase())){
-                    sampleIdsForRecipe.add(sampleId);
+                if (!sampleId.toLowerCase().contains("poolednormal") && sampleRecipe.toLowerCase().equals(recipe.toLowerCase())){
+                    if(!sampleIdsForRecipe.contains(sampleId)) {
+                        sampleIdsForRecipe.add(sampleId);
+                    }
+                }
+                if (sampleId.toLowerCase().contains("poolednormal")){
+                    if(!controlSampleIds.contains(sampleId)) {
+                        controlSampleIds.add(sampleId);
+                    }
                 }
             }
             List<String> sortedSampleIdsForRecipe = sampleIdsForRecipe.stream().sorted(new AlphaNumericComparator()).collect(Collectors.toList());
             sampleIds.addAll(sortedSampleIdsForRecipe);
-            logInfo(sampleIds.toString());
         }
+        List<String> sortedControlSampleIds = controlSampleIds.stream().sorted(new AlphaNumericComparator()).collect(Collectors.toList());
+        sampleIds.addAll(sortedControlSampleIds);
+        logInfo(sampleIds.toString());
         return sampleIds;
     }
-
-    /**
-     * Sort sample Ids using alphanumeric sorting methods.
-     *
-     * @param dataRecords
-     * @return List<String>
-     * @throws NotFound
-     * @throws RemoteException
-     */
-//    private List<String> getSortedSampleIds(List<DataRecord> dataRecords) throws NotFound, RemoteException {
-//        List<String> sampleIds = new ArrayList<>();
-//        for (DataRecord sample : dataRecords) {
-//            sampleIds.add(sample.getStringVal("SampleId", user));
-//        }
-//        return sampleIds.stream().sorted(new AlphaNumericComparator()).collect(Collectors.toList());
-//    }
 
     /**
      * Get the destination plate size from user to which samples will be assigned.
@@ -642,3 +636,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
         }
     }
 }
+
+
+
+

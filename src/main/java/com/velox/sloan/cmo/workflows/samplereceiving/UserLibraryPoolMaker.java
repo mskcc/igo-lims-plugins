@@ -12,10 +12,7 @@ import com.velox.sapioutils.shared.managers.TaskUtilManager;
 import org.apache.commons.lang3.StringUtils;
 
 import java.rmi.RemoteException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author Ajay Sharma on 6/26/18.
@@ -53,6 +50,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
             }
 
             List<String> uniqueMicronicBarcodesOnAttachedSamples = getUniqueMicronicTubeBarcodesInAttachedSamples(attachedSamples);
+            Collections.sort(uniqueMicronicBarcodesOnAttachedSamples);
             List<List<DataRecord>> samplesSeparatedByPools = getListOfSamplesToPoolTogether(attachedSamples, uniqueMicronicBarcodesOnAttachedSamples);
 
             if (samplesSeparatedByPools.size() == 0) {
@@ -64,7 +62,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
             activeTask.getTask().getTaskOptions().put("USER POOLS CREATED", "");
         } catch (Exception e) {
             clientCallback.displayError(String.format("Error while creating user pools. CAUSE:\n%s", e));
-            logError(e);
+            logError(e.getStackTrace().toString());
         }
         return new PluginResult(true);
     }
@@ -123,7 +121,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
         return userPools;
     }
 
-    private String getRequestIdForSample(DataRecord sample) throws RemoteException, ServerException, NotFound {
+    private String getRequestIdForSample(DataRecord sample) throws NullPointerException, RemoteException, ServerException, NotFound {
         String requestId = "";
         List<DataRecord> request = sample.getAncestorsOfType("Request", user);
         if (request.size() == 0) {
@@ -140,7 +138,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
         return "Pool-" + requestId + "-Tube" + String.valueOf(counter);
     }
 
-    private String concatenateStringValues(List<DataRecord> userPool, String fieldType) throws NotFound, RemoteException {
+    private String concatenateStringValues(List<DataRecord> userPool, String fieldType) throws NullPointerException, NotFound, RemoteException {
         String concatenatedOtherSampleIds = "";
         List<String> valuesToConcatenate = new ArrayList<>();
         for (DataRecord sample : userPool) {
@@ -154,14 +152,24 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
         return concatenatedOtherSampleIds;
     }
 
-    private String getSequencingRunType(List<DataRecord> userPoolSamples) throws RemoteException, NotFound {
+    private String getSequencingRunType(List<DataRecord> userPoolSamples) throws NullPointerException, RemoteException, NotFound, ServerException {
+        String sequencingRunType = userPoolSamples.get(0).getDescendantsOfType("SeqRequirement", user).get(0).getStringVal("SequencingRunType", user);
+        if (StringUtils.isBlank(sequencingRunType)){
+            clientCallback.displayError("Sequencing RunType not defined for Samples");
+            logError("Sequencing RunType not defined for Samples");
+            return "";
+        }
         return userPoolSamples.get(0).getDescendantsOfType("SeqRequirement", user).get(0).getStringVal("SequencingRunType", user);
     }
 
-    private double getTotalRequestedReadsForPool(List<DataRecord> userPoolSamples) throws RemoteException, NotFound {
+    private double getTotalRequestedReadsForPool(List<DataRecord> userPoolSamples) throws NullPointerException, RemoteException, NotFound, ServerException {
         double totalReads = 0.0;
         for (DataRecord sample : userPoolSamples) {
             double readsRequestedForSample = sample.getDescendantsOfType("SeqRequirement", user).get(0).getDoubleVal("RequestedReads", user);
+            if ((Object)readsRequestedForSample == null){
+                clientCallback.displayError(String.format("Minimum number of Reads required is not defined for Sample : %s", sample.getStringVal("SampleId", user)));
+                logError(String.format("Minimum number of Reads required is not defined for Sample : %s", sample.getStringVal("SampleId", user)));
+            }
             totalReads += readsRequestedForSample;
         }
         return totalReads;
@@ -234,5 +242,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
             sampleStatusFields.add(sampleStatus);
         }
         dataRecordManager.setFieldsForRecords(attachedSamples, sampleStatusFields, user);
+        dataRecordManager.storeAndCommit("Exemplar Sample Status changed.", user);
     }
+
 }

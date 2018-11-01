@@ -31,15 +31,15 @@ public class SampleControlMaker extends DefaultGenericPlugin {
 
     @Override
     public boolean shouldRun() throws RemoteException, com.velox.api.util.ServerException, NotFound {
-        if (activeTask.getTask().getTaskOptions().containsKey("CREATE AND AUTO ASSIGN CONTROLS") && !activeTask.getTask().getTaskOptions().containsKey("CONTROLS_ADDED")) {
-            boolean shouldAddControls = clientCallback.showYesNoDialog("CREATE NEW CONTROLS FOR IMPACT AND HEMEPACT?", "DO YOU WANT LIMS TO AUTO-ASSIGN CONTROLS FOR IMPACT AND HEMEPACT.");
-            if (!shouldAddControls) {
-                logInfo(String.format("User %s canceled the option to autoassign controls.", user.getUsername()));
-                return false;
-            }
+        if (activeTask.getStatus() != activeTask.COMPLETE && activeTask.getTask().getTaskOptions().containsKey("CREATE AND AUTO ASSIGN CONTROLS") && !activeTask.getTask().getTaskOptions().containsKey("CONTROLS_ADDED")) {
             List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
             if (isRecipeImpactOrHemepact(attachedSampleRecords)) {
                 logInfo("Need to add controls for IMPACT or HEMEPACT recipe.");
+                boolean shouldAddControls = clientCallback.showYesNoDialog("CREATE NEW CONTROLS FOR IMPACT AND HEMEPACT?", "DO YOU WANT LIMS TO AUTO-ASSIGN CONTROLS FOR IMPACT AND HEMEPACT.");
+                if (!shouldAddControls) {
+                    logInfo(String.format("User %s canceled the option to autoassign controls.", user.getUsername()));
+                    return false;
+                }
                 return true;
             }
         }
@@ -109,17 +109,24 @@ public class SampleControlMaker extends DefaultGenericPlugin {
         List<String> controlTypesToAdd = new ArrayList<>();
         for (DataRecord sample : attachedSamples) {
             String recipe = sample.getStringVal("Recipe", user);
+            String species = sample.getStringVal("Species", user);
             String sampleOrigin = sample.getStringVal("Preservation", user);
-            if ((recipe.toLowerCase().contains("impact") || recipe.toLowerCase().contains("hemepact")) && sampleOrigin.toLowerCase().contains("ffpe")) {
+            if ((recipe.toLowerCase().contains("impact") || recipe.toLowerCase().contains("hemepact")) && sampleOrigin.toLowerCase().contains("ffpe") && species.toLowerCase().equals("human")) {
                 if (!controlTypesToAdd.contains("FFPEPOOLEDNORMAL")) {
                     controlTypesToAdd.add("FFPEPOOLEDNORMAL");
                 }
             }
-            if ((recipe.toLowerCase().contains("impact") || recipe.toLowerCase().contains("hemepact")) && !sampleOrigin.toLowerCase().contains("ffpe")) {
+            if ((recipe.toLowerCase().contains("impact") || recipe.toLowerCase().contains("hemepact")) && !sampleOrigin.toLowerCase().contains("ffpe") && species.toLowerCase().equals("human")) {
                 if (!controlTypesToAdd.contains("FROZENPOOLEDNORMAL")) {
                     controlTypesToAdd.add("FROZENPOOLEDNORMAL");
                 }
             }
+            if ((recipe.toLowerCase().contains("impact") || recipe.toLowerCase().contains("hemepact")) && !sampleOrigin.toLowerCase().contains("ffpe") && species.toLowerCase().equals("mouse")) {
+                if (!controlTypesToAdd.contains("MOUSEPOOLEDNORMAL")) {
+                    controlTypesToAdd.add("MOUSEPOOLEDNORMAL");
+                }
+            }
+
         }
         return controlTypesToAdd;
     }
@@ -159,13 +166,23 @@ public class SampleControlMaker extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws RemoteException
      */
-    private int getMostRecentPooledRecordId(List<DataRecord> controlRecordsByTypesToAdd, String controlType) throws NotFound, RemoteException {
-        List<Integer> recordIds = new ArrayList<>();
+    private int getMostRecentControlRecordId(List<DataRecord> controlRecordsByTypesToAdd, String controlType) throws NotFound, RemoteException {
+        List<Integer> pooledNormalControlrecordIds = new ArrayList<>();
+        List<Integer> otherControlRecordIds = new ArrayList<>();
         for (DataRecord record : controlRecordsByTypesToAdd) {
-            if (record.getStringVal("OtherSampleId", user).toLowerCase().contains(controlType.toLowerCase()))
-                recordIds.add(((Long) record.getLongVal("RecordId", user)).intValue());
+            String sampleId = record.getStringVal("SampleId", user);
+            String otherSampleId = record.getStringVal("OtherSampleId", user);
+            if (otherSampleId.toLowerCase().contains(controlType.toLowerCase()) && sampleId.toLowerCase().contains(controlType.toLowerCase())) {
+                pooledNormalControlrecordIds.add(((Long) record.getLongVal("RecordId", user)).intValue());
+            } else if (otherSampleId.toLowerCase().contains(controlType.toLowerCase())) {
+                otherControlRecordIds.add(((Long) record.getLongVal("RecordId", user)).intValue());
+            }
         }
-        return Collections.max(recordIds);
+        if (!pooledNormalControlrecordIds.isEmpty()) {
+            return Collections.max(pooledNormalControlrecordIds);
+        } else {
+            return Collections.max(otherControlRecordIds);
+        }
     }
 
     /**
@@ -212,7 +229,7 @@ public class SampleControlMaker extends DefaultGenericPlugin {
         List<Object> newControlSampleIds = new ArrayList<>();
         List<Map<String, Object>> newControlSampleFields = new ArrayList<>();
         for (String controlType : controlTypesToAdd) {
-            int lastControlRecordId = getMostRecentPooledRecordId(allControlSampleRecords, controlType);
+            int lastControlRecordId = getMostRecentControlRecordId(allControlSampleRecords, controlType);
             String nextControlSampleId = getNextControlSampleId(lastControlRecordId, controlType);
             logInfo(" New control: " + nextControlSampleId);
             Map<String, Object> newSampleFields = new HashMap<>();
