@@ -9,10 +9,12 @@ import com.velox.api.workflow.ActiveTask;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sapioutils.shared.managers.TaskUtilManager;
+import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 import org.apache.commons.lang3.StringUtils;
 
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author Ajay Sharma on 6/26/18.
@@ -48,9 +50,9 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
             if (!isValidMicronicTubeBarcode(attachedSamples)) {
                 return new PluginResult(false);
             }
-
-            List<String> uniqueMicronicBarcodesOnAttachedSamples = getUniqueMicronicTubeBarcodesInAttachedSamples(attachedSamples);
-            Collections.sort(uniqueMicronicBarcodesOnAttachedSamples);
+            List<String> sortedSampleIds = getSampleIdsSortedAscending(attachedSamples);
+            List<DataRecord> sortedSampleDataRecords = sortDataRecordsBySampleId(attachedSamples, sortedSampleIds);
+            List<String> uniqueMicronicBarcodesOnAttachedSamples = getUniqueMicronicTubeBarcodesInAttachedSamples(sortedSampleDataRecords);
             List<List<DataRecord>> samplesSeparatedByPools = getListOfSamplesToPoolTogether(attachedSamples, uniqueMicronicBarcodesOnAttachedSamples);
 
             if (samplesSeparatedByPools.size() == 0) {
@@ -91,7 +93,28 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
         return true;
     }
 
-    private List<String> getUniqueMicronicTubeBarcodesInAttachedSamples(List<DataRecord> attachedSamples) throws NotFound, RemoteException {
+    private List<String> getSampleIdsSortedAscending(List<DataRecord> attchedSamples) throws NotFound, RemoteException {
+        List <String> sampleIds = new ArrayList<>();
+        for(DataRecord sample : attchedSamples){
+            sampleIds.add(sample.getStringVal("SampleId", user));
+        }
+        return sampleIds.stream().sorted(new AlphaNumericComparator()).collect(Collectors.toList());
+    }
+
+    private List<DataRecord> sortDataRecordsBySampleId(List<DataRecord>attachedSamples, List<String> sortedSampleIds) throws NotFound, RemoteException {
+        List<DataRecord> sortedSampleDataRecords = new ArrayList<>();
+        for(String sampleId : sortedSampleIds){
+            for(DataRecord sample : attachedSamples){
+                String id = sample.getStringVal("SampleId",user);
+                if (id.equals(sampleId)){
+                    sortedSampleDataRecords.add(sample);
+                }
+            }
+        }
+        return sortedSampleDataRecords;
+    }
+
+    private List<String> getUniqueMicronicTubeBarcodesInAttachedSamples(List<DataRecord>attachedSamples) throws NotFound, RemoteException {
         List<String> uniqueMicronicBarcodes = new ArrayList<>();
 
         for (DataRecord sample : attachedSamples) {

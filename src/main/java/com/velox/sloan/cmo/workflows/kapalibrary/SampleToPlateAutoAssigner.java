@@ -5,11 +5,18 @@ import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.InvalidValue;
 import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
+import com.velox.api.datatype.TemporaryDataType;
+import com.velox.api.datatype.datatypelayout.DataFormComponent;
+import com.velox.api.datatype.datatypelayout.DataTypeLayout;
+import com.velox.api.datatype.datatypelayout.DataTypeTabDefinition;
+import com.velox.api.datatype.fielddefinition.FieldDefinitionPosition;
+import com.velox.api.datatype.fielddefinition.VeloxFieldDefinition;
+import com.velox.api.datatype.fielddefinition.VeloxIntegerFieldDefinition;
+import com.velox.api.datatype.fielddefinition.VeloxStringFieldDefinition;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
-import com.velox.sapioutils.shared.utilities.FormBuilder;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 import org.apache.commons.lang3.StringUtils;
 
@@ -372,6 +379,37 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
         return (int) Math.ceil((double) sampleSize / (double) plateSize);
     }
 
+    private TemporaryDataType createTempDataForm(TemporaryDataType tempPlate, List<VeloxFieldDefinition<?>> fieldDefList){
+        String formName = "NewPlateForm";
+        // Create form
+        DataFormComponent form = new DataFormComponent(formName, "New Plate Form");
+        form.setCollapsed(false);
+        form.setColumn(0);
+        form.setColumnSpan(4);
+        form.setOrder(0);
+        form.setHeight(10);
+        // Add fields to the form
+        for (int i = 0; i < fieldDefList.size(); i++) {
+            VeloxFieldDefinition<?> fieldDef = fieldDefList.get(i);
+            FieldDefinitionPosition pos = new FieldDefinitionPosition(fieldDef.getDataFieldName());
+            pos.setFormColumn(0);
+            pos.setFormColumnSpan(4);
+            pos.setOrder(i);
+            pos.setFormName(formName);
+            form.setFieldDefinitionPosition(pos);
+        }
+        // Create a tab with the form on it
+        DataTypeTabDefinition tabDef = new DataTypeTabDefinition("Tab1", "Tab 1");
+        tabDef.setDataTypeLayoutComponent(form);
+        tabDef.setTabOrder(0);
+        // Create a layout with the tab on it
+        DataTypeLayout layout = new DataTypeLayout("Default", "Default", "Default layout for temp fields");
+        layout.setDataTypeTabDefinition(tabDef);
+        // Add the layout to the TDT
+        tempPlate.setDataTypeLayout(layout);
+        return tempPlate;
+    }
+
     /**
      * Get the Plate Ids to which the samples will be transferred to.
      *
@@ -382,21 +420,26 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * @throws RemoteException
      */
     private List<String> getNewPlateIdsFromUserFor96To96Transfer(List<DataRecord> attachedSamples, int plateSize) throws com.velox.api.util.ServerException, RemoteException {
-        List<String> plateDisplayFields = Arrays.asList("PlateNumber", "PlateId");
-        FormBuilder formBuilder = new FormBuilder(managerContext);
-        formBuilder.addFieldDefinitions(new HashMap<String, FormBuilder.FieldDefinitionValues>(), plateDisplayFields, "PlateIdForm", "PlateEntries96to96");
-        DataFieldDefinitions plateIdFieldDefinitions = formBuilder.getDataFieldDefinitions();
+        TemporaryDataType tempPlate = new TemporaryDataType("NewPlate", "New Plate");
+        List<VeloxFieldDefinition<?>> fieldDefList = new ArrayList<VeloxFieldDefinition<?>>();
+        VeloxStringFieldDefinition idField = VeloxFieldDefinition.stringFieldBuilder().displayName("Plate Id").dataFieldName("PlateId").visible(true).editable(true).htmlEditor(false).required(true).htmlEditor(true).isRestricted(false).build();
+        VeloxIntegerFieldDefinition plateNumField = VeloxFieldDefinition.integerFieldBuilder().displayName("Plate Number").dataFieldName("PlateNumber").visible(true).editable(false).required(true).isRestricted(false).build();
+        fieldDefList.add(idField);
+        fieldDefList.add(plateNumField);
+        tempPlate.setVeloxFieldDefinitionList(fieldDefList);
+        tempPlate = createTempDataForm(tempPlate, fieldDefList);
         int numberOfNewPlates = getNumberOfNewPlatesFor96To96Transfer(attachedSamples.size(), plateSize);
-        logInfo("NumberOfNewPlates needed: " + numberOfNewPlates);
-        List<Map<String, Object>> plateIdValues = new ArrayList<>();
+        List<Map<String, Object>> defaultValuesList = new ArrayList();
         for (int i = 1; i <= numberOfNewPlates; i++) {
-            Map<String, Object> plateIdValue = new HashMap<>();
-            plateIdValue.put("PlateNumber", i);
-            plateIdValue.put("PlateId", "");
-            plateIdValues.add(plateIdValue);
+            Map<String, Object> samples = new HashMap();
+            samples.put("PlateNumber", i);
+            samples.put("PlateId", "");
+            defaultValuesList.add(samples);
         }
+
         List<Map<String, Object>> plateIdsFromUser = clientCallback.showTableEntryDialog("Enter the New Plate Ids",
-                "Enter new Plate ID's and their order for sample assignment. eg: enter 1, 2 ,3 and so on.", plateIdFieldDefinitions, plateIdValues);
+                "Enter new Plate ID's and their order for sample assignment. eg: enter 1, 2 ,3 and so on.", tempPlate, defaultValuesList);
+
         return extractPlateIdsFromUserInputFor96To96Transfer(plateIdsFromUser, numberOfNewPlates);
     }
 

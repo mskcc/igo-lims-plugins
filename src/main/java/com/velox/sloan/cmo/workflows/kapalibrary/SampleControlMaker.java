@@ -8,19 +8,24 @@ import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sapioutils.shared.managers.TaskUtilManager;
+import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 
 import java.rmi.RemoteException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @author Ajay Sharma
- *         To create and add control samples for IMPACT and HEMEPACT and attach them to active task.
- *         It can be extended to create controls for other recipes.
- *         <p>
- *         Strategy:
- *         1. First get the type of all the controls that we need to add.
- *         2. Iterate over the list of Pools needed to add, and get the values needed to create new controls.
- *         3. Create new controls.
+ * To create and add control samples for IMPACT and HEMEPACT and attach them to active task.
+ * It can be extended to create controls for other recipes.
+ * <p>
+ * Strategy:
+ * 1. First get the type of all the controls that we need to add.
+ * 2. Iterate over the list of Pools needed to add, and get the values needed to create new controls.
+ * 3. Create new controls.
  */
 
 public class SampleControlMaker extends DefaultGenericPlugin {
@@ -166,40 +171,43 @@ public class SampleControlMaker extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws RemoteException
      */
-    private int getMostRecentControlRecordId(List<DataRecord> controlRecordsByTypesToAdd, String controlType) throws NotFound, RemoteException {
-        List<Integer> pooledNormalControlrecordIds = new ArrayList<>();
-        List<Integer> otherControlRecordIds = new ArrayList<>();
+    private String getMostRecentControlRecordId(List<DataRecord> controlRecordsByTypesToAdd, String controlType) throws NotFound, RemoteException {
+        List<String> pooledNormalControls = new ArrayList<>();
+        List<String> otherControls = new ArrayList<>();
         for (DataRecord record : controlRecordsByTypesToAdd) {
             String sampleId = record.getStringVal("SampleId", user);
             String otherSampleId = record.getStringVal("OtherSampleId", user);
             if (otherSampleId.toLowerCase().contains(controlType.toLowerCase()) && sampleId.toLowerCase().contains(controlType.toLowerCase())) {
-                pooledNormalControlrecordIds.add(((Long) record.getLongVal("RecordId", user)).intValue());
+                pooledNormalControls.add(sampleId);
             } else if (otherSampleId.toLowerCase().contains(controlType.toLowerCase())) {
-                otherControlRecordIds.add(((Long) record.getLongVal("RecordId", user)).intValue());
+                otherControls.add(sampleId);
             }
         }
-        if (!pooledNormalControlrecordIds.isEmpty()) {
-            return Collections.max(pooledNormalControlrecordIds);
+        if (!pooledNormalControls.isEmpty()) {
+            List<String> sortedPooledNormalControls = pooledNormalControls.stream().sorted(new AlphaNumericComparator()).collect(Collectors.toList());
+            return sortedPooledNormalControls.get(sortedPooledNormalControls.size() - 1).split("_")[0];
+
         } else {
-            return Collections.max(otherControlRecordIds);
+            List<String> sortedOtherControls = otherControls.stream().sorted(new AlphaNumericComparator()).collect(Collectors.toList());
+            return sortedOtherControls.get(otherControls.size() - 1).split("_")[0];
         }
     }
 
     /**
      * Create new SampleId for new control given the recordId for last control created and Control type for new control to create.
      *
-     * @param recordId
+     * @param mostRecentControlSampleId
      * @param controlType
      * @return String
      * @throws IoError
      * @throws RemoteException
      * @throws NotFound
      */
-    private String getNextControlSampleId(int recordId, String controlType) throws IoError, RemoteException, NotFound {
-        String previousSampleId = dataRecordManager.queryDataRecords("Sample", "RecordId = '" + (long) recordId + "'", user).get(0).getStringVal("SampleId", user);
-        logInfo("Previous sampleId: " + previousSampleId);
-        if (previousSampleId.toLowerCase().contains(controlType.toLowerCase())) {
-            String basePreviousSampleId = previousSampleId.split("_")[0]; // in case previous controls were aliquoted eg FFPEPOOLEDNORMAL-1_1_1_1
+    private String getNextControlSampleId(String mostRecentControlSampleId, String controlType) throws IoError, RemoteException, NotFound {
+        // String previousSampleId = dataRecordManager.queryDataRecords("Sample", "RecordId = '" + (long) recordId + "'", user).get(0).getStringVal("SampleId", user);
+        logInfo("Previous sampleId: " + mostRecentControlSampleId);
+        if (mostRecentControlSampleId.toLowerCase().contains(controlType.toLowerCase())) {
+            String basePreviousSampleId = mostRecentControlSampleId.split("_")[0]; // in case previous controls were aliquoted eg FFPEPOOLEDNORMAL-1_1_1_1
             logInfo("split base: " + basePreviousSampleId);
             String[] splitPreviousSampleId = basePreviousSampleId.split("-");
             String sampleIdPrefix = splitPreviousSampleId[0];
@@ -229,7 +237,7 @@ public class SampleControlMaker extends DefaultGenericPlugin {
         List<Object> newControlSampleIds = new ArrayList<>();
         List<Map<String, Object>> newControlSampleFields = new ArrayList<>();
         for (String controlType : controlTypesToAdd) {
-            int lastControlRecordId = getMostRecentControlRecordId(allControlSampleRecords, controlType);
+            String lastControlRecordId = getMostRecentControlRecordId(allControlSampleRecords, controlType);
             String nextControlSampleId = getNextControlSampleId(lastControlRecordId, controlType);
             logInfo(" New control: " + nextControlSampleId);
             Map<String, Object> newSampleFields = new HashMap<>();
