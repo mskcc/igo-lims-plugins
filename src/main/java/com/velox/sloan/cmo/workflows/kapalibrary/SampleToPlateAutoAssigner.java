@@ -1,6 +1,5 @@
 package com.velox.sloan.cmo.workflows.kapalibrary;
 
-import com.velox.api.datafielddefinition.DataFieldDefinitions;
 import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.InvalidValue;
 import com.velox.api.datarecord.IoError;
@@ -250,21 +249,21 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws RemoteException
      */
-    private List<String> getSampleIdsSortedSeparatedByRecipe(List<DataRecord> attachedSamples, List<String>recipes ) throws NotFound, RemoteException {
+    private List<String> getSampleIdsSortedSeparatedByRecipe(List<DataRecord> attachedSamples, List<String> recipes) throws NotFound, RemoteException {
         List<String> sampleIds = new ArrayList<>();
         List<String> controlSampleIds = new ArrayList<>();
-        for(String recipe : recipes){
+        for (String recipe : recipes) {
             List<String> sampleIdsForRecipe = new ArrayList<>();
-            for (DataRecord sample: attachedSamples){
+            for (DataRecord sample : attachedSamples) {
                 String sampleId = sample.getStringVal("SampleId", user);
-                String sampleRecipe = sample.getStringVal("Recipe",user);
-                if (!sampleId.toLowerCase().contains("poolednormal") && sampleRecipe.toLowerCase().equals(recipe.toLowerCase())){
-                    if(!sampleIdsForRecipe.contains(sampleId)) {
+                String sampleRecipe = sample.getStringVal("Recipe", user);
+                if (!sampleId.toLowerCase().contains("poolednormal") && sampleRecipe.toLowerCase().equals(recipe.toLowerCase())) {
+                    if (!sampleIdsForRecipe.contains(sampleId)) {
                         sampleIdsForRecipe.add(sampleId);
                     }
                 }
-                if (sampleId.toLowerCase().contains("poolednormal")){
-                    if(!controlSampleIds.contains(sampleId)) {
+                if (sampleId.toLowerCase().contains("poolednormal")) {
+                    if (!controlSampleIds.contains(sampleId)) {
                         controlSampleIds.add(sampleId);
                     }
                 }
@@ -304,11 +303,11 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      */
     private String getSourcePlateSize(List<DataRecord> attachedSamples) throws IoError, RemoteException, NotFound, ServerException {
         Object plateSize = null;
-        for(DataRecord sample : attachedSamples){
-            String containerType = sample.getStringVal("ContainerType",user);
-            if (containerType.toLowerCase().equals("plate")){
+        for (DataRecord sample : attachedSamples) {
+            String containerType = sample.getStringVal("ContainerType", user);
+            if (containerType.toLowerCase().equals("plate")) {
                 String plateName = sample.getParentsOfType("Plate", user).get(0).getStringVal("PlateId", user);
-                plateSize = sample.getParentsOfType("Plate",user).get(0).getShortVal("PlateWellCnt", user);
+                plateSize = sample.getParentsOfType("Plate", user).get(0).getShortVal("PlateWellCnt", user);
                 if (plateSize == null) {
                     clientCallback.displayError(String.format("Plate well count not defined for plate '%s'\nSetting plate size to 96.", plateName));
                     return "96";
@@ -330,7 +329,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
         List<String> uniquePlateIds = new ArrayList<>();
         for (DataRecord sample : attachedSamples) {
             String plateId = sample.getStringVal("RelatedRecord23", user);
-            if (plateId!=null && !uniquePlateIds.contains(plateId)) {
+            if (plateId != null && !uniquePlateIds.contains(plateId)) {
                 logInfo("PlateId : " + plateId);
                 uniquePlateIds.add(plateId);
             }
@@ -343,7 +342,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * Get the quadrant values that each source plate must be assigned to.
      *
      * @param uniquePlateIds
-     * @return List<Map   <   String   ,   Object>>
+     * @return List<Map       <       String       ,       Object>>
      */
     private List<Map<String, Object>> getValueMapForPlateQuadrant(List<String> uniquePlateIds) {
         List<Map<String, Object>> uniquePlates = new ArrayList<>();
@@ -368,22 +367,13 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
         return (int) Math.ceil((double) sampleSize / (double) plateSize);
     }
 
-//    private List<VeloxFieldDefinition<?>> createQuadrantFormFieldDefs(){
-//        List<VeloxFieldDefinition<?>> quadrantDiaplayFormFields = new ArrayList<>();
-//        VeloxStringFieldDefinition plateId = new VeloxStringFieldDefinition();
-//        plateId.setDataFieldName("PlateId");
-//        plateId.setDisplayName("Plate ID");
-//        VeloxStringFieldDefinition quadrantId = new VeloxStringFieldDefinition();
-//        quadrantId.setDataFieldName("QuadrantNumber");
-//        quadrantId.setDisplayName("Quadrant Number");
-//        quadrantId.isEditable();
-//        quadrantDiaplayFormFields.add(plateId);
-//        quadrantDiaplayFormFields.add(quadrantId);
-//        return quadrantDiaplayFormFields;
-//    }
-
-
-    private TemporaryDataType createTempDataForm(TemporaryDataType tempPlate, List<VeloxFieldDefinition<?>> fieldDefList){
+    /**
+     * Method to create DataForm to show table entry to get user input.
+     * @param tempPlate
+     * @param fieldDefList
+     * @return TemporaryDatatype
+     */
+    private TemporaryDataType createTempDataForm(TemporaryDataType tempPlate, List<VeloxFieldDefinition<?>> fieldDefList) {
         String formName = "NewPlateForm";
         // Create form
         DataFormComponent form = new DataFormComponent(formName, "New Plate Form");
@@ -493,7 +483,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
             for (k = 0; k < plateSize && i < sortedSampleIds.size(); k++, i++) {
                 for (DataRecord rec : newPlateProtocolRecordName) {
                     String sampleId = sortedSampleIds.get(i);
-                    if(rec.getStringVal("SampleId", user).equals(sampleId)) {
+                    if (rec.getStringVal("SampleId", user).equals(sampleId)) {
                         Map<String, Object> sampleToPlatePositionValue = new HashMap<>();
                         sampleToPlatePositionValue.put(targetPlateIdFieldName, plateIds.get(j));
                         sampleToPlatePositionValue.put(targetWellIdFieldName, plateWellIds.get(k));
@@ -509,7 +499,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * Get PlateId and corresponding quadrant number from user via table input dialog box.
      *
      * @param attachedSamples
-     * @return List<Map   <   String   ,       Object>>
+     * @return List<Map       <       String       ,               Object>>
      * @throws com.velox.api.util.ServerException
      * @throws RemoteException
      * @throws NotFound
@@ -526,16 +516,8 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
         fieldDefList.add(quadrantNumField);
         quadrantValues.setVeloxFieldDefinitionList(fieldDefList);
         quadrantValues = createTempDataForm(quadrantValues, fieldDefList);
-        logInfo("Plate to quadrant values: " + plateToQuadrantValuesForTableDisplay.toString());
-        //DataFieldDefinitions definitions = dataMgmtServer.getDataFieldDefManager(user).getDataFieldDefinitions("PlateToQuadrantEntries");
-//        plateToQuadrantValuesFromUser = clientCallback.showTableEntryDialog("Please enter quadrant values for plates", "Please enter the 384 well plate quadrant values " +
-//                "for each 96 well plate in the cell next to it.", crea, plateToQuadrantValuesForTableDisplay);
-
-        //definitions.get("QuadrantNumber").editable = true;
         plateToQuadrantValuesFromUser = clientCallback.showTableEntryDialog("Please enter quadrant values for plates", "Please enter the 384 well plate quadrant values " +
                 "for each 96 well plate in the cell next to it.", quadrantValues, plateToQuadrantValuesForTableDisplay);
-
-        logInfo(plateToQuadrantValuesFromUser.toString());
         return plateToQuadrantValuesFromUser;
     }
 
@@ -611,30 +593,25 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
     private void assignPositionsMapFor96To384WellPlate(List<DataRecord> attachedSamples, String destination384PlateId, List<Map<String, Object>> quadrantValues, String targetPlateIdFieldName, String targetWellIdFieldName, List<DataRecord> newPlateProtocolRecordName) throws NotFound, RemoteException, com.velox.api.util.ServerException {
         for (Map quadrantMap : quadrantValues) {
             String plateId = quadrantMap.get("PlateId").toString();
-            logInfo("quadrant PlateId: " + plateId);
             String quadrantId = quadrantMap.get("QuadrantNumber").toString();
             for (DataRecord sample : attachedSamples) {
                 String sampleId = sample.getStringVal("SampleId", user);
-                if (sample.getValue("RelatedRecord23", user) == null){
+                if (sample.getValue("RelatedRecord23", user) == null) {
                     clientCallback.displayError(String.format("Invalid Plate ID '%s' for sample '%s'.\nAll samples must have a Plate ID value for 96 to 384 assignment.",
                             sample.getValue("RelatedRecord23", user), sampleId));
                     logError(String.format("Invalid Plate ID '%s' for sample '%s'. All samples must have a Plate ID value for 96 to 384 assignment.",
                             sample.getValue("RelatedRecord23", user), sampleId));
                 }
                 String samplePlate = sample.getStringVal("RelatedRecord23", user);
-                logInfo("Sample ID: " + sampleId + ", Sample Plates: " + samplePlate);
                 String sampleWell = sample.getStringVal("RowPosition", user).replaceAll("\\s+", "") +
                         sample.getStringVal("ColPosition", user).replaceAll("\\s+", "");
-
                 if (samplePlate.equals(plateId)) {
-                    for(DataRecord rec: newPlateProtocolRecordName) {
-                        if (rec.getStringVal("SampleId",user).equals(sampleId)) {
+                    for (DataRecord rec : newPlateProtocolRecordName) {
+                        if (rec.getStringVal("SampleId", user).equals(sampleId)) {
                             Map<String, Object> newValues = new HashMap<>();
-                            newValues.put("SampleId", sampleId);
                             newValues.put(targetPlateIdFieldName, destination384PlateId);
                             newValues.put(targetWellIdFieldName, to384(Integer.parseInt(quadrantId), sampleWell));
-                            logInfo(newValues.toString());
-                            rec.setFields(newValues,user);
+                            rec.setFields(newValues, user);
                         }
                     }
                 }
@@ -656,23 +633,20 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * @throws com.velox.api.util.ServerException
      */
     private void assignPositionsMapFor384To384WellPlate(List<DataRecord> attachedSamples, String destination384PlateId, String targetPlateIdFieldName, String targetWellIdFieldName, List<DataRecord> newPlateProtocolRecordName) throws NotFound, RemoteException, com.velox.api.util.ServerException {
-        //List<Map<String, Object>> newProtocolValues = new ArrayList<>();
         for (DataRecord sample : attachedSamples) {
             String sampleId = sample.getStringVal("SampleId", user);
             String wellId = sample.getStringVal("RowPosition", user).replaceAll("\\s+", "") +
                     sample.getStringVal("ColPosition", user).replaceAll("\\s+", "");
             for (DataRecord rec : newPlateProtocolRecordName) {
-                if(rec.getStringVal("SampleId",user).equals(sampleId)) {
+                if (rec.getStringVal("SampleId", user).equals(sampleId)) {
                     Map<String, Object> newValues = new HashMap<>();
-                    newValues.put("SampleId", sampleId);
                     newValues.put(targetPlateIdFieldName, destination384PlateId);
                     newValues.put(targetWellIdFieldName, wellId);
-                    rec.setFields(newValues,user);
+                    rec.setFields(newValues, user);
                 }
             }
         }
         addPlateDimensionsToTaskOptions(384);
-        //dataRecordManager.setFieldsForRecords(newPlateProtocolRecordName, newProtocolValues, user);
     }
 
     /**
@@ -696,25 +670,6 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
             toColumn--;
         return resultRow + toColumn.toString();
     }
-
-//    /**
-//     * On the attached DataType, set the {IsNewControl = true} for the control samples.
-//     *
-//     * @param attachedDataType
-//     * @throws NotFound
-//     * @throws RemoteException
-//     * @throws IoError
-//     * @throws InvalidValue
-//     */
-//    private void setIsControlTrueForNewControls(List<DataRecord> attachedDataType) throws NotFound, RemoteException, IoError, InvalidValue {
-//        for (DataRecord r : attachedDataType) {
-//            String sampleId = r.getStringVal("SampleId", user);
-//            String otherSampleId = r.getStringVal("OtherSampleId", user);
-//            if (sampleId.toLowerCase().contains("poolednormal") && otherSampleId.toLowerCase().contains("poolednormal")) {
-//                r.setDataField("IsNewControl", "true", user);
-//            }
-//        }
-//    }
 }
 
 
