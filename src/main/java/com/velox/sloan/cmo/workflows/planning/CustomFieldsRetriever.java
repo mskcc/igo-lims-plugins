@@ -17,6 +17,7 @@ import java.util.*;
 
 /**
  * This Plugin is written to update and display samples and related fields that are important for Pool planning.
+ *
  * @author Ajay Sharma
  */
 
@@ -60,6 +61,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
 
     /**
      * The method checks if the active task contains Sample and ProtocolRecord attachments.
+     *
      * @param attachedSamples
      * @param attachedPlanninProtocols
      * @return boolean value
@@ -68,46 +70,69 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
         return !(attachedSamples.isEmpty() && attachedPlanninProtocols.isEmpty());
     }
 
+
     /**
-     * This method looks for Sample that has a child record of type IndexBarcode. If not found on the first sample,
-     * the method keep looking upstream the parent hierarchy of the sample until a parent with a child record of IndexBarcode
-     * is found.
+     * This method is designed to find and return the Sample in hierarchy with a desired child DataType
+     *
      * @param sample
-     * @return String IndexId value for Sample if found, else returns "" with a warning.
-     * @throws NotFound
-     * @throws RemoteException
+     * @param childDataType
+     * @return Sample DataRecord
      * @throws IoError
+     * @throws RemoteException
      */
-    private String getSampleLibraryIndexId(DataRecord sample) throws NotFound, RemoteException, IoError {
-        DataRecord[] indexBarcodeRecord = sample.getChildrenOfType("IndexBarcode", user);
-        String indexId = "";
-        if (indexBarcodeRecord.length > 0) {
-            return indexBarcodeRecord[0].getStringVal("IndexId", user);
-        } else {
-            boolean found = false;
-            DataRecord startingSample = sample;
-            while (!found & startingSample != null) {
-                List<DataRecord> parentSamples = startingSample.getParentsOfType("Sample", user);
-                DataRecord parentSample = null;
-                if (!parentSamples.isEmpty()) {
-                    parentSample = parentSamples.get(0);
-                }
-                if (parentSample != null && parentSample.getChildrenOfType("IndexBarcode", user).length > 0
-                        && parentSample.getChildrenOfType("IndexBarcode", user)[0].getValue("IndexId", user) != null) {
-                    indexId = parentSample.getChildrenOfType("IndexBarcode", user)[0].getStringVal("IndexId", user);
-                    found = true;
-                } else {
-                    startingSample = parentSample;
-                }
+    private DataRecord getSampleParentWithDesiredChildRecord(DataRecord sample, String childDataType) throws IoError, RemoteException, NotFound {
+        DataRecord record = null;
+        Stack<DataRecord> samplePile = new Stack<>();
+        samplePile.push(sample);
+        do {
+            DataRecord startSample = samplePile.pop();
+            List<DataRecord> parentRecords = startSample.getParentsOfType("Sample", user);
+            if (!parentRecords.isEmpty() && parentRecords.get(0).getChildrenOfType(childDataType, user).length>0) {
+                record = parentRecords.get(0);
             }
-        }
-        return indexId;
+            if (!parentRecords.isEmpty() && record == null) {
+                samplePile.push(parentRecords.get(0));
+            }
+        } while (!samplePile.empty());
+        return record;
     }
 
     /**
      * This method looks for Sample that has a child record of type IndexBarcode. If not found on the first sample,
      * the method keep looking upstream the parent hierarchy of the sample until a parent with a child record of IndexBarcode
      * is found.
+     *
+     * @param sample
+     * @return String IndexId value for Sample if found, else returns "" with a warning.
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws IoError
+     */
+    private String getSampleLibraryIndexId(DataRecord sample) throws NotFound, RemoteException, IoError, ServerException {
+        DataRecord[] indexBarcodeRecord = sample.getChildrenOfType("IndexBarcode", user);
+        String indexId = null;
+        if (indexBarcodeRecord.length > 0) {
+            return indexBarcodeRecord[0].getStringVal("IndexId", user);
+        } else {
+            DataRecord parentSample = getSampleParentWithDesiredChildRecord(sample, "IndexBarcode");
+            if (parentSample != null && parentSample.getChildrenOfType("IndexBarcode", user).length > 0
+                    && parentSample.getChildrenOfType("IndexBarcode", user)[0].getValue("IndexId", user) != null) {
+                indexId = parentSample.getChildrenOfType("IndexBarcode", user)[0].getStringVal("IndexId", user);
+            }
+        }
+        if (indexId != null) {
+            return indexId;
+        } else {
+            clientCallback.displayWarning(String.format("IndexId not found for sample '%s'.\nPlease double check.", sample.getStringVal("SampleId", user)));
+            return "";
+        }
+    }
+
+    /**
+     * This method looks for Sample that has a child record of type IndexBarcode. If not found on the first sample,
+     * the method keep looking upstream the parent hierarchy of the sample until a parent with a child record of IndexBarcode
+     * is found.
+     *
      * @param sample
      * @return String IndexTag value for Sample if found, else returns "" with a warning.
      * @throws NotFound
@@ -121,21 +146,10 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
         if (indexBarcodeRecords.length > 0) {
             return indexBarcodeRecords[0].getStringVal("IndexTag", user);
         } else {
-            boolean found = false;
-            DataRecord startingSample = sample;
-            while (!found & startingSample != null) {
-                List<DataRecord> parentSamples = startingSample.getParentsOfType("Sample", user);
-                DataRecord parentSample = null;
-                if (!parentSamples.isEmpty()) {
-                    parentSample = parentSamples.get(0);
-                }
-                if (parentSample != null && parentSample.getChildrenOfType("IndexBarcode", user).length > 0
-                        && parentSample.getChildrenOfType("IndexBarcode", user)[0].getValue("IndexTag", user) != null) {
-                    indexTag = parentSample.getChildrenOfType("IndexBarcode", user)[0].getStringVal("IndexTag", user);
-                    found = true;
-                } else {
-                    startingSample = parentSample;
-                }
+            DataRecord parentSample = getSampleParentWithDesiredChildRecord(sample, "IndexBarcode");
+            if (parentSample != null && parentSample.getChildrenOfType("IndexBarcode", user).length > 0
+                    && parentSample.getChildrenOfType("IndexBarcode", user)[0].getValue("IndexTag", user) != null) {
+                indexTag = parentSample.getChildrenOfType("IndexBarcode", user)[0].getStringVal("IndexTag", user);
             }
         }
         if (indexTag != null) {
@@ -150,6 +164,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
      * This method looks for Sample that has a child records of type Sample with ExemplarSampleType= "DNA Library or cDNA Library". If not found on the first sample,
      * the method keep looking upstream the parent hierarchy of the sample until a sample with a parent samples of correct type are found.
      * is found.
+     *
      * @param sample
      * @return List<DataRecord> samples that are parent of the Sample pool.
      * @throws IoError
@@ -162,8 +177,8 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
         boolean found = false;
         do {
             List<DataRecord> parentSamples = startingSample.getParentsOfType("Sample", user);
-            if (parentSamples.size() > 0 && (parentSamples.get(0).getStringVal("ExemplarSampleType", user).toLowerCase().equals(librarySampleTypes.get(0))
-                    || parentSamples.get(0).getStringVal("ExemplarSampleType", user).toLowerCase().equals(librarySampleTypes.get(1)))) {
+            if (parentSamples.size() > 0 && (parentSamples.get(0).getStringVal("ExemplarSampleType", user).equalsIgnoreCase(librarySampleTypes.get(0))
+                    || parentSamples.get(0).getStringVal("ExemplarSampleType", user).equalsIgnoreCase(librarySampleTypes.get(1)))) {
                 samplesInPool = parentSamples;
                 found = true;
             } else {
@@ -177,13 +192,14 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
      * This method first finds Samples in Sample pool. And then iterate through each sample to find related IndexId. And then
      * creates the List of IndexIds for samples in pools. The values in the List are finally concatenated to return all the IndexIds
      * as a String.
+     *
      * @param sample
      * @return String IndexId values for Samples in Pool if found, else returns "" with a warning.
      * @throws RemoteException
      * @throws NotFound
      * @throws IoError
      */
-    private String getIndexIdsForPooledSample(DataRecord sample) throws RemoteException, NotFound, IoError {
+    private String getIndexIdsForPooledSample(DataRecord sample) throws RemoteException, NotFound, IoError, ServerException {
         List<DataRecord> samplesInPool = getSamplesInPool(sample);
         List<String> indexIds = new ArrayList<>();
         for (DataRecord samp : samplesInPool) {
@@ -196,6 +212,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
      * This method first finds Samples in Sample pool. And then iterate through each sample to find related IndexTag. And then
      * creates the List of IndexTags for samples in pools. The values in the List are finally concatenated to return all the IndexTags
      * as a String.
+     *
      * @param sample
      * @return String IndexTag values for Samples in Pool if found, else returns "" with a warning.
      * @throws RemoteException
@@ -218,6 +235,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
      * This method looks for Sample that has a child record of type SeqRequirement/SeqRequirementPooled. If not found on the starting sample,
      * the method keep looking upstream the parent hierarchy of the sample until a parent with a child record of SeqRequirement/SeqRequirementPooled
      * is found.
+     *
      * @param sample
      * @return Double value RequestedReads value from SeqRequirement/SeqRequirementPooled record if found, else returns 0.0 with a warning.
      * @throws IoError
@@ -226,28 +244,17 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws InvalidValue
      */
-    private Double getRequestedReadsForsample(DataRecord sample) throws IoError, RemoteException, NotFound, ServerException, InvalidValue {
+    private Double getRequestedReadsForSample(DataRecord sample) throws IoError, RemoteException, NotFound, ServerException, InvalidValue {
         String sequencingRequirementDatatype = getSequencingRequirementDataType(sample);
         Double requestedReads = null;
         DataRecord[] sequencingRequirementRecords = sample.getChildrenOfType(sequencingRequirementDatatype, user);
         if (sequencingRequirementRecords.length > 0 && sequencingRequirementRecords[0].getValue("RequestedReads", user) != null) {
             requestedReads = sequencingRequirementRecords[0].getDoubleVal("RequestedReads", user);
         } else {
-            boolean found = false;
-            DataRecord startingSample = sample;
-            while (!found && startingSample != null) {
-                List<DataRecord> parentSamples = startingSample.getParentsOfType("Sample", user);
-                DataRecord parentSample = null;
-                if (!parentSamples.isEmpty()) {
-                    parentSample = parentSamples.get(0);
-                }
-                if (parentSample != null && parentSample.getChildrenOfType(sequencingRequirementDatatype, user).length > 0
-                        && parentSample.getChildrenOfType(sequencingRequirementDatatype, user)[0].getValue("RequestedReads", user) != null) {
-                    requestedReads = parentSample.getChildrenOfType(sequencingRequirementDatatype, user)[0].getDoubleVal("RequestedReads", user);
-                    found = true;
-                } else {
-                    startingSample = parentSample;
-                }
+            DataRecord parentSample = getSampleParentWithDesiredChildRecord(sample, sequencingRequirementDatatype);
+            if (parentSample != null && parentSample.getChildrenOfType(sequencingRequirementDatatype, user).length > 0
+                    && parentSample.getChildrenOfType(sequencingRequirementDatatype, user)[0].getValue("RequestedReads", user) != null) {
+                requestedReads = parentSample.getChildrenOfType(sequencingRequirementDatatype, user)[0].getDoubleVal("RequestedReads", user);
             }
         }
         if (requestedReads != null && requestedReads > 0.0) {
@@ -262,6 +269,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
      * This method looks for Sample that has a child record of type SeqRequirement/SeqRequirementPooled. If not found on the starting sample,
      * the method keep looking upstream the parent hierarchy of the sample until a parent with a child record of SeqRequirement/SeqRequirementPooled
      * is found.
+     *
      * @param sample
      * @return Integer value CoverageTarget value from SeqRequirement/SeqRequirementPooled record if found, else returns 0 with a warning.
      * @throws IoError
@@ -270,29 +278,17 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws InvalidValue
      */
-    private Integer getCoverageTargetForsample(DataRecord sample) throws IoError, RemoteException, NotFound, ServerException, InvalidValue {
+    private Integer getCoverageTargetForSample(DataRecord sample) throws IoError, RemoteException, NotFound, ServerException, InvalidValue {
         String sequencingRequirementDatatype = getSequencingRequirementDataType(sample);
-        logInfo("SeqRequirement DataType: " + sequencingRequirementDatatype);
         Integer coverageTarget = null;
         DataRecord[] sequencingRequirementRecords = sample.getChildrenOfType(sequencingRequirementDatatype, user);
         if (sequencingRequirementRecords.length > 0 && sequencingRequirementRecords[0].getValue("CoverageTarget", user) != null) {
             coverageTarget = sequencingRequirementRecords[0].getIntegerVal("CoverageTarget", user);
         } else {
-            boolean found = false;
-            DataRecord startingSample = sample;
-            while (!found && startingSample != null) {
-                List<DataRecord> parentSamples = startingSample.getParentsOfType("Sample", user);
-                DataRecord parentSample = null;
-                if (!parentSamples.isEmpty()) {
-                    parentSample = parentSamples.get(0);
-                }
-                if (parentSample != null && parentSample.getChildrenOfType(sequencingRequirementDatatype, user).length > 0
-                        && parentSample.getChildrenOfType(sequencingRequirementDatatype, user)[0].getValue("CoverageTarget", user) != null) {
-                    coverageTarget = parentSample.getChildrenOfType(sequencingRequirementDatatype, user)[0].getIntegerVal("CoverageTarget", user);
-                    found = true;
-                } else {
-                    startingSample = parentSample;
-                }
+            DataRecord parentSample = getSampleParentWithDesiredChildRecord(sample, sequencingRequirementDatatype);
+            if (parentSample != null && parentSample.getChildrenOfType(sequencingRequirementDatatype, user).length > 0
+                    && parentSample.getChildrenOfType(sequencingRequirementDatatype, user)[0].getValue("CoverageTarget", user) != null) {
+                coverageTarget = parentSample.getChildrenOfType(sequencingRequirementDatatype, user)[0].getIntegerVal("CoverageTarget", user);
             }
         }
         if (coverageTarget != null && coverageTarget > 0) {
@@ -306,6 +302,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
     /**
      * Because the sequencing requirements for a Library Sample and Pooled Library Sample are stored under different DataRecords,
      * this method returns the DataType name for DataRecord containing Sequencing Requirement values for a sample.
+     *
      * @param sample
      * @return String value DataType name for DataRecord containing Sequencing Requirement values for a sample.
      * @throws NotFound
@@ -315,11 +312,10 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
      */
     private String getSequencingRequirementDataType(DataRecord sample) throws NotFound, RemoteException, ServerException, InvalidValue {
         String sampleType = sample.getStringVal("ExemplarSampleType", user);
-        logInfo("SampleType: " + sampleType);
-        if (sampleType.toLowerCase().equals(librarySampleTypes.get(0)) || sampleType.toLowerCase().equals(librarySampleTypes.get(1))) {
+        if (sampleType.equalsIgnoreCase(librarySampleTypes.get(0)) || sampleType.equalsIgnoreCase(librarySampleTypes.get(1))) {
             return "SeqRequirement";
         }
-        if (sampleType.toLowerCase().equals(librarySampleTypes.get(2))) {
+        if (sampleType.equalsIgnoreCase(librarySampleTypes.get(2))) {
             return "SeqRequirementPooled";
         } else {
             clientCallback.displayError(String.format("Invalid SampleType '%s' for sample '%s'", sampleType, sample.getStringVal("SampleId", user)));
@@ -331,6 +327,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
      * This method looks for Sample that has a child record of type SeqRequirement/SeqRequirementPooled. If not found on the starting sample,
      * the method keep looking upstream the parent hierarchy of the sample until a parent with a child record of SeqRequirement/SeqRequirementPooled
      * is found.
+     *
      * @param sample
      * @return String value SequencingRunType value from SeqRequirement/SeqRequirementPooled record if found, else returns "" with a warning.
      * @throws IoError
@@ -339,28 +336,17 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws InvalidValue
      */
-    private String getSequencingRunTypeForsample(DataRecord sample) throws IoError, RemoteException, NotFound, ServerException, InvalidValue {
+    private String getSequencingRunTypeForSample(DataRecord sample) throws IoError, RemoteException, NotFound, ServerException, InvalidValue {
         String sequencingRequirementDatatype = getSequencingRequirementDataType(sample);
         String sequencingRunType = null;
         DataRecord[] sequencingRequirementRecords = sample.getChildrenOfType(sequencingRequirementDatatype, user);
         if (sequencingRequirementRecords.length > 0 && sequencingRequirementRecords[0].getValue("SequencingRunType", user) != null) {
             sequencingRunType = sequencingRequirementRecords[0].getStringVal("SequencingRunType", user);
         } else {
-            boolean found = false;
-            DataRecord startingSample = sample;
-            while (!found && startingSample != null) {
-                List<DataRecord> parentSamples = startingSample.getParentsOfType("Sample", user);
-                DataRecord parentSample = null;
-                if (!parentSamples.isEmpty()) {
-                    parentSample = parentSamples.get(0);
-                }
-                if (parentSample != null && parentSample.getChildrenOfType(sequencingRequirementDatatype, user).length > 0
-                        && parentSample.getChildrenOfType(sequencingRequirementDatatype, user)[0].getValue("SequencingRunType", user) != null) {
-                    sequencingRunType = parentSample.getChildrenOfType(sequencingRequirementDatatype, user)[0].getStringVal("SequencingRunType", user);
-                    found = true;
-                } else {
-                    startingSample = parentSample;
-                }
+            DataRecord parentSample = getSampleParentWithDesiredChildRecord(sample, sequencingRequirementDatatype);
+            if (parentSample != null && parentSample.getChildrenOfType(sequencingRequirementDatatype, user).length > 0
+                    && parentSample.getChildrenOfType(sequencingRequirementDatatype, user)[0].getValue("SequencingRunType", user) != null) {
+                sequencingRunType = parentSample.getChildrenOfType(sequencingRequirementDatatype, user)[0].getStringVal("SequencingRunType", user);
             }
         }
         if (sequencingRunType != null) {
@@ -373,6 +359,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
 
     /**
      * This method loops through the QcData records and finds the record that whose values are mapped to the sample in question.
+     *
      * @param qcData
      * @return Double value if found, else returns null.
      * @throws NotFound
@@ -389,6 +376,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
 
     /**
      * This method loops through the samples and finds associated QcData records and finds the AvgSize from the QcRecords.
+     *
      * @param sample
      * @return Double value if found, else returns "" with a warning.
      * @throws NotFound
@@ -402,20 +390,9 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
         if (qcDatumRecords.length > 0 && qcDatumRecords[0].getValue("AvgSize", user) != null) {
             avgSize = qcDatumRecords[0].getDoubleVal("AvgSize", user);
         } else {
-            boolean found = false;
-            DataRecord startingSample = sample;
-            while (!found && startingSample != null) {
-                List<DataRecord> parentSamples = startingSample.getParentsOfType("Sample", user);
-                DataRecord parentSample = null;
-                if (!parentSamples.isEmpty()) {
-                    parentSample = parentSamples.get(0);
-                }
-                if (parentSample != null && parentSample.getChildrenOfType(QCDatumModel.DATA_TYPE_NAME, user).length > 0) {
-                    avgSize = getAverageSizeFromQcData(Arrays.asList(parentSample.getChildrenOfType(QCDatumModel.DATA_TYPE_NAME, user)));
-                    found = true;
-                } else {
-                    startingSample = parentSample;
-                }
+            DataRecord parentSample = getSampleParentWithDesiredChildRecord(sample, QCDatumModel.DATA_TYPE_NAME);
+            if (parentSample != null && parentSample.getChildrenOfType(QCDatumModel.DATA_TYPE_NAME, user).length > 0) {
+                avgSize = getAverageSizeFromQcData(Arrays.asList(parentSample.getChildrenOfType(QCDatumModel.DATA_TYPE_NAME, user)));
             }
         }
         if (avgSize != null && avgSize > 0.0) {
@@ -428,6 +405,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
 
     /**
      * This method loops through the planningStepProtocolRecords and updates the values for fields.
+     *
      * @param samples
      * @param planningStepProtocolRecords
      * @throws IoError
@@ -444,18 +422,17 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
                 String protocolSampleId = rec.getStringVal("SampleId", user);
                 if (protocolSampleId.equals(sampleId)) {
                     Map<String, Object> fieldValues = new HashMap<>();
-                    if (sampleType.toLowerCase().equals(librarySampleTypes.get(2))) {
+                    if (sampleType.equalsIgnoreCase(librarySampleTypes.get(2))) {
                         fieldValues.put("IndexId", getIndexIdsForPooledSample(sample));
                         fieldValues.put("IndexTag", getIndexTagsForPooledSample(sample));
                     } else {
                         fieldValues.put("IndexId", getSampleLibraryIndexId(sample));
                         fieldValues.put("IndexTag", getSampleLibraryIndexTag(sample));
                     }
-                    fieldValues.put("RequestedReads", getRequestedReadsForsample(sample));
-                    fieldValues.put("CoverageTarget", getCoverageTargetForsample(sample));
-                    fieldValues.put("SequencingRunType", getSequencingRunTypeForsample(sample));
+                    fieldValues.put("RequestedReads", getRequestedReadsForSample(sample));
+                    fieldValues.put("CoverageTarget", getCoverageTargetForSample(sample));
+                    fieldValues.put("SequencingRunType", getSequencingRunTypeForSample(sample));
                     fieldValues.put("AvgSize", getAvgSizeForSample(sample));
-                    logInfo("Printing values:\n" + fieldValues.toString());
                     rec.setFields(fieldValues, user);
                 }
             }

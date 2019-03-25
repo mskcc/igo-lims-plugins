@@ -18,6 +18,7 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 import org.apache.commons.lang3.StringUtils;
+import org.mockito.internal.matchers.Not;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -273,7 +274,6 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
         }
         List<String> sortedControlSampleIds = controlSampleIds.stream().sorted(new AlphaNumericComparator()).collect(Collectors.toList());
         sampleIds.addAll(sortedControlSampleIds);
-        logInfo(sampleIds.toString());
         return sampleIds;
     }
 
@@ -330,11 +330,9 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
         for (DataRecord sample : attachedSamples) {
             String plateId = sample.getStringVal("RelatedRecord23", user);
             if (plateId != null && !uniquePlateIds.contains(plateId)) {
-                logInfo("PlateId : " + plateId);
                 uniquePlateIds.add(plateId);
             }
         }
-        logInfo("Number of Plates : " + uniquePlateIds.size());
         return uniquePlateIds;
     }
 
@@ -363,7 +361,6 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * @return int
      */
     private int getNumberOfNewPlatesFor96To96Transfer(int sampleSize, int plateSize) {
-        logInfo("Number of plates needed : " + Integer.toString((int) Math.ceil((double) sampleSize / (double) plateSize)));
         return (int) Math.ceil((double) sampleSize / (double) plateSize);
     }
 
@@ -590,7 +587,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws com.velox.api.util.ServerException
      */
-    private void assignPositionsMapFor96To384WellPlate(List<DataRecord> attachedSamples, String destination384PlateId, List<Map<String, Object>> quadrantValues, String targetPlateIdFieldName, String targetWellIdFieldName, List<DataRecord> newPlateProtocolRecordName) throws NotFound, RemoteException, com.velox.api.util.ServerException {
+    private void assignPositionsMapFor96To384WellPlate(List<DataRecord> attachedSamples, String destination384PlateId, List<Map<String, Object>> quadrantValues, String targetPlateIdFieldName, String targetWellIdFieldName, List<DataRecord> newPlateProtocolRecordName) throws RemoteException, com.velox.api.util.ServerException, NotFound {
         for (Map quadrantMap : quadrantValues) {
             String plateId = quadrantMap.get("PlateId").toString();
             String quadrantId = quadrantMap.get("QuadrantNumber").toString();
@@ -599,7 +596,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
                 if (sample.getValue("RelatedRecord23", user) == null) {
                     clientCallback.displayError(String.format("Invalid Plate ID '%s' for sample '%s'.\nAll samples must have a Plate ID value for 96 to 384 assignment.",
                             sample.getValue("RelatedRecord23", user), sampleId));
-                    logError(String.format("Invalid Plate ID '%s' for sample '%s'. All samples must have a Plate ID value for 96 to 384 assignment.",
+                    throw new NotFound(String.format("Invalid Plate ID '%s' for sample '%s'. All samples must have a Plate ID value for 96 to 384 assignment.",
                             sample.getValue("RelatedRecord23", user), sampleId));
                 }
                 String samplePlate = sample.getStringVal("RelatedRecord23", user);
