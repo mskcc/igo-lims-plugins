@@ -1,7 +1,6 @@
 package com.velox.sloan.cmo.workflows.IgoLimsPluginUtils;
 
 import org.apache.commons.lang3.StringUtils;
-import org.json.JSONObject;
 
 import java.io.*;
 import java.util.*;
@@ -10,22 +9,6 @@ import java.util.*;
  This class will contain all the common methods which are often used repeatedly across different plugins.
  */
 public class IgoLimsPluginUtils {
-
-     public final JSONObject EXEMPLAR_SAMPLE_TYPES = new JSONObject(
-                                                            "{\"DNA\":\"DNA\"," +
-                                                                    "\"RNA\":\"RNA\"," +
-                                                                    "\"cDNA\":\"cDNA\"," +
-                                                                    "\"DNA Library\":\"DNA Library\"," +
-                                                                    "\"cDNA Library\":\"cDNA Library\"," +
-                                                                    " \"Pooled Library\":\"Pooled Library\"," +
-                                                                    "\"Tissue\":\"Tissue\"," +
-                                                                    " \"Blocks/Slides\":\"Blocks/Slides\"," +
-                                                                    " \"Blood\":\"Blood\"," +
-                                                                    "\"Buffy Coat\":\"Buffy Coat\"," +
-                                                                    "  \"Cells\":\"Cells\"," +
-                                                                    " \"dfDNA\":\"cfDNA\"," +
-                                                                    " \"other\":\"other\" }"
-                                                    );
 
     public boolean isCsvFile(String fileName) {
         return fileName.toLowerCase().endsWith(".csv");
