@@ -11,10 +11,7 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 
 import java.rmi.RemoteException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -57,7 +54,7 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
     }
 
     /**
-     * Get all the existing aliquots that contain the sampleID of given sample.
+     * Gets all the existing aliquots that contain the sampleID of given sample.
      *
      * @param sample
      * @return List of DataRecords
@@ -76,7 +73,7 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
     }
 
     /**
-     * Get sample Ids for the list of given samples
+     * Gets sample Ids for the list of given samples
      *
      * @param samples
      * @return list of SampleId strings
@@ -92,7 +89,7 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
     }
 
     /**
-     * Get the next sample Id given a Sample DataRecord. It is important to make sure the next sample ID
+     * Gets the next sample Id given a Sample DataRecord. It is important to make sure the next sample ID
      * that is generated is not already assigned to any of the aliquots existing under the parent project
      * of a given sample.
      *
@@ -118,8 +115,9 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
     }
 
     /**
-     * Replace the 'SampleId' value for pooled sample with regular SampleId that does not contains 'Pool-'
-     * substring in SampleId value.
+     * Replaces the 'SampleId' value for pooled sample with regular SampleId that does not contains 'Pool-'
+     * substring in SampleId value. Also, removes children of type "SeqRequirementPooled" from the sample as it
+     * will not be relevant anymore and it will never be used.
      *
      * @param samples
      * @throws NotFound
@@ -134,6 +132,10 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
                 newValues.put("SampleId", getNextSampleId(sample));
                 newValues.put("ExemplarSampleType", getSampleTypeToAssign(sample));
                 sample.setFields(newValues, user);
+                if(sample.getChildrenOfType("SeqRequirementPooled", user).length>0){
+                    List<DataRecord> seqRequirementPooledChild = Arrays.asList(sample.getChildrenOfType("SeqRequirementPooled", user));
+                    dataRecordManager.deleteDataRecords(seqRequirementPooledChild, null, false, user);
+                }
             }
         }
     }
