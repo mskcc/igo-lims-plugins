@@ -134,6 +134,9 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
                 sample.setFields(newValues, user);
                 if(sample.getChildrenOfType("SeqRequirementPooled", user).length>0){
                     List<DataRecord> seqRequirementPooledChild = Arrays.asList(sample.getChildrenOfType("SeqRequirementPooled", user));
+                    logInfo("Found SeqRequirementPooled for Sample " + seqRequirementPooledChild.get(0).getStringVal("SampleId", user) +
+                    ". It is an ampliseq DNA pool, therefore associated  SeqRequirementPooled records will be deleted. Because the PoolId is overwritten, the " +
+                            "associated SeqRequirementPooled are not relevant.");
                     dataRecordManager.deleteDataRecords(seqRequirementPooledChild, null, false, user);
                 }
             }
