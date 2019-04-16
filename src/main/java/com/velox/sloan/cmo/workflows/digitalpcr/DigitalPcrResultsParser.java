@@ -13,16 +13,25 @@ import org.apache.commons.lang3.StringUtils;
 import java.rmi.RemoteException;
 import java.util.*;
 
+/**
+ * This plugin is designed to import ddPCR results into LIMS. The Raw data from csv file is parsed,
+ * and plugin will calculate the final results and store in "DdPcrAssayResults" DataType as child to sample.
+ *
+ * @author Ajay Sharma
+ */
 public class DigitalPcrResultsParser extends DefaultGenericPlugin{
 
     IgoLimsPluginUtils igoUtils = new IgoLimsPluginUtils();
-    private List<String> expectedRawResultsHeaders = Arrays.asList("Well", "ExptType", "Experiment", "Sample", "TargetType", "Target",
+    DdPcrResultsProcessor resultsProcessor = new DdPcrResultsProcessor();
+    private final String HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME = "Mouse_Human_CNV_PTGER2";
+    private final List<String> expectedRawResultsHeaders = Arrays.asList("Well", "ExptType", "Experiment", "Sample", "TargetType", "Target",
             "Status", "Concentration","Supermix", "CopiesPer20uLWell", "TotalConfMax", "TotalConfMin", "PoissonConfMax", "PoissonConfMin",
             "Positives", "Negatives", "Ch1+Ch2+", "Ch1+Ch2-", "Ch1-Ch2+", "Ch1-Ch2-", "Linkage", "AcceptedDroplets");
 
     public DigitalPcrResultsParser(){
         setTaskEntry(true);
         setOrder(PluginOrder.EARLY.getOrder());
+        setDescription("Generates report for ddPCR experiment with specific columns.");
     }
 
     @Override
@@ -67,13 +76,20 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin{
         return new PluginResult(true);
     }
 
+    /**
+     * Check if the passed file is a valid CSV file.
+     * @param fileName
+     * @param fileData
+     * @return
+     * @throws ServerException
+     */
     private boolean isValidFile(String fileName, List<String> fileData) throws ServerException {
         if (!igoUtils.isCsvFile(fileName)){
             clientCallback.displayError(String.format("Uploaded file '%s' is not a '.csv' file", fileName));
             logError(String.format("Uploaded file '%s' is not a '.csv' file", fileName));
             return false;
         }
-        if(!igoUtils.csvFileContainsNeededHeaderValues(fileData, expectedRawResultsHeaders)){
+        if(!igoUtils.csvFileContainsRequiredHeaders(fileData, expectedRawResultsHeaders)){
             clientCallback.displayError(String.format("Uploaded file '%s' has incorrect header. Please check the file", fileName));
             logError(String.format("Uploaded file '%s' has incorrect header. Please check the file", fileName));
             return false;
@@ -86,87 +102,80 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin{
         return true;
     }
 
+    /**
+     * Get the data related to channel1 in the raw data under "TargetType" column in ddPCR results.
+     * @param fileData
+     * @param headerValueMap
+     * @return data related to channel1 in the raw data under "TargetType" column in ddPCR results.
+     */
     private List<List<String>> getChannel1Data(List<String> fileData, Map<String, Integer> headerValueMap){
-        List<List<String>> channel1RawData = new ArrayList<>();
-        for (String row : fileData) {
-            List<String> valuesInRow = Arrays.asList(row.split(","));
-            if (valuesInRow.get(headerValueMap.get("TargetType")).contains("Ch1")) {
-                channel1RawData.add(valuesInRow);
-            }
-        }
-        return channel1RawData;
+        return resultsProcessor.readChannel1Data(fileData, headerValueMap);
     }
 
+    /**
+     *
+     * @param fileData
+     * @param headerValueMap
+     * @return data related to channel2 in the raw data under "TargetType" column in ddPCR results.
+     */
     private List<List<String>> getChannel2Data(List<String> fileData, Map<String, Integer> headerValueMap){
-        List<List<String>> channel2RawData = new ArrayList<>();
-        for (String row : fileData) {
-            List<String> valuesInRow = Arrays.asList(row.split(","));
-            if (valuesInRow.get(headerValueMap.get("TargetType")).contains("Ch2")) {
-                channel2RawData.add(valuesInRow);
-            }
-        }
-        return channel2RawData;
+        return resultsProcessor.readChannel2Data(fileData, headerValueMap);
     }
 
+    /**
+     * Add Channel2 data to the rows containing Channel1 data as Concentration of the Reference.
+     * @param channel1Data
+     * @param channel2Data
+     * @param headerValueMap
+     * @return Channel1 and Channel2 combined data.
+     */
     private List<Map<String, Object>> flattenChannel1AndChannel2Data(List<List<String>>channel1Data, List<List<String>>channel2Data, Map<String, Integer> headerValueMap){
-        List<Map<String,Object>> flatData = new ArrayList<>();
-        for (List<String> s1 : channel1Data){
-            String s1Well = s1.get(headerValueMap.get("Well"));
-            String s1SampleId = s1.get(headerValueMap.get("Sample"));
-            for (List<String> s2 : channel2Data ){
-                String s2Well = s2.get(headerValueMap.get("Well"));
-                String s2SampleId = s2.get(headerValueMap.get("Sample"));
-                if (s2Well.equalsIgnoreCase(s1Well) && s2SampleId.equalsIgnoreCase(s1SampleId)) {
-                    Map<String, Object> sampleValues = new HashMap<>();
-                    sampleValues.put("Well", s1.get(headerValueMap.get("Well")));
-                    sampleValues.put("Sample", s1.get(headerValueMap.get("Sample")));
-                    sampleValues.put("Target", s1.get(headerValueMap.get("Target")));
-                    sampleValues.put("ConcentrationMutation", Double.parseDouble(s1.get(headerValueMap.get("Concentration"))));
-                    sampleValues.put("ConcentrationWildType", Double.parseDouble(s2.get(headerValueMap.get("Concentration"))));
-                    sampleValues.put("Channel1PosChannel2Pos", Integer.parseInt(s1.get(headerValueMap.get("Ch1+Ch2+"))));
-                    sampleValues.put("Channel1PosChannel2Neg", Integer.parseInt(s1.get(headerValueMap.get("Ch1+Ch2-"))));
-                    sampleValues.put("Channel1NegChannel2Pos", Integer.parseInt(s1.get(headerValueMap.get("Ch1-Ch2+"))));
-                    sampleValues.put("AcceptedDroplets", Integer.parseInt(s1.get(headerValueMap.get("AcceptedDroplets"))));
-                    flatData.add(sampleValues);
-                }
-
-            }
-        }
-        return flatData;
+        return resultsProcessor.concatenateChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap);
     }
 
+    /**
+     * Group the data based on Sample and Target values in the results.
+     * @param flatData
+     * @return data grouped by Sample and Target values.
+     */
     private Map<String,List<Map<String,Object>>> groupResultsBySampleAndAssay(List<Map<String, Object>> flatData){
-        Map<String,List<Map<String,Object>>> groupedData = new HashMap<>();
-        for (Map<String, Object> data : flatData){
-            String keyValue = data.get("Sample").toString() + "/" + data.get("Target").toString();
-            groupedData.putIfAbsent(keyValue, new ArrayList<>());
-            groupedData.get(keyValue).add(data);
-        }
-        return groupedData;
+       return resultsProcessor.aggregateResultsBySampleAndAssay(flatData);
     }
 
+    /**
+     * Get average of specific values from the List of HashMaps.
+     * @param sampleData
+     * @param fieldName
+     * @return average of values under key identified by fieldName passed to the method.
+     */
     private Double getAverage(List<Map<String,Object>> sampleData, String fieldName){
-        Double sum = 0.0;
-        for (Map<String, Object> data : sampleData){
-            sum += Double.parseDouble(data.get(fieldName).toString());
-        }
-        return sum/sampleData.size();
+       return resultsProcessor.calculateAverage(sampleData, fieldName);
     }
 
+    /**
+     * Get Sum of specific values from the List of HashMaps.
+     * @param sampleData
+     * @param fieldName
+     * @return sun of values under key identified by fieldName passed to the method.
+     */
     private Integer getSum(List<Map<String,Object>> sampleData, String fieldName){
-        int sum = 0;
-        for (Map<String, Object> data : sampleData){
-            sum += Integer.parseInt(data.get(fieldName).toString());
-        }
-        return sum/sampleData.size();
+       return resultsProcessor.calculateSum(sampleData, fieldName);
     }
 
+    /**
+     * Get total input used for sample and replicates to perform the experiment.
+     * @param sampleName
+     * @param assayName
+     * @param protocolRecords
+     * @return DNA input amount used to perform the experiment.
+     * @throws NotFound
+     * @throws RemoteException
+     */
     private Double getTotalInputForSample(String sampleName, String assayName, List<DataRecord> protocolRecords) throws NotFound, RemoteException {
         for(DataRecord record : protocolRecords){
             Object sampleNameOnProtocol = record.getValue("OtherSampleId", user);
             Object assayOnProtocol = record.getValue("Ch1Target", user);
             Object igoSampleIdOnProtocol = record.getStringVal("SampleId", user);
-            logInfo("IgoId: " + igoSampleIdOnProtocol.toString() + " ----> SampleName : " + sampleNameOnProtocol);
             if(sampleNameOnProtocol != null && assayOnProtocol!=null && sampleName.equalsIgnoreCase(sampleNameOnProtocol.toString())
             && assayName.equalsIgnoreCase(assayOnProtocol.toString())){
                 Object totalInput = record.getValue("Aliq1TargetMass", user);
@@ -186,28 +195,46 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin{
         return 0.0;
     }
 
+    /**
+     * Calculate Ration between two values.
+     * @param dropletCountMutation
+     * @param dropletCountWildType
+     * @return ration of dropletCountMutation/dropletCountWildType.
+     */
     private Double getRatio(Double dropletCountMutation, Double dropletCountWildType){
-        if (dropletCountWildType<=0){
-            dropletCountWildType=1.0;
-        }
-        return dropletCountMutation/dropletCountWildType;
+        return resultsProcessor.calculateRatio(dropletCountMutation, dropletCountWildType);
     }
 
-    private Double calculateTotalDnaDetected(Double concentrationMutation, Double ConcentrationWildType){
-        if (ConcentrationWildType<=0){
-            ConcentrationWildType=1.0;
-        }
-        return (concentrationMutation/ConcentrationWildType) * 0.066;
+    /**
+     * Calculate total DNA detected in the ddPCR experiment.
+     * @param concentrationMutation
+     * @param concentrationWildType
+     * @return total DNA amount detected in the ddPCR experiment results.
+     */
+    private Double calculateTotalDnaDetected(Double concentrationMutation, Double concentrationWildType){
+       return resultsProcessor.calculateTotalDnaDetected(concentrationMutation, concentrationWildType);
     }
 
+    /**
+     * Calculate the percentage of Human and Mouse DNA in case the samples are xenografts.
+     * @param dropletCountMutation
+     * @param dropletCountWildType
+     * @return Percentage of Human sample in the sample used for ddPCR Assay.
+     */
     private Double calculateHumanPercentage(Integer dropletCountMutation, Integer dropletCountWildType){
-        if(dropletCountWildType<=0){
-            dropletCountWildType = 1;
-        }
-        return (dropletCountMutation/(dropletCountMutation+dropletCountWildType))*100.0;
+        return resultsProcessor.calculateHumanPercentage(dropletCountMutation, dropletCountWildType);
     }
 
+    /**
+     * Calculate final result values from the raw data.
+     * @param groupedData
+     * @param protocolRecords
+     * @return final ddPCR results. One row per sample.
+     * @throws NotFound
+     * @throws RemoteException
+     */
     private List<Map<String, Object>> runDataAnalysisForAssays(Map<String,List<Map<String,Object>>> groupedData, List<DataRecord>protocolRecords) throws NotFound, RemoteException {
+        logInfo("Analyzing ddPCR Results.");
         List<Map<String, Object>> analyzedDataValues = new ArrayList<>();
         for (String key : groupedData.keySet()){
             Map<String, Object> analyzedData = new HashMap<>();
@@ -229,14 +256,25 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin{
             Double ratio = getRatio(Double.valueOf(analyzedData.get("DropletCountMutation").toString()),Double.valueOf(analyzedData.get("DropletCountWildType").toString()));
             analyzedData.put("Ratio", ratio);
             analyzedData.put("AcceptedDroplets", getSum(groupedData.get(key), "AcceptedDroplets"));
-            Double humanPercentage = calculateHumanPercentage(dropletCountMutation, dropletCountWildType);
-            analyzedData.put("HumanPercentage", humanPercentage);
+            if (target.equalsIgnoreCase(HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME)) {
+                Double humanPercentage = calculateHumanPercentage(dropletCountMutation, dropletCountWildType);
+                analyzedData.put("HumanPercentage", humanPercentage);
+            }
             analyzedData.put("TotalInput", getTotalInputForSample(sampleName, target, protocolRecords));
             analyzedDataValues.add(analyzedData);
         }
         return analyzedDataValues;
     }
 
+    /**
+     * Add the results as Children to the Sample DataType.
+     * @param analyzedDataValues
+     * @param attachedSamples
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws ServerException
+     * @throws IoError
+     */
     private void addResultsAsChildRecords( List<Map<String, Object>> analyzedDataValues, List<DataRecord> attachedSamples) throws NotFound, RemoteException, ServerException, IoError {
         List<Object> alreadyAdded = new ArrayList<>();
         List<DataRecord> recordsToAttachToTask = new ArrayList<>();
@@ -255,6 +293,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin{
                 }
             }
         }
+        logInfo("Assigning ddPCR Results as Children.");
         activeTask.addAttachedDataRecords(recordsToAttachToTask);
         activeTask.getTask().getTaskOptions().put("_DDPCR RESULTS PARSED","");
     }

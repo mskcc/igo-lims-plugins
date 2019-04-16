@@ -36,6 +36,10 @@ public class IgoLimsPluginUtils {
         return Arrays.asList(fileData.get(0).split(",")).equals(expectedHeaderValues);
     }
 
+    public boolean csvFileContainsRequiredHeaders(List<String> fileData, List<String> expectedHeaderValues){
+        return Arrays.asList(fileData.get(0).split(",")).containsAll(expectedHeaderValues);
+    }
+
     public String convertListToString(List<String> listWithValues) {
         return StringUtils.join(listWithValues, "\n");
     }

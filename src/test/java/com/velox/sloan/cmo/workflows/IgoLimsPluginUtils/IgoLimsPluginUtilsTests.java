@@ -93,6 +93,18 @@ public class IgoLimsPluginUtilsTests {
     }
 
     @Test
+    public void csvFileContainsRequiredHeaders_shouldReturnTrueWhenAllValuesAreContained(){
+        List<String> headerValues = Arrays.asList("RACKID", "TUBE", "SAMPLES", "STATUS");
+        assertTrue(commonMethods.csvFileContainsRequiredHeaders(dataFromFile, headerValues));
+    }
+
+    @Test
+    public void csvFileContainsRequiredHeaders_shouldReturnFalseWhenAllValuesAreNotContained(){
+        List<String> headerValues = Arrays.asList("RACKID", "TUBE", "SAMPLES", "STATUS", "ALPHA", "BETA");// ALPHA, BETA are not contained in the headers
+        assertFalse(commonMethods.csvFileContainsRequiredHeaders(dataFromFile, headerValues));
+    }
+
+    @Test
     public void rowInCsvFileHasRequiredValues_shouldReturnTrueIfRowHasRequiredValues(){
         String validRowValues= "abc, A1, 0,3,12.5,12.6, 0.22";
         assertTrue(commonMethods.rowInCsvFileHasRequiredValues(validRowValues, headerWithMustHaveValuesInRow,headerValuesMap));
