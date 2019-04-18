@@ -29,11 +29,11 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
 
     @Override
     public List<Map<String, Object>> concatenateChannel1AndChannel2Data(List<List<String>> channel1Data, List<List<String>> channel2Data, Map<String, Integer> headerValueMap) {
-        List<Map<String,Object>> flatData = new ArrayList<>();
-        for (List<String> s1 : channel1Data){
+        List<Map<String, Object>> flatData = new ArrayList<>();
+        for (List<String> s1 : channel1Data) {
             String s1Well = s1.get(headerValueMap.get("Well"));
             String s1SampleId = s1.get(headerValueMap.get("Sample"));
-            for (List<String> s2 : channel2Data ){
+            for (List<String> s2 : channel2Data) {
                 String s2Well = s2.get(headerValueMap.get("Well"));
                 String s2SampleId = s2.get(headerValueMap.get("Sample"));
                 if (s2Well.equalsIgnoreCase(s1Well) && s2SampleId.equalsIgnoreCase(s1SampleId)) {
@@ -56,8 +56,8 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
 
     @Override
     public Map<String, List<Map<String, Object>>> aggregateResultsBySampleAndAssay(List<Map<String, Object>> flatData) {
-        Map<String,List<Map<String,Object>>> groupedData = new HashMap<>();
-        for (Map<String, Object> data : flatData){
+        Map<String, List<Map<String, Object>>> groupedData = new HashMap<>();
+        for (Map<String, Object> data : flatData) {
             String keyValue = data.get("Sample").toString() + "/" + data.get("Target").toString();
             groupedData.putIfAbsent(keyValue, new ArrayList<>());
             groupedData.get(keyValue).add(data);
@@ -68,16 +68,16 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
     @Override
     public Double calculateAverage(List<Map<String, Object>> sampleData, String fieldName) {
         Double sum = 0.0;
-        for (Map<String, Object> data : sampleData){
+        for (Map<String, Object> data : sampleData) {
             sum += Double.parseDouble(data.get(fieldName).toString());
         }
-        return sum/sampleData.size();
+        return sum / sampleData.size();
     }
 
     @Override
     public Integer calculateSum(List<Map<String, Object>> sampleData, String fieldName) {
         int sum = 0;
-        for (Map<String, Object> data : sampleData){
+        for (Map<String, Object> data : sampleData) {
             sum += Integer.parseInt(data.get(fieldName).toString());
         }
         return sum;
@@ -85,25 +85,22 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
 
     @Override
     public Double calculateRatio(Double dropletCountMutation, Double dropletCountWildType) {
-        if (dropletCountWildType <= 0.0){
-            dropletCountWildType=1.0;
+        if (dropletCountWildType <= 0.0) {
+            dropletCountWildType = 1.0;
         }
-        return dropletCountMutation/dropletCountWildType;
+        return dropletCountMutation / dropletCountWildType;
     }
 
     @Override
     public Double calculateTotalDnaDetected(Double concentrationMutation, Double ConcentrationWildType) {
-        if (ConcentrationWildType <= 0.0){
-            ConcentrationWildType = 1.0;
-        }
-        return (concentrationMutation/ConcentrationWildType) * 0.066;
+        return (concentrationMutation + ConcentrationWildType) * 0.066;
     }
 
     @Override
     public Double calculateHumanPercentage(Integer dropletCountMutation, Integer dropletCountWildType) {
-        if(dropletCountWildType <= 0.0 && dropletCountMutation <= 0.0){
+        if (dropletCountWildType <= 0.0 && dropletCountMutation <= 0.0) {
             return 0.0;
         }
-        return Double.valueOf(dropletCountMutation)/(dropletCountMutation + dropletCountWildType) * 100.0;
+        return Double.valueOf(dropletCountMutation) / (dropletCountMutation + dropletCountWildType) * 100.0;
     }
 }

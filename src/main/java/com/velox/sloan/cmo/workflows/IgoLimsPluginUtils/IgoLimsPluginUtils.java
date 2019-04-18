@@ -5,8 +5,8 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.*;
 import java.util.*;
 
-/*
- This class will contain all the common methods which are often used repeatedly across different plugins.
+/**
+ * This class will contain all the common methods which are often used repeatedly across different plugins.
  */
 public class IgoLimsPluginUtils {
 
