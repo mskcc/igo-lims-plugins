@@ -8,8 +8,17 @@ import org.apache.poi.ss.usermodel.Sheet;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+/**
+ * Class to read Thoracic Banked Sample data from excel file and eneter into LIMS with new UUID and unique values.
+ *
+ * @author sharmaa1@mskcc.org ~Ajay Sharma
+ */
 public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGenerator {
 
+    /**
+     * Method to generate a random Alphanumeric ID for new Banked Samp to be stored in LIMS.
+     * @return unique ID.
+     */
     @Override
     public String generateNewIdForThoracicBankedSample() {
         Random random = new Random();
@@ -24,6 +33,11 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
         return String.format("%s%s%s", uuidCharacterString, time.substring(time.length() - uuidSubstringLength), alphabets.charAt(random.nextInt(lengthOfAlphabets)));
     }
 
+    /**
+     * Method to generate only unique IDs. If a generated unique ID exists in LIMS then it is skipped and a new ID is generated.
+     * @param existingUuids
+     * @return unique ID
+     */
     @Override
     public String compareIdToExistingIdsAndReturnUniqueId(List<String> existingUuids) {
         String uniqueId = "";
@@ -37,16 +51,33 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
         return uniqueId;
     }
 
+    /**
+     * Method to valid if the excel file has valid extension.
+     * @param fileName
+     * @return true/false
+     */
     @Override
     public boolean isValidExcelFile(String fileName) {
         return fileName.toLowerCase().endsWith(".xlsx") || fileName.toLowerCase().endsWith(".xls");
     }
 
+    /**
+     * Method to check if excel file has row data other than header row.
+     * @param sheet
+     * @return true/false
+     */
     @Override
     public boolean excelFileHasData(Sheet sheet) {
         return sheet.getLastRowNum() > 1;
     }
 
+    /**
+     * Method to check if excel file has valid Header values.
+     * @param sheet
+     * @param expectedHeaderValues
+     * @param fileName
+     * @return true/false
+     */
     @Override
     public boolean excelFileHasValidHeader(Sheet sheet, List<String> expectedHeaderValues, String fileName) {
         Row row = sheet.getRow(0);
@@ -61,6 +92,12 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
         return headerValuesInFile.containsAll(expectedHeaderValues);
     }
 
+    /**
+     * Method to parse header values from the excel file.
+     * @param sheet
+     * @param headerValues
+     * @return Map of Header value and Index position
+     */
     @Override
     public Map<String, Integer> parseExcelFileHeader(Sheet sheet, List<String> headerValues) {
         Map<String, Integer> headerNames = new HashMap<>();
@@ -75,6 +112,13 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
         return headerNames;
     }
 
+    /**
+     * Method to read and create Thoracic Banked Sample records from excel file.
+     * @param sheet
+     * @param fileHeader
+     * @param existingUuids
+     * @return Thoracic Banked Sample records.
+     */
     @Override
     public List<Map<String, Object>> readThoracicBankedSampleRecordsFromFile(Sheet sheet, Map<String, Integer> fileHeader, List<String> existingUuids) {
         List<Map<String, Object>> thoracicBankSampleRecords = new ArrayList<>();

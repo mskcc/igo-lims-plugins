@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * @author Ajay Sharma
  * To create and add control samples for IMPACT and HEMEPACT and attach them to active task.
  * It can be extended to create controls for other recipes.
  * <p>
@@ -26,6 +25,8 @@ import java.util.stream.Collectors;
  * 1. First get the type of all the controls that we need to add.
  * 2. Iterate over the list of Pools needed to add, and get the values needed to create new controls.
  * 3. Create new controls.
+ *
+ * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
 
 public class SampleControlMaker extends DefaultGenericPlugin {

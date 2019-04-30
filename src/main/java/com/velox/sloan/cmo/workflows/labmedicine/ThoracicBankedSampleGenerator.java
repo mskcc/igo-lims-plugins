@@ -6,7 +6,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by sharmaa1 on 4/12/18.
+ * Interface for reading Thoracic Banked Sample data.
+ *
+ * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
 public interface ThoracicBankedSampleGenerator {
     String generateNewIdForThoracicBankedSample();
