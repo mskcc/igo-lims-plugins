@@ -18,7 +18,7 @@ import java.util.*;
 /**
  * This Plugin is written to update and display samples and related fields that are important for Pool planning.
  *
- * @author Ajay Sharma
+ * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
 
 

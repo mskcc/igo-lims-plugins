@@ -13,12 +13,13 @@ import org.apache.commons.lang3.StringUtils;
 import java.rmi.RemoteException;
 import java.util.*;
 
-/*
-    @author: Ajay Sharma
-    @Description: This plugin is designed to generate a QC report for samples based on the sample types attached to the task where the report is generated.
-                  Plugin will be used in "Quality control" and "Library/Pool Quality control" workflow. It generates three kind of dataRecords, 1. "QcReportForDna" when
-                  ExemplarSampleType is "DNA, cDNA or cfDNA", 2. "QcReportForRna" when ExemplarSampleType is "RNA", and 3. "QcReportForLibrary" when ExemplarSampleType
-                  is "DNA Library, cDNA Library or Pooled Library".
+/**
+ * This plugin is designed to generate a QC report for samples based on the sample types attached to the task where the report is generated.
+ * Plugin will be used in "Quality control" and "Library/Pool Quality control" workflow. It generates three kind of dataRecords, 1. "QcReportForDna" when
+ * ExemplarSampleType is "DNA, cDNA or cfDNA", 2. "QcReportForRna" when ExemplarSampleType is "RNA", and 3. "QcReportForLibrary" when ExemplarSampleType
+ * is "DNA Library, cDNA Library or Pooled Library".
+ *
+ * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
 public class QcReportGenerator extends DefaultGenericPlugin {
 
