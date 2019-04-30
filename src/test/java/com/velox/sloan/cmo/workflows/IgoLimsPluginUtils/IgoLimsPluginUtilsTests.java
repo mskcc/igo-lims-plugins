@@ -2,11 +2,15 @@ package com.velox.sloan.cmo.workflows.IgoLimsPluginUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
+
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.ss.usermodel.Row;
 import org.junit.Before;
 import org.junit.Test;
 import java.io.IOException;
 import java.util.*;
 
+import static java.util.Objects.requireNonNull;
 import static org.junit.Assert.*;
 
 public class IgoLimsPluginUtilsTests {
@@ -146,8 +150,108 @@ public class IgoLimsPluginUtilsTests {
         assertEquals(commonMethods.getPlateWellColumnPosition(plateRowPosition),"12");
     }
 
+    @Test
+    public void getExcelSheetDataRows_shoudReturnData() throws IOException, InvalidFormatException {
+        byte [] excelByteData = readExcelFileToBytes("ddpcrPlateAssignmentTemplate.xlsx");
+        List<Row> excelData = commonMethods.getExcelSheetDataRows(excelByteData);
+        assertEquals(excelData.size(),28);
+    }
+
+    @Test
+    public void excelFileHasData_shouldReturnFalseWhenExcelFileEmpty(){
+        try {
+            byte [] excelByteData = readExcelFileToBytes("ddpcrPlateAssignment_NoData.xlsx");
+            List<Row> excelData = commonMethods.getExcelSheetDataRows(excelByteData);
+            System.out.print(excelData.size());
+            assertFalse(commonMethods.excelFileHasData(excelData));
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void excelFileHasValidHeader_shouldReturnTrueIfHeaderValid(){
+        List<String> expectedHeader = Arrays.asList("Sample ID", "Other Sample ID", "AltId", "Assay", "Well", "Plate ID");
+        try{
+            byte [] excelByteData = readExcelFileToBytes("ddpcrPlateAssignmentTemplate.xlsx");
+            List<Row> excelData = commonMethods.getExcelSheetDataRows(excelByteData);
+            assertTrue(commonMethods.excelFileHasValidHeader(excelData,expectedHeader));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void excelFileHasValidHeader_shouldReturnFalseIfHeaderNotValid(){
+        List<String> expectedHeader = Arrays.asList("Sample ID", "Other Sample ID", "AltId", "Assay", "Well", "Plate ID");
+        try{
+            byte [] excelByteData = readExcelFileToBytes("ddpcrPlateAssignment_IncorrectHeaders.xlsx");
+            List<Row> excelData = commonMethods.getExcelSheetDataRows(excelByteData);
+            assertFalse(commonMethods.excelFileHasValidHeader(excelData,expectedHeader));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void isValidExcelFile_shouldReturnTrueIfValidExcelFile(){
+        String fileName1 = "abc.xlsx";
+        String fileName2 = "abc.xls";
+        assertTrue(commonMethods.isValidExcelFile(fileName1));
+        assertTrue(commonMethods.isValidExcelFile(fileName2));
+    }
+
+    @Test
+    public void isValidExcelFile_shouldReturnFalseIfNotValidExcelFile(){
+        String fileName1 = "abc.csv";
+        String fileName2 = "abc.txt";
+        assertFalse(commonMethods.isValidExcelFile(fileName1));
+        assertFalse(commonMethods.isValidExcelFile(fileName2));
+    }
+
+    @Test
+    public void excelFileHasData_shouldReturnTrueIfFileHasData(){
+        try{
+            byte [] excelByteData = readExcelFileToBytes("ddpcrPlateAssignmentTemplate.xlsx");
+            List<Row> excelData = commonMethods.getExcelSheetDataRows(excelByteData);
+            assertTrue(commonMethods.excelFileHasData(excelData));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void excelFileHasData_shouldReturnFalseIfFileHasNoData(){
+        try{
+            byte [] excelByteData = readExcelFileToBytes("ddpcrPlateAssignment_NoData.xlsx");
+            List<Row> excelData = commonMethods.getExcelSheetDataRows(excelByteData);
+            assertFalse(commonMethods.excelFileHasData(excelData));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void getHeaderValuesMapFromExcelRowData_shouldReturnHeaderMap(){
+        Map<String,Integer> headerMap = new HashMap<>();
+        headerMap.put("Sample ID", 0);
+        headerMap.put("Other Sample ID",1);
+        headerMap.put("AltId", 2);
+        headerMap.put("Assay", 3);
+        headerMap.put("Well", 4);
+        headerMap.put("Plate ID", 5);
+        try{
+            byte [] excelByteData = readExcelFileToBytes("ddpcrPlateAssignment_NoData.xlsx");
+            List<Row> excelData = commonMethods.getExcelSheetDataRows(excelByteData);
+            assertEquals(commonMethods.getHeaderValuesMapFromExcelRowData(excelData), headerMap);
+            assertEquals(commonMethods.getHeaderValuesMapFromExcelRowData(excelData).size(),6);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private byte[] readCsvFileToBytes(String fileName) {
-    File file = new File(Objects.requireNonNull(IgoLimsPluginUtils
+    File file = new File(requireNonNull(IgoLimsPluginUtils
             .class.getClassLoader().getResource(fileName)).getPath());
     byte[] bytesArray = new byte[(int) file.length()];
     FileInputStream fileIn;
@@ -159,5 +263,20 @@ public class IgoLimsPluginUtilsTests {
         e.printStackTrace();
     }
     return bytesArray;
+    }
+
+    private byte[] readExcelFileToBytes(String fileName) {
+        File file = new File(requireNonNull(IgoLimsPluginUtils
+                .class.getClassLoader().getResource(fileName)).getPath());
+        byte[] bytesArray = new byte[(int) file.length()];
+        FileInputStream fileIn;
+        try {
+            fileIn = new FileInputStream(file);
+            fileIn.read(bytesArray);
+            fileIn.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return bytesArray;
     }
 }
