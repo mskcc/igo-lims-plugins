@@ -25,7 +25,7 @@ import java.util.*;
  * This report could be shared with the users as final results.
  * The plugin will change the header names in the output file based on the report type values selected by the user.
  *
- * @author Ajay Sharma
+ * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
 
 public class DigitalPcrReportGenerator extends DefaultGenericPlugin {

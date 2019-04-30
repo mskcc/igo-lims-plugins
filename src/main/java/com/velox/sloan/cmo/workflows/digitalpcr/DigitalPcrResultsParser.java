@@ -17,7 +17,7 @@ import java.util.*;
  * This plugin is designed to import ddPCR results into LIMS. The Raw data from csv file is parsed,
  * and plugin will calculate the final results and store in "DdPcrAssayResults" DataType as child to sample.
  *
- * @author Ajay Sharma
+ * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
 public class DigitalPcrResultsParser extends DefaultGenericPlugin {
 
