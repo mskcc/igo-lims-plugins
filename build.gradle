@@ -1,23 +1,28 @@
 group 'lims-plugins'
-version '1.0-SNAPSHOT'
-//version '1.5'
+version '1.1-SNAPSHOT'
 apply plugin: 'java'
 
 sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
+    maven { url "http://bale:8081/service/local/repositories/releases/content" }
 }
 
 dependencies {
-    compile files('lib/veloxapi-10.6.1-b777.jar', 'lib/sloancmo-2.21.1-LIMS10.6.1_b84.jar', 'lib/sapio-commons-15.0.0-LIMS10.6.1.jar', 'lib/sapioutils-15.0.0-LIMS10.6.1.jar', 'lib/accessionservice-LIMS10.6.1.jar', 'lib/sapiogeneric-15.0.0-LIMS10.6.1.jar'),
-            ('org.apache.poi:poi-ooxml:3.17'),('org.apache.commons:commons-lang3:3.7'),('org.json:json:20171018')
-    compile ('junit:junit:4.12') {
-        exclude group: 'org.hamcrest'
-    }
-    compile ('org.mockito:mockito-all:1.10.19') {
-        exclude group: 'org.hamcrest'
-    }
+    compile (group: 'org.apache.poi', name: 'poi-ooxml', version: '3.17')
+    compile (group: 'org.apache.commons', name: 'commons-lang3', version: '3.7')
+
+    // sapio dependencies
+    compile 'com.velox.internalproducts:veloxapi:10.6.1-b777'
+    compile 'com.velox.sloan.cmo:sloancmo:2.21.1-LIMS10.6.1_b84'
+    compile 'com.velox.internalproducts:sapiogeneric:15.0.0-LIMS10.6.1'
+    compile 'com.velox.internalproducts:sapioutils:15.0.0-LIMS10.6.1'
+    compile 'com.velox.internalproducts:sapio-commons:15.0.0-LIMS10.6.1'
+    compile 'com.velox.internalproducts:veloxapi:10.6.1-b777'
+
+    testCompile ('junit:junit:4.12') { exclude group: 'org.hamcrest' }
+    testCompile ('org.mockito:mockito-all:1.10.19') { exclude group: 'org.hamcrest' }
     testCompile 'org.assertj:assertj-core:3.9.0'
 }
 
@@ -25,7 +30,7 @@ jar {
     manifest {
         attributes("Implementation-Title": "Lims Plugin",
                 "Implementation-Version": version,
-                'Class-Path': configurations.compile.collect { '../lib/' + it.getName() }.join(' ')
+                //'Class-Path': configurations.compile.collect { '../lib/' + it.getName() }.join(' ')
         )
     }
 }

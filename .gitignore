@@ -3,3 +3,4 @@ build/*
 out/*
 .DS_STORE*
 .gradle*
+*.class
