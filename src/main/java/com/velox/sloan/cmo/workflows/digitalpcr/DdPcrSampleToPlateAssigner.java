@@ -25,7 +25,7 @@ import java.util.*;
 
 public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
 
-    private final List<String> DDPCR_PLATE_ASSIGNMENT_SHEET_EXPECTED_HEADERS = Arrays.asList("Sample ID", "Other Sample ID", "AltId", "Assay", "Well", "Plate ID");
+    private final List<String> DDPCR_PLATE_ASSIGNMENT_SHEET_EXPECTED_HEADERS = Arrays.asList("IGO ID", "Sample Name", "AltId", "Assay", "Well", "Plate ID");
     private final String TASK_OPTION = "UPLOAD_DDPCR_PLATE_ASSIGNMENT_SHEET";
     IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
 
@@ -152,8 +152,8 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
         String plateIdFieldName = dataTypeFieldNames.get(1).trim();
         String destinationWellFieldName = dataTypeFieldNames.get(2).trim();
         String ddPcrAssayFieldName = dataTypeFieldNames.get(3).trim();
-        dataFieldValueMap.put("SampleId", row.getCell(headerValueMap.get("Sample ID")).getStringCellValue());
-        dataFieldValueMap.put("OtherSampleId", row.getCell(headerValueMap.get("Other Sample ID")).getStringCellValue());
+        dataFieldValueMap.put("SampleId", row.getCell(headerValueMap.get("IGO ID")).getStringCellValue());
+        dataFieldValueMap.put("OtherSampleId", row.getCell(headerValueMap.get("Sample Name")).getStringCellValue());
         if (row.getCell(headerValueMap.get("AltId")).getStringCellValue() != null) {
             dataFieldValueMap.put("AltId", row.getCell(headerValueMap.get("AltId")).getStringCellValue());
         }

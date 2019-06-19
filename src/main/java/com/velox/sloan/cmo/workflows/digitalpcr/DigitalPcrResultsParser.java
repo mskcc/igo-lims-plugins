@@ -51,7 +51,6 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
             removeDuplicateHeaderFromCombinedData(fileData);
-            logInfo(fileData.toString());
             Map<String, Integer> headerValueMap = igoUtils.getCsvHeaderValueMap(fileData);
             List<List<String>> channel1Data = getChannel1Data(fileData, headerValueMap);
             List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap);
@@ -219,7 +218,6 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                     && assayName.equalsIgnoreCase(assayOnProtocol.toString())) {
                 Object totalInput = record.getValue("Aliq1TargetMass", user);
                 if (totalInput != null) {
-                    logInfo(totalInput.toString());
                     return (Double) totalInput;
                 }
             } else if (sampleNameOnProtocol != null && assayOnProtocol != null && sampleName.equalsIgnoreCase(igoSampleIdOnProtocol.toString())
@@ -308,7 +306,8 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
         return analyzedDataValues;
     }
 
-    /**
+
+        /**
      * Add the results as Children to the Sample DataType.
      *
      * @param analyzedDataValues
@@ -319,26 +318,27 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      * @throws IoError
      */
     private void addResultsAsChildRecords(List<Map<String, Object>> analyzedDataValues, List<DataRecord> attachedSamples) throws NotFound, RemoteException, ServerException, IoError {
-        List<Object> alreadyAdded = new ArrayList<>();
+        //List<Object> alreadyAdded = new ArrayList<>();
         List<DataRecord> recordsToAttachToTask = new ArrayList<>();
-        for (DataRecord record : attachedSamples) {
-            Object sampleId = record.getValue("SampleId", user);
-            Object otherSampleId = record.getValue("OtherSampleId", user);
-            for (Map<String, Object> data : analyzedDataValues) {
-                String analyzedDataSampleId = data.get("OtherSampleId").toString();
-                if ((otherSampleId != null && !alreadyAdded.contains(otherSampleId) && otherSampleId.toString().equalsIgnoreCase(analyzedDataSampleId))
-                        || sampleId.toString().equalsIgnoreCase(analyzedDataSampleId)) {
-                    if (sampleId != null) {
-                        data.put("SampleId", sampleId);
-                    }
-                    recordsToAttachToTask.add(record.addChild("DdPcrAssayResults", data, user));
-                    alreadyAdded.add(otherSampleId);
+        logInfo(Integer.toString(analyzedDataValues.size()));
+        for (Map<String, Object> data : analyzedDataValues) {
+            logInfo(data.toString());
+            String analyzedDataSampleId = data.get("OtherSampleId").toString();
+            for (DataRecord sample : attachedSamples) {
+                Object sampleId = sample.getValue("SampleId", user);
+                Object otherSampleId = sample.getValue("OtherSampleId", user);
+                if (analyzedDataSampleId.equals(otherSampleId) && data.get("SampleId") == null) {
+                    data.put("SampleId", sampleId);
+                    logInfo(data.toString());
+                    DataRecord  recordToAttach = sample.addChild(activeTask.getInputDataTypeName(), data, user);
+                    recordsToAttachToTask.add(recordToAttach);
                 }
             }
         }
-        logInfo("Assigning ddPCR Results as Children.");
         activeTask.addAttachedDataRecords(recordsToAttachToTask);
         activeTask.getTask().getTaskOptions().put("_DDPCR RESULTS PARSED", "");
     }
 
+
 }
+
