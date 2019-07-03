@@ -154,7 +154,9 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
         String ddPcrAssayFieldName = dataTypeFieldNames.get(3).trim();
         dataFieldValueMap.put("SampleId", row.getCell(headerValueMap.get("IGO ID")).getStringCellValue());
         dataFieldValueMap.put("OtherSampleId", row.getCell(headerValueMap.get("Sample Name")).getStringCellValue());
-        if (row.getCell(headerValueMap.get("AltId")).getStringCellValue() != null) {
+        if (row.getCell(headerValueMap.get("AltId")) != null)
+                //&& row.getCell(headerValueMap.get("AltId")).getStringCellValue() != null)
+        {
             dataFieldValueMap.put("AltId", row.getCell(headerValueMap.get("AltId")).getStringCellValue());
         }
         dataFieldValueMap.put(ddPcrAssayFieldName, row.getCell(headerValueMap.get("Assay")).getStringCellValue());
