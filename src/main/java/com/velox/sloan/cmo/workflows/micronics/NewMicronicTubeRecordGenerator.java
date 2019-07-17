@@ -13,6 +13,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Plugin to create new Micronic Tube records along with tare weight in LIMS.
+ *
+ * @author sharmaa1@mskcc.org ~Ajay Sharma
+ */
 public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
     private String[] permittedUsers = {"Sample Receiving", "Sapio Admin"};
     private NewMicronicTubeTareWeightImporter fileDataReader = new NewMicronicTubeTareWeightImporter();
@@ -55,22 +60,49 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
         return new PluginResult(true);
     }
 
+    /**
+     * Method to validate file extension.
+     * @param file
+     * @return true/false
+     */
     private boolean isValidCsvFile(String file) {
         return fileDataReader.isCsvFile(file);
     }
 
+    /**
+     * Method to validate if file has data.
+     * @param fileData
+     * @return true/false
+     */
     private boolean fileHasData(String[] fileData) {
         return fileDataReader.dataFileHasValidData(fileData);
     }
 
+    /**
+     * Method to valid header row values in file.
+     * @param fileData
+     * @return true/false
+     */
     private boolean hasValidMicronicFileHeader(String[] fileData) {
         return fileDataReader.dataFileHasValidHeader(fileData);
     }
 
+    /**
+     * Method to validate that all rows in excel file has required data
+     * @param fileData
+     * @return
+     */
     private boolean allRowsContainValidData(String[] fileData) {
         return fileDataReader.rowsInFileHasValidData(fileData);
     }
 
+    /**
+     * Method to valid file and file data
+     * @param filePath
+     * @param fileDataToBytes
+     * @return true/false
+     * @throws ServerException
+     */
     private boolean isValidFileWithValidData(String filePath, byte[] fileDataToBytes) throws ServerException {
         String[] rowData = new String(fileDataToBytes).split("\r\n|\r|\n");
         if (!isValidCsvFile(filePath)) {
@@ -100,10 +132,22 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
         return true;
     }
 
+    /**
+     * Method to create micronic tube record values from excel data
+     * @param fileData
+     * @return List of Maps of micronic tube values
+     */
     private List<Map<String, Object>> getMicronicTubeRecordsFromFile(String[] fileData) {
         return fileDataReader.readNewTubeRecordsFromFileData(fileData);
     }
 
+    /**
+     * Method to get existing MicronicTube Barcodes stored under MicronicTubeTareWeight DataType
+     * @param existingMicronicTubes
+     * @return List of MicronicTube Barcodes
+     * @throws NotFound
+     * @throws RemoteException
+     */
     private List<String> getExistingMicronicBarcodes(List<DataRecord> existingMicronicTubes) throws NotFound, RemoteException {
         List<String> existingMicronicBarcodes = new ArrayList<>();
         for (DataRecord record : existingMicronicTubes) {
@@ -112,10 +156,22 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
         return existingMicronicBarcodes;
     }
 
+    /**
+     * Method to get MicronicTube Barcodes from Data
+     * @param micronicTubes
+     * @return List of MicronicTube Barcodes
+     */
     private List<String> getMicronicTubeBarcodes(List<Map<String, Object>> micronicTubes) {
         return fileDataReader.getMicronicTubeBarcodesFromTubeRecords(micronicTubes);
     }
 
+    /**
+     * Method to check if duplicate MicronicTube Barcodes exist in the data read from the file.
+     * @param micronicTubeBarcodesAlreadyInLims
+     * @param newMicronicTubeBarcodes
+     * @return true/false
+     * @throws ServerException
+     */
     private boolean hasDuplicateBarcodesInData(List<String> micronicTubeBarcodesAlreadyInLims, List<String> newMicronicTubeBarcodes) throws ServerException {
         List<String> duplicatesWithExistingBarcodes = fileDataReader.getDuplicateBarcodesInExistingBarcodes(micronicTubeBarcodesAlreadyInLims, newMicronicTubeBarcodes);
         List<String> duplicatesInNewBarcodes = fileDataReader.getDuplicateValuesInNewBarcodesList(newMicronicTubeBarcodes);
@@ -132,10 +188,24 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
         return false;
     }
 
+    /**
+     * Method to concatenate list separated by new line character '\n'.
+     * @param listWithValues
+     * @return Strings separated by new line
+     */
     private String convertListToString(List<String> listWithValues) {
         return StringUtils.join(listWithValues, "\n");
     }
 
+    /**
+     * Method to validate no conflict state to add new MicronicTube records.
+     * @param micronicTubes
+     * @return true/false
+     * @throws ServerException
+     * @throws IoError
+     * @throws RemoteException
+     * @throws NotFound
+     */
     private boolean shouldAddNewMicronicRecords(List<Map<String, Object>> micronicTubes) throws ServerException, IoError, RemoteException, NotFound {
         if (micronicTubes.isEmpty()) {
             clientCallback.displayError("Cannot construct any micronic tube records from the file. Please make sure you have uploaded "

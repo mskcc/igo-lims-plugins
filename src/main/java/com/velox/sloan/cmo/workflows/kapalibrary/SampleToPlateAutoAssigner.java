@@ -25,9 +25,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * @author Ajay Sharma
  * For the Kapa Library Preparation workflow write the well locations to DNALibraryPrepProtocols
  * sorted based on IGO ID.  (User doesn't need to drag and drop).
+ *
+ * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
 
 public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
