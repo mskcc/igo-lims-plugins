@@ -34,7 +34,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
     private List<String> ddPCRReportTypes = Arrays.asList("GEX", "RED", "CNV");
     private List<String> gexReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet # gene", "Droplet # Ref", "Ratio ([GOI]/[Ref])", "Accepted Droplets", "Micronic Tube Barcode");
     private List<String> cnvReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count Mu", "Droplet Count WT", "Ratio ([Mu]/[WT])", "Accepted Droplets", "Micronic Tube Barcode");
-    private List<String> redReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count Mu", "Droplet Count WT", "Ratio ([Mu]/[WT])", "Accepted Droplets", "Micronic Tube Barcode");
+    private List<String> redReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count Mu", "Droplet Count WT", "Ratio ([Mu]/[WT])", "Accepted Droplets", "Micronic Tube Barcode","Human %");
 
     public DigitalPcrReportGenerator() {
         setTaskTableToolbar(true);
@@ -144,6 +144,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
             reportFieldValues.put("DropletCountRef", record.getValue("DropletCountWildType", user));
             reportFieldValues.put("Ratio", record.getValue("Ratio", user));
             reportFieldValues.put("AcceptedDroplets", record.getValue("AcceptedDroplets", user));
+            reportFieldValues.put("HumanPercentage", record.getValue("HumanPercentage", user));
             reportFieldValues.put("MicronicTubeBarcode", getMicronicTubeIdFromParentSample(record));
             reportFieldValueMaps.add(reportFieldValues);
         }
@@ -270,10 +271,19 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
             setDataCellStyle(workbook, row.createCell(5)).setCellValue(Integer.parseInt(data.get("DropletCountRef").toString()));
             setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("Ratio").toString()));
             setDataCellStyle(workbook, row.createCell(7)).setCellValue(Integer.parseInt(data.get("AcceptedDroplets").toString()));
+
             if (data.get("MicronicTubeBarcode") != null) {
                 setDataCellStyle(workbook, row.createCell(8)).setCellValue(data.get("MicronicTubeBarcode").toString());
             } else {
                 setDataCellStyle(workbook, row.createCell(8)).setCellValue("");
+            }
+            if (headerValues.contains("Human %")){
+                if (data.get("HumanPercentage") != null){
+                    setDataCellStyle(workbook, row.createCell(9)).setCellValue(Double.parseDouble(data.get("HumanPercentage").toString()));
+                }
+                else{
+                    setDataCellStyle(workbook, row.createCell(9)).setCellValue("");
+                }
             }
             rowId++;
         }
