@@ -1,6 +1,6 @@
 group 'lims-plugins'
 version '1.0-SNAPSHOT'
-//version '1.3'
+//version '1.5'
 apply plugin: 'java'
 
 sourceCompatibility = 1.8
@@ -11,10 +11,8 @@ repositories {
 
 dependencies {
     compile files('lib/veloxapi-10.6.1-b777.jar', 'lib/sloancmo-2.21.1-LIMS10.6.1_b84.jar', 'lib/sapio-commons-15.0.0-LIMS10.6.1.jar', 'lib/sapioutils-15.0.0-LIMS10.6.1.jar', 'lib/accessionservice-LIMS10.6.1.jar', 'lib/sapiogeneric-15.0.0-LIMS10.6.1.jar'),
-            ('org.apache.poi:poi-ooxml:3.17'),('org.apache.commons:commons-lang3:3.7')
-    
+            ('org.apache.poi:poi-ooxml:3.17'),('org.apache.commons:commons-lang3:3.7') 
     compile group:'org.json', name: 'json', version: '20180813'
-
     compile ('junit:junit:4.12') {
         exclude group: 'org.hamcrest'
     }
