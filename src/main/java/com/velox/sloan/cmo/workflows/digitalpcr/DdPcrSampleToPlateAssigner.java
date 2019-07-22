@@ -10,8 +10,11 @@ import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.usermodel.Row;
 
+import javax.xml.crypto.Data;
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 /**
  * This plugin is designed to assign samples to plate for ddPCR Assay using file upload.
@@ -183,6 +186,14 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
         return dataFieldValuesMaps;
     }
 
+    private List<Long> getRecotdIds(List<DataRecord> records) throws NotFound, RemoteException {
+        List<Long>recordIds = new ArrayList<>();
+        for (DataRecord rec: records){
+            recordIds.add(rec.getLongVal("RecordId", user));
+        }
+        return recordIds;
+    }
+
     /**
      * Method to update the target DataRecord with values read from file, and attach updated records to active task.
      *
@@ -196,7 +207,9 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
     private void setValuesOnDataRecord(List<DataRecord> attachedSamples, List<Map<String, Object>> dataFieldValuesMaps, String targetDataTypeName) throws NotFound, RemoteException, ServerException {
         logInfo("Adding records to " + targetDataTypeName);
         List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords(targetDataTypeName, user);
-        attachedProtocolRecords.removeAll(attachedProtocolRecords);
+        activeTask.removeTaskAttachments(getRecotdIds(attachedProtocolRecords));
+        activeWorkflow.getNext(activeTask).removeTaskAttachments(getRecotdIds(attachedProtocolRecords));
+        dataRecordManager.deleteDataRecords(attachedProtocolRecords,null,false,user);
         List<DataRecord> newDataRecords = new ArrayList<>();
         for (DataRecord sample : attachedSamples) {
             String sampleId = sample.getStringVal("SampleId", user);
