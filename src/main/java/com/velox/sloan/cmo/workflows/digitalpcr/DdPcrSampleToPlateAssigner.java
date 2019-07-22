@@ -10,11 +10,8 @@ import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.usermodel.Row;
 
-import javax.xml.crypto.Data;
 import java.rmi.RemoteException;
 import java.util.*;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
 /**
  * This plugin is designed to assign samples to plate for ddPCR Assay using file upload.
