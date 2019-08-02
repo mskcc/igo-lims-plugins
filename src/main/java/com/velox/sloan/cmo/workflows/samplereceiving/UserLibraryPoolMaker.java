@@ -65,6 +65,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
         } catch (Exception e) {
             clientCallback.displayError(String.format("Error while creating user pools. CAUSE:\n%s", e));
             logError(e.getStackTrace().toString());
+            return new PluginResult(false);
         }
         return new PluginResult(true);
     }

@@ -69,16 +69,13 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
             HashMap<String, Integer> headerValuesMap = utils.getHeaderValuesMapFromExcelRowData(fileData);
-            logInfo("header values parsed" + headerValuesMap.toString());
             List<Map<String, Object>> dataFieldValuesMap = getDataFieldValueMaps(fileData, headerValuesMap);
-            logInfo("Data values parsed");
             String targetDataTypeName = activeTask.getTask().getTaskOptions().get(TASK_OPTION).split("\\|")[0].trim();
-            logInfo("Target DataType : " + targetDataTypeName);
             setValuesOnDataRecord(attachedSamples, dataFieldValuesMap, targetDataTypeName);
-            logInfo("Values setting complete.");
         } catch (Exception e) {
             clientCallback.displayError(String.format("Error while parsing the ddPCR Sample to plate assignment sheet:\n%s", e));
             logError(Arrays.toString(e.getStackTrace()));
+            return new PluginResult(false);
         }
         return new PluginResult(true);
     }

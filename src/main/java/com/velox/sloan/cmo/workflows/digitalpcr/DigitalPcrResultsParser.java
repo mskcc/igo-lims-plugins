@@ -73,6 +73,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
         } catch (Exception e) {
             clientCallback.displayError(String.format("Error while parsing the ddPCR Results file:\n%s", e));
             logError(Arrays.toString(e.getStackTrace()));
+            return new PluginResult(false);
         }
         return new PluginResult(true);
     }

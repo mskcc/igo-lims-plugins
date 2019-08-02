@@ -99,6 +99,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
         } catch (Exception e) {
             clientCallback.displayError(String.format(":( Error while generating DDPCR Report:\n%s", e));
             logError(Arrays.toString(e.getStackTrace()));
+            return new PluginResult(false);
         }
         return new PluginResult(true);
     }

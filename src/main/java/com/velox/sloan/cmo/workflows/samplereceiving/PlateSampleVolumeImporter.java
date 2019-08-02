@@ -54,7 +54,7 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
         return false;
     }
 
-    public PluginResult run() {
+    public PluginResult run() throws ServerException {
         try {
             String plateVolumeFile = clientCallback.showFileDialog("Upload file with plate volume data", null);
             if (StringUtils.isEmpty(plateVolumeFile)) {
@@ -88,7 +88,9 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
             }
             updateSampleVolumes(samples, volumeRecordsFromfile);
         } catch (Exception e) {
-            logError(e);
+            clientCallback.displayError(String.format("Error while parsing the plate volume data file:\n%s", e));
+            logError(Arrays.toString(e.getStackTrace()));
+            return new PluginResult(false);
         }
         return new PluginResult(true);
     }

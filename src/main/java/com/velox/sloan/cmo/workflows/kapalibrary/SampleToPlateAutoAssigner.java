@@ -98,6 +98,8 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
         } catch (Exception e) {
             clientCallback.displayError(String.format("Error while sample assignment to plates. CAUSE:\n%s", e));
             logError(e);
+            return new PluginResult(false);
+
         }
         return new PluginResult(true);
 
