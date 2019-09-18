@@ -15,12 +15,16 @@ import java.rmi.RemoteException;
 import java.util.*;
 
 /**
- * Created by sharmaa1 on 9/4/19.
+ * This is the plugin class designed to import the data for 'AutoIndexAssignmentConfig' DataType via file upload.
+ * 'Index Barcode and Adapter' terms are used interchangeably and have the same meaning.
+ * 'AutoIndexAssignmentConfig' is the DataType which holds the Index Barcode metadata that is used for Auto Index Assignment to the samples.
+ * @author sharmaa1
  */
 public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
-    private final List<String> VALID_HEADER_VALUES = Arrays.asList("Adapter Plate Barcode","Index ID","Index Tag","Well ID","Concentration","Volume","Index Type","Set ID");
+    private final List<String> VALID_HEADER_VALUES = Arrays.asList("Adapter Plate Barcode","Index ID","Index Tag","Well ID","Concentration","Volume","Index Type","Set ID"); //Header values that are expected to be present in the uploaded file.
     private final String INDEX_ASSIGNMENT_CONFIG_DATATYPE = "AutoIndexAssignmentConfig";
     private IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
+
     public IndexAssinmentConfigImporter() {
         setTableToolbar(true);
         setLine1Text("Upload Index Assignment");
@@ -64,8 +68,14 @@ public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
             return new PluginResult(false);
         }
         return new PluginResult(true);
-        }
+    }
 
+    /**
+     * Method to validate csv file type.
+     * @param filepath
+     * @return Boolean
+     * @throws ServerException
+     */
     private boolean isValidCsvFile( String filepath) throws ServerException {
         if (!utils.isCsvFile(filepath)) {
             clientCallback.displayError(String.format("File '%s' is not a valid csv file. File must be csv with valid .csv extension", filepath));
@@ -75,6 +85,13 @@ public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
         return true;
     }
 
+    /**
+     * Method to check if file has data.
+     * @param fileRowData
+     * @param filePath
+     * @return Boolean
+     * @throws ServerException
+     */
     private boolean fileHasData(List<String> fileRowData, String filePath) throws ServerException {
         if (!utils.csvFileHasData(fileRowData)){
             clientCallback.displayError(String.format("File '%s' is empty. Please load a csv file with data.", filePath));
@@ -84,6 +101,14 @@ public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
         return true;
     }
 
+    /**
+     * Method to validate Header values in uploaded file.
+     * @param fileRowData
+     * @param expectedHeader
+     * @param filePath
+     * @return Boolean
+     * @throws ServerException
+     */
     private boolean fileHasValidHeader(List<String> fileRowData, List<String> expectedHeader, String filePath) throws ServerException {
         if(!utils.csvFileHasValidHeader(fileRowData, expectedHeader)){
             clientCallback.displayError(String.format("File '%s' does not contain valid headers. File must have following header values: %s.", filePath, utils.convertListToString(expectedHeader)));
@@ -93,6 +118,14 @@ public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
         return true;
     }
 
+    /**
+     * Method to validate data for all rows in uploaded file.
+     * @param fileRowData
+     * @param expectedHeader
+     * @param filePath
+     * @return Boolean
+     * @throws ServerException
+     */
     private boolean allRowsHaveData(List<String> fileRowData, List<String> expectedHeader, String filePath) throws ServerException {
         if(!utils.allRowsInCsvFileHasValidData(fileRowData, expectedHeader)){
             clientCallback.displayError(String.format("Some rows in File '%s' has missing data. Please make sure all rows has data for all columns", filePath));
@@ -102,6 +135,16 @@ public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
         return true;
     }
 
+    /**
+     * Method to check if the Index record vales in uploaded file match the existing values under 'IndexBarcode' DataType. 'IndexBarcode' datatype holds the values for all indexes to be used in LIMS.
+     * @param indexAssignmentRecords
+     * @param dataRows
+     * @param headerValuesMap
+     * @return Boolean
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws InvalidValue
+     */
     private boolean isValidIndexAssignmentRecords(List<DataRecord> indexAssignmentRecords, List<String> dataRows, Map<String, Integer> headerValuesMap ) throws NotFound, RemoteException, InvalidValue {
         for (int i=1; i<dataRows.size(); i++){
             boolean valid = false;
@@ -125,6 +168,13 @@ public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
         return true;
     }
 
+    /**
+     * Method to parse file rows into 'AutoIndexAssignmentConfig' datarecord.
+     * @param fileRowData
+     * @param headerValuesMap
+     * @return List<Map<String,Object>>
+     * @throws ServerException
+     */
     private List<Map<String,Object>> parseIndexAssignmentConfigurations(List<String> fileRowData, Map<String, Integer> headerValuesMap) throws ServerException {
         List <Map<String,Object>> indexAssignmentConfigurations = new ArrayList<>();
         for (int i = 1; i<fileRowData.size(); i++){
@@ -146,6 +196,12 @@ public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
         return indexAssignmentConfigurations;
     }
 
+    /**
+     * Method to get unique Adapter Plate barcodes from rows in uploaded file.
+     * @param fileRowData
+     * @param headerValuesMap
+     * @return List<String>
+     */
     private List<String> getUniueAdapterPlateBarcodes(List<String> fileRowData, Map<String, Integer> headerValuesMap){
         Set<String> adaptePlateBarcodes = new HashSet<>();
         for(String row : fileRowData){
@@ -155,6 +211,15 @@ public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
         return new ArrayList<>(adaptePlateBarcodes);
     }
 
+    /**
+     *
+     * @param adapterPlateBarcodes
+     * @return Boolean
+     * @throws IoError
+     * @throws RemoteException
+     * @throws NotFound
+     * @throws ServerException
+     */
     private boolean adapterPlateBarcodeAlreadyExists(List<String> adapterPlateBarcodes) throws IoError, RemoteException, NotFound, ServerException {
         for (String barcode : adapterPlateBarcodes){
             if (dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "AdapterPlateId = '" + barcode + "'", user).size() > 0){

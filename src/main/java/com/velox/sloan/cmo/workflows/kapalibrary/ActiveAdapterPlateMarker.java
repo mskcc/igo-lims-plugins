@@ -1,6 +1,5 @@
 package com.velox.sloan.cmo.workflows.kapalibrary;
 
-import com.drew.lang.annotations.Nullable;
 import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.InvalidValue;
 import com.velox.api.datarecord.IoError;
@@ -15,7 +14,11 @@ import java.rmi.RemoteException;
 import java.util.*;
 
 /**
- * Created by sharmaa1 on 9/5/19.
+ * This Plugin is designed in an effort to Automate Index Assignment to samples in Kapa Library Preparation workflow. This plugin provides a toolbar button on 'AutoIndexAssignmentConfig' Datatype
+ * to activate Index barcode plates stored under 'AutoIndexAssignmentConfig' Datatype to use for Index Assignments.
+ * 'Index Barcode and Adapter' terms are used interchangeably and have the same meaning.
+ * 'AutoIndexAssignmentConfig' is the DataType which holds the Index Barcode metadata that is used for Auto Index Assignment to the samples.
+ * @author sharmaa1
  */
 public class ActiveAdapterPlateMarker extends DefaultGenericPlugin {
 
@@ -61,6 +64,15 @@ public class ActiveAdapterPlateMarker extends DefaultGenericPlugin {
         return new PluginResult(true);
     }
 
+    /**
+     * Method to return the Set ID that should be activated
+     * @param plateBarcode
+     * @param indexAssignmentConfigs
+     * @return Integer Set ID
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws ServerException
+     */
     private Integer getSetIdToActivate(String plateBarcode, List<DataRecord> indexAssignmentConfigs) throws NotFound, RemoteException, ServerException {
         for (DataRecord record: indexAssignmentConfigs){
             if (record.getValue("AdapterPlateId", user) != null && record.getStringVal("AdapterPlateId", user).equals(plateBarcode)){
@@ -72,6 +84,15 @@ public class ActiveAdapterPlateMarker extends DefaultGenericPlugin {
         return null;
     }
 
+    /**
+     * Method to return the type of Index Barcodes to activate.
+     * @param plateBarcode
+     * @param indexAssignmentConfigs
+     * @return
+     * @throws ServerException
+     * @throws NotFound
+     * @throws RemoteException
+     */
     private String getIndexTypeToActivate(String plateBarcode,List<DataRecord> indexAssignmentConfigs) throws ServerException, NotFound, RemoteException {
         for (DataRecord record: indexAssignmentConfigs){
             if (record.getValue("IndexType", user) != null && record.getStringVal("AdapterPlateId", user).equals(plateBarcode)){
@@ -83,6 +104,17 @@ public class ActiveAdapterPlateMarker extends DefaultGenericPlugin {
         return null;
     }
 
+    /**
+     * Method to set the Boolean value of 'IsDepelted' to true for datarecords under 'AutoIndexAssignmentConfig' Datatype.
+     * @param indexType
+     * @param setId
+     * @param plateBarcode
+     * @param indexAssignmentConfigs
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws IoError
+     * @throws InvalidValue
+     */
     private void setAdapterSetAsUsedAndDepleted(String indexType, Integer setId, String plateBarcode, List<DataRecord> indexAssignmentConfigs) throws NotFound, RemoteException, IoError, InvalidValue {
         for (DataRecord record: indexAssignmentConfigs){
             if (indexType.equals(record.getStringVal("IndexType", user)) && record.getIntegerVal("SetId", user) == setId &&
@@ -94,6 +126,16 @@ public class ActiveAdapterPlateMarker extends DefaultGenericPlugin {
         }
     }
 
+    /**
+     * Method to set the Boolean value of 'IsActive' to true for datarecords under 'AutoIndexAssignmentConfig' Datatype.
+     * @param barcode
+     * @param indexAssignmentConfigs
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws IoError
+     * @throws InvalidValue
+     * @throws ServerException
+     */
     private void setAdapterPlateAsActive(String barcode, List<DataRecord> indexAssignmentConfigs) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
         int count = 0;
         for (DataRecord rec : indexAssignmentConfigs){
@@ -117,6 +159,13 @@ public class ActiveAdapterPlateMarker extends DefaultGenericPlugin {
         logInfo(String.format("Setting Adapter Plate with ID '%s' as active.", barcode));
     }
 
+    /**
+     * Method to return Unique 'IndexType' values from a given set of AutoIndexAssignmentConfig' DataRecords.
+     * @param indexAssignmentConfigs
+     * @return
+     * @throws NotFound
+     * @throws RemoteException
+     */
     private List<String> getUniqueIndexTypes(List<DataRecord> indexAssignmentConfigs) throws NotFound, RemoteException {
         Set<String> uniqueIndexTypes = new HashSet<>();
         for(DataRecord rec: indexAssignmentConfigs){
@@ -127,6 +176,14 @@ public class ActiveAdapterPlateMarker extends DefaultGenericPlugin {
         return new ArrayList<>(uniqueIndexTypes);
     }
 
+    /**
+     * Method to return Unique 'SetId' values from a given set of AutoIndexAssignmentConfig' DataRecords.
+     * @param indexType
+     * @param indexAssignmentConfigs
+     * @return
+     * @throws NotFound
+     * @throws RemoteException
+     */
     private List<Integer> getUniqueSetIdForIndexType(String indexType, List<DataRecord> indexAssignmentConfigs) throws NotFound, RemoteException {
         Set<Integer> uniqueSetIds = new HashSet<>();
         for(DataRecord rec: indexAssignmentConfigs){
@@ -137,6 +194,15 @@ public class ActiveAdapterPlateMarker extends DefaultGenericPlugin {
         return new ArrayList<>(uniqueSetIds);
     }
 
+    /**
+     * Method to get the size of adapter set from a given set of 'AutoIndexAssignmentConfig' DataRecords.
+     * @param indexType
+     * @param setId
+     * @param indexAssignmentConfigs
+     * @return
+     * @throws NotFound
+     * @throws RemoteException
+     */
     private int getSizeOfAdapterSet(String indexType, int setId, List<DataRecord>indexAssignmentConfigs) throws NotFound, RemoteException {
         int count = 0;
         for (DataRecord rec: indexAssignmentConfigs){
@@ -147,6 +213,14 @@ public class ActiveAdapterPlateMarker extends DefaultGenericPlugin {
         return count;
     }
 
+    /**
+     * Method to check that the size of any Index Barcode records under 'AutoIndexAssignmentConfig' DataType for a given set is not greater that 96.
+     * @param indexAssignmentConfigs
+     * @return
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws ServerException
+     */
     private boolean isActiveAdapterCountCorrect(List<DataRecord> indexAssignmentConfigs) throws NotFound, RemoteException, ServerException {
         List<String> uniqueIndexTypes = getUniqueIndexTypes(indexAssignmentConfigs);
         for (String ind : uniqueIndexTypes){

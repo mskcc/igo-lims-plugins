@@ -14,15 +14,29 @@ import java.util.function.DoubleUnaryOperator;
 
 
 /**
- * Created by sharmaa1 on 9/10/19.
+ * This is a helper class with common methods used across plugins. Index Barcode and Adapter terms are used interchangeably and have the same meaning.
+ * 'AutoIndexAssignmentConfig' is the DataType which holds the Index Barcode metadata that is used for Auto Index Assignment to the samples.
+ * @author sharmaa1
  */
 
 public class AutoIndexAssignmentHelper extends ManagerBase{
 
     public AutoIndexAssignmentHelper(ManagerContext managerContext){
+
         setManagerContext(managerContext);
     }
 
+    /**
+     * To set the value of Volume field on the records under 'AutoIndexAssignmentConfig' DataType.
+     * @param indexAssignmentConfig
+     * @param adapterVolumeUsed
+     * @return Updated AutoIndexAssignmentConfig DataRecord
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws IoError
+     * @throws InvalidValue
+     * @throws ServerException
+     */
     public DataRecord setUpdatedIndexAssignmentConfigVol(DataRecord indexAssignmentConfig, Double adapterVolumeUsed) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
         Double previousVol = indexAssignmentConfig.getDoubleVal("AdapterVolume", user);
         Double newVolume = previousVol - adapterVolumeUsed;
@@ -38,6 +52,11 @@ public class AutoIndexAssignmentHelper extends ManagerBase{
     }
 
 
+    /**
+     * Get the minimum liquid volume for the Index Barcode to be present in a plate well for a plate given its plate size.
+     * @param plateSize
+     * @return Double volume
+     */
     public Double getMinAdapterVolumeRequired(Integer plateSize){
         if(plateSize == 96){
             return 7.50;
@@ -47,7 +66,13 @@ public class AutoIndexAssignmentHelper extends ManagerBase{
         }
     }
 
-    //new methods
+    /**
+     * Get the volume of Index Barcode to transfer to a well on new plate.
+     * @param startingAdapterConcentration
+     * @param minAdapterVolume
+     * @param targetAdapterConcentration
+     * @return Double volume
+     */
    public Double getAdapterInputVolume(Double startingAdapterConcentration, Double minAdapterVolume, Double targetAdapterConcentration) {
         Double c1 = startingAdapterConcentration;
         Double v1 = minAdapterVolume;
@@ -60,7 +85,11 @@ public class AutoIndexAssignmentHelper extends ManagerBase{
     }
 
 
-    //new method
+    /**
+     * Get concentration of adapter in the new plate given the DNA Input amount.
+     * @param dnaInputAmount
+     * @return Double Concentration
+     */
     public Double getCalculatedTargetAdapterConcentration(Double dnaInputAmount){
         if (dnaInputAmount<50.00){
             return (15 * dnaInputAmount)/50.00;
@@ -68,7 +97,14 @@ public class AutoIndexAssignmentHelper extends ManagerBase{
         return 15.00;
     }
 
-    //new methods
+    /**
+     * Get the volume of water to transfer to new plate.
+     * @param startingAdapterConcentration
+     * @param minAdapterVolume
+     * @param targetAdapterConcentration
+     * @param maxPlateVolume
+     * @return Double volume
+     */
     public Double getVolumeOfWater(Double startingAdapterConcentration, Double minAdapterVolume, Double targetAdapterConcentration, Double maxPlateVolume){
         Double c1 = startingAdapterConcentration;
         Double v1 = minAdapterVolume;
@@ -86,6 +122,15 @@ public class AutoIndexAssignmentHelper extends ManagerBase{
         }
     }
 
+    /**
+     *  Get the plate size given the Sample DataRecord(s) that is on a plate.
+     * @param samples
+     * @return Integer plate size.
+     * @throws IoError
+     * @throws RemoteException
+     * @throws NotFound
+     * @throws ServerException
+     */
     public Integer getPlateSize(List<DataRecord> samples) throws IoError, RemoteException, NotFound, ServerException {
         DataRecord plate = samples.get(0).getParentsOfType("Plate", user).get(0);
         Integer plateSizeIndex = Integer.parseInt(plate.getValue("PlateWellCnt", user).toString());
@@ -93,6 +138,11 @@ public class AutoIndexAssignmentHelper extends ManagerBase{
         return Integer.parseInt(plateSize.split("-")[0]);
     }
 
+    /**
+     * Get the maximim volume a plate well can hold given plate size.
+     * @param plateSize
+     * @return Double volume
+     */
     public Double getMaxVolumeLimit(Integer plateSize) {
         switch (plateSize) {
             case 96:
@@ -103,26 +153,25 @@ public class AutoIndexAssignmentHelper extends ManagerBase{
         return 150.00;
     }
 
-//    public Double getVolumeOfWater(Double adapterVol, Double adapterConc, Double maxVolume) {
-//        Double targerConc = 7.50;
-//        if (adapterVol < maxVolume) {
-//            return maxVolume - adapterVol;
-//        }
-//        return maxVolume;
-//    }
 
+    /**
+     * Get Row Position of Index Barcode on plate given its Well ID.
+     * @param wellPosition
+     * @return String Row Position.
+     * @throws NotFound
+     * @throws RemoteException
+     */
     public String getAdapterRowPosition(String wellPosition) throws NotFound, RemoteException {
         return wellPosition.replaceAll("[^A-Za-z]+", "");
     }
 
+    /**
+     *  Get Column Position of Index Barcode on plate given its Well ID.
+     * @param wellPosition
+     * @return String Column Position
+     */
     public String getAdapterColPosition(String wellPosition) {
         return wellPosition.replaceAll("\\D+", "");
     }
-
-//    public Double getAdapterConcentration(DataRecord indexAssignmentConfig, Double adapterVolume, Double waterVolume) throws NotFound, RemoteException {
-//        Double adapterConcentration = indexAssignmentConfig.getDoubleVal("AdapterConcentration", user);
-//        Double dilutionFactor = (adapterVolume + waterVolume) / adapterVolume;
-//        return adapterConcentration / dilutionFactor;
-//    }
 
 }

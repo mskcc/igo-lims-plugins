@@ -5,6 +5,7 @@ import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
+import com.velox.api.workflow.ActiveTask;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sapioutils.shared.managers.TaskUtilManager;
@@ -37,7 +38,7 @@ public class SampleControlMaker extends DefaultGenericPlugin {
 
     @Override
     public boolean shouldRun() throws RemoteException, com.velox.api.util.ServerException, NotFound {
-        if (activeTask.getStatus() != activeTask.COMPLETE && activeTask.getTask().getTaskOptions().containsKey("CREATE AND AUTO ASSIGN CONTROLS") && !activeTask.getTask().getTaskOptions().containsKey("CONTROLS_ADDED")) {
+        if (activeTask.getStatus() != ActiveTask.COMPLETE && activeTask.getTask().getTaskOptions().containsKey("CREATE AND AUTO ASSIGN CONTROLS") && !activeTask.getTask().getTaskOptions().containsKey("CONTROLS_ADDED")) {
             List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
             if (isRecipeImpactOrHemepact(attachedSampleRecords)) {
                 logInfo("Need to add controls for IMPACT or HEMEPACT recipe.");

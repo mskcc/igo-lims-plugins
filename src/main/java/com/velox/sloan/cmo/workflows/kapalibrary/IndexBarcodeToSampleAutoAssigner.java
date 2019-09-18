@@ -20,7 +20,11 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * Created by sharmaa1 on 9/5/19.
+ * This is the plugin class designed to automatically populate 'IndexBarcode' records for each sample on the task. This plugin uses DataRecords under 'AutoIndexAssignmentConfig' DataType
+ * to populate IndexBarcode values. The the metadata for 'AutoIndexAssignmentConfig' DataRecords is also updated if they are used in the process.
+ * 'Index Barcode and Adapter' terms are used interchangeably and have the same meaning.
+ * 'AutoIndexAssignmentConfig' is the DataType which holds the Index Barcode metadata that is used for Auto Index Assignment to the samples.
+ * @author sharmaa1
  */
 public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin{
 
@@ -88,6 +92,11 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin{
         return new PluginResult(true);
     }
 
+    /**
+     * Method to get the IndexType to use for the autoassignment based on the value for Task Option 'AUTOASSIGN INDEX BARCODES' on the task.
+     * @param taskOptionValueForIndexAssignment
+     * @return String
+     */
     private String getIndexTypesToUse( String taskOptionValueForIndexAssignment){
         List<String> indexTypes = new ArrayList<>();
         Matcher m = Pattern.compile("\\(([^)]+)\\)").matcher(taskOptionValueForIndexAssignment);
@@ -100,6 +109,11 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin{
         return "('" + StringUtils.join(indexTypes,"','") + "')";
     }
 
+    /**
+     * Method to get the unique Recipe values associated with Sample DataRecords.
+     * @param attachedSamples
+     * @return List<String>
+     */
     private List<String> getUniqueSampleRecipes(List<DataRecord> attachedSamples){
         List<String> recipes = attachedSamples.stream().map(s -> {
             try {
@@ -113,6 +127,16 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin{
         return new ArrayList<String>(uniqueRecipes);
     }
 
+    /**
+     * Method to get DataRecords for 'AutoIndexAssignmentConfig' DataType that are marked as Active.
+     * @param indexTypes
+     * @param recipes
+     * @return List<DataRecord>
+     * @throws IoError
+     * @throws RemoteException
+     * @throws NotFound
+     * @throws ServerException
+     */
     private List<DataRecord> getIndexAssignmentConfigsForIndexType(String indexTypes, List<String> recipes) throws IoError, RemoteException, NotFound, ServerException {
         Boolean isCrisprOrAmpliconSeq = recipes.stream().filter(RECIPES_TO_USE_SPECIAL_ADAPTERS :: contains).collect(Collectors.toList()).size()>0;
         if (!isCrisprOrAmpliconSeq) {
@@ -125,6 +149,13 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin{
         }
     }
 
+    /**
+     * Method to get the position of last 'AutoIndexAssignmentConfig' DataRecord that was used for Auto Index Assignment process.
+     * @param indexAssignmentConfigs
+     * @return Integer
+     * @throws NotFound
+     * @throws RemoteException
+     */
     private Integer getPositionOfLastUsedIndex(List<DataRecord> indexAssignmentConfigs) throws NotFound, RemoteException {
         for (int i=0; i< indexAssignmentConfigs.size(); i ++){
             if (indexAssignmentConfigs.get(i).getBooleanVal("LastUsed", user)){
@@ -134,6 +165,11 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin{
         return -1;
     }
 
+    /**
+     * Method to sort the DataRecords, First by 'SampleColumn' and then by 'SampleRow' field values in Ascending order.
+     * @param protocolRecords
+     * @return List<DataRecord>
+     */
     private List<DataRecord> getSampleProtocolRecordsSortedByWellPositionColumnWise(List<DataRecord> protocolRecords){
         protocolRecords.sort(Comparator.comparing(s -> {
             try {
@@ -146,6 +182,19 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin{
         return protocolRecords;
     }
 
+    /**
+     * Method to populate field values of 'IndexBarcode' DataRecord.
+     * @param indexBarcode
+     * @param indexAssignmentConfig
+     * @param minVolInAdapterPlate
+     * @param maxPlateVolume
+     * @return Map<String, Object>
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws InvalidValue
+     * @throws IoError
+     * @throws ServerException
+     */
     private Map<String, Object> setAssignedIndicesDataRecordFieldValues(DataRecord indexBarcode, DataRecord indexAssignmentConfig, Double minVolInAdapterPlate, Double maxPlateVolume) throws NotFound, RemoteException, InvalidValue, IoError, ServerException {
         Double dnaInputAmount = 0.0;
         if (indexBarcode.getValue("InitialInput", user)!=null){
@@ -179,6 +228,17 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin{
         return indexAssignmentValues;
     }
 
+    /**
+     * Set the 'LastUsed' value of 'AutoIndexAssignmentConfig' DataRecord that was last used in the iteration to true.
+     * @param indexAssignmentConfigs
+     * @param oldLastIndexUsed
+     * @param newLastIndexUsed
+     * @throws RemoteException
+     * @throws InvalidValue
+     * @throws IoError
+     * @throws NotFound
+     * @throws ServerException
+     */
     private void setLastIndexUsed(List<DataRecord> indexAssignmentConfigs, Integer oldLastIndexUsed, int newLastIndexUsed) throws RemoteException, InvalidValue, IoError, NotFound, ServerException {
         if (oldLastIndexUsed >=0) {
             indexAssignmentConfigs.get(oldLastIndexUsed).setDataField("LastUsed", false, user);
@@ -186,6 +246,14 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin{
         indexAssignmentConfigs.get(newLastIndexUsed).setDataField("LastUsed", true, user);
     }
 
+    /**
+     * Split the List of DataRecords by alternate Well ID's. This is useful autoassignment when samples are on 384 well plates.
+     * @param protocolRecords
+     * @return List<List<DataRecord>>
+     * @throws ServerException
+     * @throws NotFound
+     * @throws RemoteException
+     */
     private List<List<DataRecord>> splitListByAlternatePosition(List<DataRecord> protocolRecords) throws ServerException, NotFound, RemoteException {
         List<List<DataRecord>> splitList = new ArrayList<>();
         List<DataRecord> listA = new ArrayList<>();
@@ -206,6 +274,18 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin{
         return splitList;
     }
 
+    /**
+     * Method to update 'IndexBarcode' records when samples are present on 96 well plates.
+     * @param indexAssignmentProtocolRecordsSortedColumnWise
+     * @param indexAssignmentConfigs
+     * @param minAdapterVol
+     * @param plateSize
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws IoError
+     * @throws InvalidValue
+     * @throws ServerException
+     */
     private void assignIndicesToSamplesOn96WellPlate(List<DataRecord> indexAssignmentProtocolRecordsSortedColumnWise, List<DataRecord> indexAssignmentConfigs, Double minAdapterVol, Integer plateSize) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
         Integer positionOfLastUsedIndex = getPositionOfLastUsedIndex(indexAssignmentConfigs);
         Double maxPlateVolume = autoHelper.getMaxVolumeLimit(plateSize);
@@ -227,6 +307,12 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin{
         activeTask.getTask().getTaskOptions().put("_INDEXES_AUTO_ASIGNED","");
     }
 
+    /**
+     * Method to get the position from the List of 'AutoIndexAssignmentConfig' to use as a start point based on position of last used record.
+     * @param lastUsedIndexPosition
+     * @param indexAssignmentConfigs
+     * @return int
+     */
     private int getStartIndexAssignmentConfigPosition(int lastUsedIndexPosition, List<DataRecord> indexAssignmentConfigs){
         if (lastUsedIndexPosition == indexAssignmentConfigs.size()-1){
             return 0;
@@ -235,6 +321,19 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin{
             return lastUsedIndexPosition +1;
         }
     }
+
+    /**
+     * Method to update 'IndexBarcode' records when samples are present on 384 well plates.
+     * @param indexAssignmentProtocolRecordsSortedColumnWise
+     * @param indexAssignmentConfigs
+     * @param minAdapterVol
+     * @param plateSize
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws InvalidValue
+     * @throws IoError
+     * @throws ServerException
+     */
     private void assignIndicesToSamplesOn384WellPlate(List<DataRecord> indexAssignmentProtocolRecordsSortedColumnWise, List<DataRecord> indexAssignmentConfigs, Double minAdapterVol, Integer plateSize) throws NotFound, RemoteException, InvalidValue, IoError, ServerException {
         Integer positionOfLastUsedIndex = getPositionOfLastUsedIndex(indexAssignmentConfigs);
         Double maxPlateVolume = autoHelper.getMaxVolumeLimit(plateSize);
@@ -262,6 +361,15 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin{
         activeTask.getTask().getTaskOptions().put("_INDEXES_AUTO_ASIGNED","");
     }
 
+    /**
+     * Method to check for the DataRecords in 'AutoIndexAssignmentConfig' for which the value of 'IsDepelted' should to marked to true.
+     * @param indexAssignmentConfigs
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws IoError
+     * @throws InvalidValue
+     * @throws ServerException
+     */
     private void checkIndexAssignmentsForDepletedAdapters(List<DataRecord> indexAssignmentConfigs) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
         for (DataRecord rec: indexAssignmentConfigs){
             if (rec.getDoubleVal("AdapterVolume", user) < 10.00){

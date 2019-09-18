@@ -14,6 +14,7 @@ import com.velox.api.datatype.fielddefinition.VeloxIntegerFieldDefinition;
 import com.velox.api.datatype.fielddefinition.VeloxStringFieldDefinition;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
+import com.velox.api.workflow.ActiveTask;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
@@ -44,7 +45,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
 
     @Override
     public boolean shouldRun() throws RemoteException {
-        return activeTask.getStatus() != activeTask.COMPLETE && activeTask.getTask().getTaskOptions().keySet().contains("SORT AND ASSIGN SAMPLES TO PLATE");
+        return activeTask.getStatus() != ActiveTask.COMPLETE && activeTask.getTask().getTaskOptions().keySet().contains("SORT AND ASSIGN SAMPLES TO PLATE");
     }
 
     @Override
