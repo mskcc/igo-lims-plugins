@@ -15,7 +15,11 @@ import java.util.*;
 import java.util.function.DoubleUnaryOperator;
 
 /**
- * Created by sharmaa1 on 9/10/19.
+ * This is the plugin class is designed to update the values for 'AutoIndexAssignmentConfig' records based on the 'IndexBarcode' DataRecord values manually assigned by the Users. This will help to track the
+ * Volumes for 'AutoIndexAssignmentConfig' DataRecords.
+ * 'Index Barcode and Adapter' terms are used interchangeably and have the same meaning.
+ * 'AutoIndexAssignmentConfig' is the DataType which holds the Index Barcode metadata that is used for Auto Index Assignment to the samples.
+ * @author sharmaa1
  */
 public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
     private final List<String> RECIPES_TO_USE_SPECIAL_ADAPTERS = Arrays.asList("CRISPRSeq", "AmpliconSeq");
@@ -66,6 +70,18 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
         return new PluginResult(true);
     }
 
+    /**
+     * Method to add the metadata for 'IndexBarcode' records, that is not added during Manual Index Assignment process.
+     * @param indexAssignmentConfigs
+     * @param indexBarcodeRecords
+     * @param minVolInAdapterPlate
+     * @param maxPlateVolume
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws InvalidValue
+     * @throws IoError
+     * @throws ServerException
+     */
     private void setUpdatedIndexAssignmentValues(List<DataRecord> indexAssignmentConfigs, List<DataRecord> indexBarcodeRecords, Double minVolInAdapterPlate, Double maxPlateVolume) throws NotFound, RemoteException, InvalidValue, IoError, ServerException {
         for (DataRecord indexBarcodeRec : indexBarcodeRecords) {
             boolean found = false;
@@ -100,6 +116,15 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
         }
     }
 
+    /**
+     * Method to check for the DataRecords in 'AutoIndexAssignmentConfig' for which the value of 'IsDepelted' should to marked to true.
+     * @param indexAssignmentConfigs
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws IoError
+     * @throws InvalidValue
+     * @throws ServerException
+     */
     private void checkIndexAssignmentsForDepletedAdapters(List<DataRecord> indexAssignmentConfigs) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
         for (DataRecord rec: indexAssignmentConfigs){
             if (rec.getDoubleVal("AdapterVolume", user) < 10.00){
