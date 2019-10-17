@@ -63,6 +63,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             if (!fileHasData(rowData, filesWithDlpData) || !hasValidHeader(rowData, DLP_UPLOAD_SHEET_EXPECTED_HEADERS, filesWithDlpData)) {
                 return new PluginResult(false);
             }
+            clientCallback.displayInfo("This process Will take some time. Please be patient.");
             HashMap<String, Integer> headerValuesMap = utils.getHeaderValuesMapFromExcelRowData(rowData);
             List <DataRecord> samplesAttachedToTask = activeTask.getAttachedDataRecords("Sample", user);
             if (samplesAttachedToTask.isEmpty()){
@@ -71,7 +72,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             }
             Map<String, List<Row>> rowsSeparatedBySampleMap = getRowsBySample(samplesAttachedToTask, rowData, headerValuesMap);
             if (rowsSeparatedBySampleMap.isEmpty()){
-                clientCallback.displayError(String.format("Did not find matching SAMPLE ID's for samples attached to the task in the file %s ", filesWithDlpData));
+                clientCallback.displayError(String.format("Did not find matching SAMPLE ID's for samples attached to the task in the file %s.\nPlease make sure that file has correct Sample Info.", filesWithDlpData));
                 return new PluginResult(false);
             }
             Map<String, List<DataRecord>> newDlpSamples = createDlpSamplesAndProtocolRecords(rowsSeparatedBySampleMap, headerValuesMap, samplesAttachedToTask);
@@ -340,6 +341,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         valuesForControlRec.put("Recipe", sampleFields.get("Recipe"));
         valuesForControlRec.put("ExemplarSampleType", "DNA Library");
         valuesForControlRec.put("Species", sampleFields.get("Species"));
+        valuesForControlRec.put("RequestId", sampleFields.get("RequestId"));
         valuesForControlRec.put("IsControl", true);
         DataRecord controlSample = dataRecordManager.addDataRecord("Sample", user);
         controlSample.setFields(valuesForControlRec, user);
@@ -358,11 +360,12 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
      */
     private String getMostRecentDLPControl( String controlTypeIdentifier) throws IoError, RemoteException, NotFound {
         List<DataRecord> controlSampleRecords = dataRecordManager.queryDataRecords("Sample", "IsControl = 1 AND SampleId LIKE '" + controlTypeIdentifier + "%'", user);
+        logInfo("ControlSamples Size: " + controlSampleRecords.size());
         List<String> controlSampleIds = new ArrayList<>();
         for (DataRecord record : controlSampleRecords) {
             String sampleId = record.getStringVal("SampleId", user);
             String otherSampleId = record.getStringVal("OtherSampleId", user);
-            if (otherSampleId.toLowerCase().contains("dlp-ntc") && sampleId.toLowerCase().contains("dlp-ntc")){
+            if (otherSampleId.toLowerCase().contains(controlTypeIdentifier.toLowerCase()) && sampleId.toLowerCase().contains(controlTypeIdentifier.toLowerCase())){
                 controlSampleIds.add(sampleId);
             }
         }
@@ -371,6 +374,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             return controlTypeIdentifier;
         }
         List<String> sortedControlSampleIds = controlSampleIds.stream().sorted(new AlphaNumericComparator()).collect(Collectors.toList());
+        logInfo("Sorted controls:" + sortedControlSampleIds.toString());
         return sortedControlSampleIds.get(sortedControlSampleIds.size() - 1).split("_")[0];
     }
 
@@ -445,6 +449,25 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         }
     }
 
+    /**
+     * Get the next Sample ID that we can use to start creating aliquot ID's. If the sample is being reporcessed, Some aliquot Sample ID's may already exist, and we need to find next aliquot sample ID.
+     * @param sampleId
+     * @return
+     * @throws IoError
+     * @throws RemoteException
+     * @throws NotFound
+     */
+    private String getNextSampleId(String sampleId) throws IoError, RemoteException, NotFound {
+        int counter = 1;
+        String nextSampleId = sampleId + "_" + counter; //this SampleId can already exist if sample is being reprocessed for DLP. We check that in next if block
+        // if poolid exists, extend it with a number and increment the number until we have a pool id that doesn't exist in the LIMS.
+        while(dataRecordManager.queryDataRecords("Sample","SampleId = '" + nextSampleId +"'", user).size()>0){
+            counter += 1;
+            nextSampleId = sampleId + "_" + counter;
+        }
+        logInfo("Next Sample ID : " + nextSampleId);
+        return nextSampleId;
+    }
 
     /**
      * This method is long and does few things:
@@ -468,48 +491,48 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
      */
     private Map<String, List<DataRecord>> createDlpSamplesAndProtocolRecords(Map<String, List<Row>>rowsSeparatedBySampleMap, HashMap<String, Integer> headerValuesMap, List<DataRecord> samples) throws NotFound, RemoteException, IoError, InvalidValue, ServerException, AlreadyExists {
         Map<String, List<DataRecord>> newlyCreatedChildSamplesByQuadrant = new HashMap<>();
+        int negativeControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPNegativeCONTROL"));
+        int salControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPSalCONTROL"));
+        int gmControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPGmCONTROL"));
         for (DataRecord sample : samples) {
             String sampleId = sample.getStringVal("SampleId", user);
             String otherSampleId = sample.getStringVal("OtherSampleId", user);
             String altId = sample.getStringVal("AltId", user);
             String sequencingRunType = getSequencingRunType(sample);
             List<Row> sampleDataRows = rowsSeparatedBySampleMap.get(sampleId);
-            int negativeControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPNegativeCONTROL"));
-            int salControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPSalCONTROL"));
-            int gmControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPGmCONTROL"));
+            String nextAliquotSampleId = getNextSampleId(sampleId); // This will provode the next sample ID that we can use to start creating aliquot ID's. If the sample is being reporcessed, the aliquot ID's may exist, and we need to find next aliquot sample ID.
             int aliquotIncrementValue = 1;
             for (Row row : sampleDataRows) {
                 String chipRow = row.getCell(headerValuesMap.get("Row")).toString();
                 String chipColumn = row.getCell(headerValuesMap.get("Column")).toString();
                 if (isValidChipSpotToProcess(chipRow, chipColumn) && (chipSpotHasOneCell(row, headerValuesMap)|| isRevisedAndHasOneCell(row, headerValuesMap))){
-                    logInfo("Valid to process");
-                    String newSampleId = "";
-                    String newOtherSampleId = "";
+                    String newSampleId;
+                    String newOtherSampleId;
                     boolean isControl = false;
                     Map<String, Object> dlpRecordValues = new HashMap<>();
                     switch (chipColumn) {
                         case "3.0":
                             negativeControlIncrement += 1;
                             newSampleId = "DLPNegativeCONTROL" + "-" + negativeControlIncrement;
-                            newOtherSampleId = "DLPNegativeCONTROL";
+                            newOtherSampleId = "DLPNegativeCONTROL" + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
                             altId = newSampleId;
                             isControl = true;
                             break;
                         case "4.0":
                             salControlIncrement += 1;
                             newSampleId = "DLPSalCONTROL" + "-" + salControlIncrement;
-                            newOtherSampleId = "DLPSalCONTROL";
+                            newOtherSampleId = "DLPSalCONTROL" + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
                             isControl = true;
                             break;
                         case "5.0":
                             gmControlIncrement += 1;
                             newSampleId = "DLPGmCONTROL" + "-" + gmControlIncrement;
-                            newOtherSampleId = "DLPGmCONTROL";
+                            newOtherSampleId = "DLPGmCONTROL" + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
                             altId = newSampleId;
                             isControl = true;
                             break;
                         default:
-                            newSampleId = sampleId + "_" + Integer.toString(aliquotIncrementValue);
+                            newSampleId = nextAliquotSampleId + "_" + Integer.toString(aliquotIncrementValue);
                             newOtherSampleId = otherSampleId + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
                             break;
                     }
@@ -576,6 +599,32 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
 
 
     /**
+     * Get Pool ID.
+     * @param requestId
+     * @param quadrant
+     * @return
+     * @throws IoError
+     * @throws RemoteException
+     * @throws NotFound
+     */
+    private String getPoolId(String requestId, String quadrant) throws IoError, RemoteException, NotFound {
+        String poolId = "Pool-" + requestId + "-Tube" + quadrant; //this pool  ID can already exist if samples from same request were processed before. We check that in next if block
+        if(dataRecordManager.queryDataRecords("Sample","SampleId = '" + poolId + "'", user).isEmpty()){
+            logInfo("Pool ID : " + poolId);
+            return poolId;
+        }
+        int counter = 1;
+        String extendedPoolId = poolId + "_" + counter; // if poolid exists, extend it with a number and increment the number until we have a pool id that doesn't exist in the LIMS.
+        while(dataRecordManager.queryDataRecords("Sample","SampleId = '" + extendedPoolId +"'", user).size()>0){
+            counter += 1;
+            extendedPoolId = poolId + "_" + counter;
+        }
+        logInfo("PoolId: " + extendedPoolId);
+        return extendedPoolId;
+    }
+
+
+    /**
      * Method to create Sample Pools. Samples on each Quadrant on the chip will be pooled together.
      * After pooling new pools are attached to the active task
      * @param newlyCreatedChildSamplesByQuadrant
@@ -595,8 +644,8 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             String requestIds = getRequestIdsAsString(samples, quadrant);
             logInfo("requestIds: " + requestIds);
             Map<String, Object> pooledSampleValues = new HashMap<>();
-            String poolId = "Pool-" + requestIds + "-Tube" + quadrant;
-            String otherSampleId = "Pool-" + requestIds + "_" + "Tube" + quadrant + "_" + chipId;
+            String poolId = getPoolId(requestIds, quadrant);
+            String otherSampleId = poolId + "_" + chipId;
             pooledSampleValues.put("SampleId", poolId);
             pooledSampleValues.put("OtherSampleId", otherSampleId );
             pooledSampleValues.put("AltId", otherSampleId);
@@ -604,8 +653,8 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             pooledSampleValues.put("ExemplarSampleType", "Pooled Library");
             newPoolRecordvalues.add(pooledSampleValues);
             DataRecord pooledSample = dataRecordManager.addDataRecords("Sample", newPoolRecordvalues, user).get(0);
+            logInfo("Adding pool as child to Sample!");
             for (DataRecord sample: samples){
-                logInfo("Adding pool as child!");
                 sample.addChild(pooledSample, user);
             }
             dataRecordManager.storeAndCommit("Adding pool Info for DLP sample " + poolId, null, user);
