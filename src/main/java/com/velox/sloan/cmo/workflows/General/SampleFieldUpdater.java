@@ -57,7 +57,14 @@ public class SampleFieldUpdater extends DefaultGenericPlugin {
         return new PluginResult(true);
     }
 
-    private boolean isValidOtherSampleId(Object otherSampleId) throws ServerException {
+    /**
+     * Method to validate OtherSampleId field.
+     * @param otherSampleId
+     * @param sampleType
+     * @return Boolean
+     * @throws ServerException
+     */
+    private boolean isValidOtherSampleId(Object otherSampleId, String sampleType) throws ServerException {
         String sampleName = String.valueOf(otherSampleId).toLowerCase();
         Pattern mrnpattern = Pattern.compile(".*\\d{9}.*"); // to match 9 digit string in sample name
         Matcher mrnMatcher = mrnpattern.matcher(sampleName);
@@ -76,11 +83,17 @@ public class SampleFieldUpdater extends DefaultGenericPlugin {
         Pattern specialCharPattern = Pattern.compile("[^a-z0-9_-]", Pattern.CASE_INSENSITIVE);
         Matcher specialCharMatcher = specialCharPattern.matcher(sampleName);
         boolean specialCharPresent = specialCharMatcher.find();
-        if(specialCharPresent){
+        if(specialCharPresent && !"pooled library".equalsIgnoreCase(sampleType)){
             clientCallback.displayError(String.format("Sample name '%s' cannot contain special characters except '_' or '-'", String.valueOf(otherSampleId)));
             return false;
         }
-
+        Pattern specialCharPatternForPool = Pattern.compile("[^a-z0-9,_-]", Pattern.CASE_INSENSITIVE);
+        Matcher specialCharMatcherForPool = specialCharPatternForPool.matcher(sampleName);
+        boolean specialCharPresentPool = specialCharMatcherForPool.find();
+        if("pooled library".equalsIgnoreCase(sampleType) && specialCharPresentPool){
+            clientCallback.displayError(String.format("Sample name for pool '%s' cannot contain special characters except '_' or '-' or ','", String.valueOf(otherSampleId)));
+            return false;
+        }
         if (sampleName.contains("sample")
                 || sampleName.contains("samples")
                 || sampleName.contains("igo")
@@ -92,47 +105,19 @@ public class SampleFieldUpdater extends DefaultGenericPlugin {
         return true;
     }
 
-    private void updateFieldsOnDescendants(List<DataRecord> samples, String fieldNameToUpdate) throws IoError, RemoteException, ServerException, NotFound, InvalidValue, org.omg.CORBA.DynAnyPackage.InvalidValue {
-        for (DataRecord sample : samples) {
-            Object valueToOverwrie = sample.getStringVal(fieldNameToUpdate, user);
-            List<DataRecord> descendantSamples = getDescendantSamplesWithinRequest(sample);
-            for (DataRecord samp : descendantSamples) {
-                logInfo("samp: " + sample.getStringVal("SampleId", user));
-                logInfo("descendant samp: " + samp.getStringVal("SampleId", user));
-                updateNonPooledSamples(samp, valueToOverwrie, fieldNameToUpdate);
-            }
-        }
-    }
 
-    public List<DataRecord> getParentRequests(DataRecord sample) throws IoError, RemoteException, NotFound {
-        List<DataRecord> requests = new ArrayList<>();
-        if (sample.getStringVal("SampleId", user).toLowerCase().startsWith("pool-")){
-            return requests;
-        }
-        if (sample.getParentsOfType("Request", user).size() > 0){
-            return sample.getParentsOfType("Request", user);
-        }
-        Stack<DataRecord> sampleStack = new Stack<>();
-        if (sample.getParentsOfType("Sample", user).size() > 0){
-            sampleStack.push(sample.getParentsOfType("Sample", user).get(0));
-        }
-        while (!sampleStack.isEmpty()){
-            DataRecord nextSample = sampleStack.pop();
-            if (nextSample.getParentsOfType("Request", user).size() > 0){
-                return nextSample.getParentsOfType("Request", user);
-            }
-            else if(nextSample.getParentsOfType("Sample", user).size() > 0){
-                sampleStack.push(nextSample.getParentsOfType("Sample", user).get(0));
-            }
-        }
-        return requests;
-    }
-
-
+    /**
+     * Method to get all the descendants on a DataRecord within a request.
+     * @param sample
+     * @return List<DataRecord>
+     * @throws RemoteException
+     * @throws NotFound
+     * @throws ServerException
+     * @throws IoError
+     */
     private List<DataRecord> getDescendantSamplesWithinRequest(DataRecord sample) throws RemoteException, NotFound, ServerException, IoError {
         List<DataRecord> descendantSamplesInRequest = new ArrayList<>();
         descendantSamplesInRequest.add(sample);
-        List<DataRecord> allDescendantSamples = sample.getDescendantsOfType("Sample", user);
         Stack<DataRecord> sampleStack = new Stack<>();
         sampleStack.add(sample);
         while (!sampleStack.isEmpty()){
@@ -147,10 +132,50 @@ public class SampleFieldUpdater extends DefaultGenericPlugin {
                         logInfo("desc in request: " + samp.getStringVal("SampleId", user));
                         sampleStack.push(samp);
                     }
+                    if("pooled library".equals(samp.getStringVal("ExemplarSampleType", user).toLowerCase())
+                    && samp.getValue("RequestId", user) != null && sample.getValue("RequestId", user) != null){
+                       List<String> poolRequestIds = Arrays.asList(samp.getStringVal("RequestId", user).split(","));
+                        String sampleRequestId = sample.getStringVal("RequestId", user);
+                        if (poolRequestIds.contains(sampleRequestId)){
+                            descendantSamplesInRequest.add(samp);
+                            logInfo("desc in request: " + samp.getStringVal("SampleId", user));
+                            sampleStack.push(samp);
+                        }
+                    }
                 }
             }
         }
         return descendantSamplesInRequest;
+    }
+
+    /**
+     * Method to get the old value for a field on dataRecord. It is important to have old value when changing OtherSampleId field on Pooled Samples.
+     * @param sample
+     * @param newValue
+     * @param fieldName
+     * @return
+     * @throws IoError
+     * @throws RemoteException
+     * @throws NotFound
+     */
+    private String getPrevousAssignedValueForOtherSampleId(DataRecord sample, String newValue, String fieldName) throws IoError, RemoteException, NotFound {
+        DataRecord[] childSamples = sample.getChildrenOfType("Sample", user);
+        if (childSamples.length> 0 ){
+            if (fieldName.equals("OtherSampleId") && childSamples[0].getValue("ExemplarSampleType", user) != null && !childSamples[0].getStringVal("ExemplarSampleType", user).equalsIgnoreCase("Pooled Library")){
+                if (childSamples[0].getValue("OtherSampleId", user) != null && !newValue.equalsIgnoreCase(childSamples[0].getStringVal("OtherSampleId", user))){
+                    return childSamples[0].getStringVal("OtherSampleId", user);
+                }
+            }
+        }
+        return newValue;
+    }
+
+    private String getNewSampleNameForPool(String poolSampleName, String oldSampleVal, String newSampleVal){
+        logInfo("old: " + oldSampleVal);
+        logInfo("poolName: " + poolSampleName);
+        logInfo("new: " + newSampleVal);
+        logInfo("newPoolId: " +  poolSampleName.replace(oldSampleVal, newSampleVal));
+        return poolSampleName.replace(oldSampleVal, newSampleVal);
     }
 
     /**
@@ -172,7 +197,7 @@ public class SampleFieldUpdater extends DefaultGenericPlugin {
         return new ArrayList<>(descendentDataTypeNames);
     }
 
-    /**
+    /**,
      * Update the samples that are not pools.
      * @param descSamp
      * @param valueToOverWrite
@@ -182,8 +207,8 @@ public class SampleFieldUpdater extends DefaultGenericPlugin {
      * @throws InvalidValue
      * @throws NotFound
      */
-    private void updateNonPooledSamples(DataRecord descSamp, Object valueToOverWrite, String fieldNameToUpdate) throws IoError, RemoteException, InvalidValue, NotFound, ServerException, org.omg.CORBA.DynAnyPackage.InvalidValue {
-        if ("OtherSampleId".equals(fieldNameToUpdate) && !isValidOtherSampleId(valueToOverWrite)){
+    private void updateSampleFields(DataRecord descSamp, Object valueToOverWrite, String fieldNameToUpdate) throws IoError, RemoteException, InvalidValue, NotFound, ServerException, org.omg.CORBA.DynAnyPackage.InvalidValue {
+        if ("OtherSampleId".equals(fieldNameToUpdate) && !isValidOtherSampleId(valueToOverWrite, descSamp.getStringVal("ExemplarSampleType", user))){
             throw new org.omg.CORBA.DynAnyPackage.InvalidValue(String.format("Invalid OtherSampleId '%s", String.valueOf(valueToOverWrite)));
         }
         List<String> childDataTypesExceptSample = getDescendentDataTypeNames(descSamp);
@@ -195,6 +220,81 @@ public class SampleFieldUpdater extends DefaultGenericPlugin {
                 for (DataRecord rec : children) {
                     Map<String, Object> fields = rec.getFields(user);
                     if (fields.containsKey(fieldNameToUpdate)) {
+                        rec.setDataField(fieldNameToUpdate, valueToOverWrite, user);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Method to update fields on descendants of a DataRecord.
+     * @param samples
+     * @param fieldNameToUpdate
+     * @throws IoError
+     * @throws RemoteException
+     * @throws ServerException
+     * @throws NotFound
+     * @throws InvalidValue
+     * @throws org.omg.CORBA.DynAnyPackage.InvalidValue
+     */
+
+    private void updateFieldsOnDescendants(List<DataRecord> samples, String fieldNameToUpdate) throws IoError, RemoteException, ServerException, NotFound, InvalidValue, org.omg.CORBA.DynAnyPackage.InvalidValue {
+        for (DataRecord sample : samples) {
+            Object valueToOverwrie = sample.getStringVal(fieldNameToUpdate, user);
+            String oldValue = getPrevousAssignedValueForOtherSampleId(sample, String.valueOf(valueToOverwrie), fieldNameToUpdate);
+            List<DataRecord> descendantSamples = getDescendantSamplesWithinRequest(sample);
+            for (DataRecord samp : descendantSamples) {
+                if (fieldNameToUpdate.equalsIgnoreCase("OtherSampleId")
+                        && samp.getValue("ExemplarSampleType", user) != null
+                        && !"Pooled Library".equalsIgnoreCase(samp.getStringVal("ExemplarSampleType", user))){
+                    updateSampleFields(samp, valueToOverwrie, fieldNameToUpdate);
+                }
+                else if (fieldNameToUpdate.equalsIgnoreCase("OtherSampleId")
+                        && samp.getValue("ExemplarSampleType", user) != null
+                        && "Pooled Library".equalsIgnoreCase(samp.getStringVal("ExemplarSampleType", user))){
+                    updatePooledSampleFields(samp, valueToOverwrie, fieldNameToUpdate, oldValue);
+                }
+                else{
+                    updateSampleFields(samp, valueToOverwrie, fieldNameToUpdate);
+                }
+            }
+        }
+    }
+
+    /**
+     * Method to update fields for pooled samples. It has to be handled differently because OtherSampleId is concatenation of same field values from all the samples that
+     * are part of the pool. Other fields will be handled in the same way as
+     * @param descSamp
+     * @param valueToOverWrite
+     * @param fieldNameToUpdate
+     * @param oldValueForSampleName
+     * @throws IoError
+     * @throws RemoteException
+     * @throws InvalidValue
+     * @throws NotFound
+     * @throws ServerException
+     * @throws org.omg.CORBA.DynAnyPackage.InvalidValue
+     */
+    private void updatePooledSampleFields(DataRecord descSamp, Object valueToOverWrite, String fieldNameToUpdate, String oldValueForSampleName) throws IoError, RemoteException, InvalidValue, NotFound, ServerException, org.omg.CORBA.DynAnyPackage.InvalidValue {
+        if ("OtherSampleId".equals(fieldNameToUpdate) && !isValidOtherSampleId(valueToOverWrite, descSamp.getStringVal("ExemplarSampleType", user))){
+            throw new org.omg.CORBA.DynAnyPackage.InvalidValue(String.format("Invalid OtherSampleId '%s", String.valueOf(valueToOverWrite)));
+        }
+        List<String> childDataTypesExceptSample = getDescendentDataTypeNames(descSamp);
+        String pooledSampleId = descSamp.getStringVal("OtherSampleId", user);
+        String newPooledSampleId = getNewSampleNameForPool(pooledSampleId, oldValueForSampleName, String.valueOf(valueToOverWrite));
+        logInfo(newPooledSampleId);
+        descSamp.setDataField(fieldNameToUpdate, newPooledSampleId, user);
+        for(String descendentType : childDataTypesExceptSample ) {
+            List<DataRecord> children = Arrays.asList(descSamp.getChildrenOfType(descendentType, user));
+            if (children.size() > 0) {
+                for (DataRecord rec : children) {
+                    Map<String, Object> fields = rec.getFields(user);
+                    if ("OtherSampleId".equals(fieldNameToUpdate) && fields.containsKey(fieldNameToUpdate)){
+                        //String newPooledSampleId = getNewSampleNameForPool(pooledSampleId, oldValueForSampleName, String.valueOf(valueToOverWrite));
+                        rec.setDataField(fieldNameToUpdate, newPooledSampleId, user);
+                    }
+                    if (!"OtherSampleId".equals(fieldNameToUpdate) && fields.containsKey(fieldNameToUpdate)) {
                         rec.setDataField(fieldNameToUpdate, valueToOverWrite, user);
                     }
                 }
