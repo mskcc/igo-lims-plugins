@@ -45,7 +45,7 @@ public class AutoIndexAssignmentHelper extends ManagerBase{
         if (newVolume <= 10) {
             indexAssignmentConfig.setDataField("IsDepelted", true, user);
             indexAssignmentConfig.setDataField("IsActive", false, user);
-            clientCallback.displayWarning(String.format("The Volume for adapter '%s'on Adapter Plate with ID '%s' is below 10ul.\nThis adapter will be marked as depleted and will ignored for future assignments.",
+            clientCallback.displayWarning(String.format("The Volume for adapter '%s'on Adapter Plate with ID '%s' is below 10ul.\nThis adapter will be marked as depleted and will be ignored for future assignments.",
                     indexAssignmentConfig.getStringVal("IndexId", user), indexAssignmentConfig.getStringVal("AdapterPlateId", user)));
         }
         return indexAssignmentConfig;
@@ -90,9 +90,12 @@ public class AutoIndexAssignmentHelper extends ManagerBase{
      * @param dnaInputAmount
      * @return Double Concentration
      */
-    public Double getCalculatedTargetAdapterConcentration(Double dnaInputAmount){
-        if (dnaInputAmount<50.00){
+    public Double getCalculatedTargetAdapterConcentration(Double dnaInputAmount, Integer plateSize){
+        if (plateSize == 96 && dnaInputAmount < 50.00){
             return (15 * dnaInputAmount)/50.00;
+        }
+        if (plateSize == 384 && dnaInputAmount <20.00){
+            return (15 * dnaInputAmount)/20.00;
         }
         return 15.00;
     }

@@ -30,8 +30,9 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             "Rev_Live",	"Rev_Dead",	"Rev_Other", "Rev_Class", "Condition", "Index_I7", "Primer_I7", "Index_I5", "Primer_I5", "Pick_Met", "Spot_Well", "Num_Drops");
     private final List<String> ROW_NUMBERS_TO_SKIP = Arrays.asList("1","2","36","37","71","72", "1.0","2.0","36.0","37.0","71.0","72.0"); // these are the row numbers on DLP chip edges that are not spotted with samples and must be skipped.
     private final List<String> COLUMN_NUMBERS_TO_SKIP = Arrays.asList("1","2","37","38","39","71","72", "1.0","2.0","37.0","38.0","39.0","71.0","72.0"); // these are the column numbers on DLP chip edges, and in middle of the chip, that are not spotted with samples and must be skipped.
-
-    String chipId = "";
+    private final List<String> CELL_TYPES_TO_PROCESS = Arrays.asList("Live", "Dead", "Live/Dead");
+    String recipe =""; // Recipe to assign to new pool and new child records
+    String chipId = ""; // DLP chip ID
     Map<String, String>  seqRunTypeByQuadrant = new HashMap<>();
 
     public DlpSampleSplitterPoolMaker() {
@@ -39,13 +40,11 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         setOrder(PluginOrder.EARLY.getOrder());
     }
 
-
     @Override
     public boolean shouldRun() throws RemoteException {
         return activeTask.getStatus() != ActiveTask.COMPLETE && activeTask.getTask().getTaskOptions().containsKey("PARSE DLP SPOTTING FILE")
                 && !activeTask.getTask().getTaskOptions().containsKey("_DLP SPOTTING FILE PARSED");
     }
-
 
     public PluginResult run() throws ServerException {
         try {
@@ -56,7 +55,9 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             if (!isValidExcelFile(filesWithDlpData)){
                 return new PluginResult(false);
             }
-            chipId = filesWithDlpData.split("[_.]")[1];
+            List<String> splitFileName = Arrays.asList(filesWithDlpData.replaceAll("\\s","_").split("_|-|\\s"));;
+            String endOfFileName = splitFileName.get(splitFileName.size()-1);
+            chipId = endOfFileName.split("\\.")[0];
             byte[] excelFileData = clientCallback.readBytes(filesWithDlpData);
             List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
 
@@ -75,9 +76,19 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                 clientCallback.displayError(String.format("Did not find matching SAMPLE ID's for samples attached to the task in the file %s.\nPlease make sure that file has correct Sample Info.", filesWithDlpData));
                 return new PluginResult(false);
             }
-            Map<String, List<DataRecord>> newDlpSamples = createDlpSamplesAndProtocolRecords(rowsSeparatedBySampleMap, headerValuesMap, samplesAttachedToTask);
+            List <String> cellTypeChoices = clientCallback.showListDialog("Please choose the cell type to process", CELL_TYPES_TO_PROCESS, false, user);
+            if (cellTypeChoices.isEmpty()){
+                clientCallback.displayError("Cell type to process not selected. You need to select correct cell type to process");
+                return new PluginResult(false);
+            }
+            String cellTypeToProcess = cellTypeChoices.get(0);
+            boolean isCorrectCellTypeToProcess = clientCallback.showYesNoDialog("Confirm CELL TYPE to process", String.format("Are you sure you want to process '%s' cells", cellTypeToProcess));
+            if (!isCorrectCellTypeToProcess){
+                logInfo("User did not positively confirm CELL TYPE to process. Aborting plugin task.");
+                return new PluginResult(false);
+            }
+            Map<String, List<DataRecord>> newDlpSamples = createDlpSamplesAndProtocolRecords(rowsSeparatedBySampleMap, headerValuesMap, samplesAttachedToTask, cellTypeToProcess);
             createPools(newDlpSamples);
-
         } catch (Exception e) {
             clientCallback.displayError(String.format("Error while parsing the DLP plus spotting file:\n%s", e));
             logError(Arrays.toString(e.getStackTrace()));
@@ -152,32 +163,54 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         return !ROW_NUMBERS_TO_SKIP.contains(rowNum) && !COLUMN_NUMBERS_TO_SKIP.contains(columnNum);
     }
 
-
     /**
-     * Method to check that the chip spot has only one cell. Spots with only singleton live or dead cell is valid to process.
+     * To validate file row for presence of only one live cell and not other cells.
      * @param row
      * @param headerValuesMap
-     * @return boolean true/false
+     * @return
      */
-    private boolean chipSpotHasOneCell(Row row, HashMap<String, Integer> headerValuesMap){
-        return (row.getCell(headerValuesMap.get("Num_Live")).toString().equals("1.0") && row.getCell(headerValuesMap.get("Num_Dead")).toString().equals("0.0")
-                || row.getCell(headerValuesMap.get("Num_Live")).toString().equals("0.0") && row.getCell(headerValuesMap.get("Num_Dead")).toString().equals("1.0")) ||
-                (row.getCell(headerValuesMap.get("Num_Live")).toString().equals("1") && row.getCell(headerValuesMap.get("Num_Dead")).toString().equals("0")
-                        || row.getCell(headerValuesMap.get("Num_Live")).toString().equals("0") && row.getCell(headerValuesMap.get("Num_Dead")).toString().equals("1"));
+    private boolean chipHasOneliveCell(Row row, HashMap<String, Integer> headerValuesMap){
+        Integer num_live = Integer.parseInt(row.getCell(headerValuesMap.get("Num_Live")).toString().split("\\.")[0]);
+        Integer num_dead = Integer.parseInt(row.getCell(headerValuesMap.get("Num_Dead")).toString().split("\\.")[0]);
+        Integer rev_live = Integer.parseInt(row.getCell(headerValuesMap.get("Rev_Live")).toString().split("\\.")[0]);
+        Integer rev_dead = Integer.parseInt(row.getCell(headerValuesMap.get("Rev_Dead")).toString().split("\\.")[0]);
+        return (num_live == 1.0 && num_dead <= 0.0 && rev_dead <=0.0 && rev_live <=0.0) // must have only one live cell
+                || (rev_live == 1.0 && num_dead <= 0.0 && rev_dead <=0.0 && num_live <=0.0); // OR must have only one revised live cell
     }
 
-
     /**
-     * Method to check that the chip spot has only one cell in case software call was changed. Sometimes smartchip calls are overridden by technician.
+     * To validate file row for presence of only one dead cell and not other cells.
      * @param row
      * @param headerValuesMap
-     * @return boolean true/false
+     * @return
      */
-    private boolean isRevisedAndHasOneCell(Row row, HashMap<String, Integer> headerValuesMap){
-        return (row.getCell(headerValuesMap.get("Rev_Live")).toString().equals("1") && row.getCell(headerValuesMap.get("Rev_Dead")).toString().equals("0")
-                || row.getCell(headerValuesMap.get("Rev_Live")).toString().equals("0") && row.getCell(headerValuesMap.get("Rev_Dead")).toString().equals("1")) ||
-                row.getCell(headerValuesMap.get("Rev_Live")).toString().equals("1") && row.getCell(headerValuesMap.get("Rev_Dead")).toString().equals("0")
-                || row.getCell(headerValuesMap.get("Rev_Live")).toString().equals("0") && row.getCell(headerValuesMap.get("Rev_Dead")).toString().equals("1");
+    private boolean chipSpotHasOneDeadCell(Row row, HashMap<String, Integer> headerValuesMap){
+        Integer num_live = Integer.parseInt(row.getCell(headerValuesMap.get("Num_Live")).toString().split("\\.")[0]);
+        Integer num_dead = Integer.parseInt(row.getCell(headerValuesMap.get("Num_Dead")).toString().split("\\.")[0]);
+        Integer rev_live = Integer.parseInt(row.getCell(headerValuesMap.get("Rev_Live")).toString().split("\\.")[0]);
+        Integer rev_dead = Integer.parseInt(row.getCell(headerValuesMap.get("Rev_Dead")).toString().split("\\.")[0]);
+        return (num_dead == 1.0 && rev_dead <= 0.0 && rev_live <=0.0 && num_live <=0.0) // must have only one dead cell
+                || (rev_dead == 1.0 && num_dead <= 0.0 && num_live <=0.0 && rev_live <=0.0); // OR there can only be one revised dead cell
+    }
+
+    /**
+     * To validate the row based on user cell type to process.
+     * @param row
+     * @param headerValuesMap
+     * @param cellTypeToProcess
+     * @return
+     */
+    private boolean isValidCellTypeToProcess(Row row, HashMap<String, Integer> headerValuesMap, String cellTypeToProcess){
+        switch (cellTypeToProcess){
+            case "Live":
+                return chipHasOneliveCell(row, headerValuesMap);
+            case "Dead":
+                return chipSpotHasOneDeadCell(row, headerValuesMap);
+            case "Live/Dead":
+                return chipHasOneliveCell(row, headerValuesMap) || chipSpotHasOneDeadCell(row, headerValuesMap);
+
+        }
+        return false;
     }
 
 
@@ -489,11 +522,12 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws AlreadyExists
      */
-    private Map<String, List<DataRecord>> createDlpSamplesAndProtocolRecords(Map<String, List<Row>>rowsSeparatedBySampleMap, HashMap<String, Integer> headerValuesMap, List<DataRecord> samples) throws NotFound, RemoteException, IoError, InvalidValue, ServerException, AlreadyExists {
+    private Map<String, List<DataRecord>> createDlpSamplesAndProtocolRecords(Map<String, List<Row>>rowsSeparatedBySampleMap, HashMap<String, Integer> headerValuesMap, List<DataRecord> samples, String cellTypeToProcess) throws NotFound, RemoteException, IoError, InvalidValue, ServerException, AlreadyExists {
         Map<String, List<DataRecord>> newlyCreatedChildSamplesByQuadrant = new HashMap<>();
         int negativeControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPNegativeCONTROL"));
         int salControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPSalCONTROL"));
         int gmControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPGmCONTROL"));
+        recipe = samples.get(0).getStringVal("Recipe", user);
         for (DataRecord sample : samples) {
             String sampleId = sample.getStringVal("SampleId", user);
             String otherSampleId = sample.getStringVal("OtherSampleId", user);
@@ -505,7 +539,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             for (Row row : sampleDataRows) {
                 String chipRow = row.getCell(headerValuesMap.get("Row")).toString();
                 String chipColumn = row.getCell(headerValuesMap.get("Column")).toString();
-                if (isValidChipSpotToProcess(chipRow, chipColumn) && (chipSpotHasOneCell(row, headerValuesMap)|| isRevisedAndHasOneCell(row, headerValuesMap))){
+                if (isValidChipSpotToProcess(chipRow, chipColumn) && isValidCellTypeToProcess(row, headerValuesMap, cellTypeToProcess)){
                     String newSampleId;
                     String newOtherSampleId;
                     boolean isControl = false;
@@ -623,7 +657,6 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         return extendedPoolId;
     }
 
-
     /**
      * Method to create Sample Pools. Samples on each Quadrant on the chip will be pooled together.
      * After pooling new pools are attached to the active task
@@ -651,6 +684,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             pooledSampleValues.put("AltId", otherSampleId);
             pooledSampleValues.put("RequestId", requestIds);
             pooledSampleValues.put("ExemplarSampleType", "Pooled Library");
+            pooledSampleValues.put("Recipe", recipe);
             newPoolRecordvalues.add(pooledSampleValues);
             DataRecord pooledSample = dataRecordManager.addDataRecords("Sample", newPoolRecordvalues, user).get(0);
             logInfo("Adding pool as child to Sample!");
