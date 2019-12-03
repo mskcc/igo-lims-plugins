@@ -60,7 +60,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
             Integer plateSize = autohelper.getPlateSize(attachedSamplesList);
             Double minAdapterVolInPlate = autohelper.getMinAdapterVolumeRequired(plateSize);
             Double maxPlateVolume = autohelper.getMaxVolumeLimit(plateSize);
-            setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords, minAdapterVolInPlate, maxPlateVolume);
+            setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords, minAdapterVolInPlate, maxPlateVolume, plateSize);
             checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
         } catch (Exception e) {
             clientCallback.displayError(String.format("Error while updating Index assignment values after manual Index assignment to samples:\n%s", ExceptionUtils.getStackTrace(e)));
@@ -82,7 +82,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
      * @throws IoError
      * @throws ServerException
      */
-    private void setUpdatedIndexAssignmentValues(List<DataRecord> indexAssignmentConfigs, List<DataRecord> indexBarcodeRecords, Double minVolInAdapterPlate, Double maxPlateVolume) throws NotFound, RemoteException, InvalidValue, IoError, ServerException {
+    private void setUpdatedIndexAssignmentValues(List<DataRecord> indexAssignmentConfigs, List<DataRecord> indexBarcodeRecords, Double minVolInAdapterPlate, Double maxPlateVolume, Integer plateSize) throws NotFound, RemoteException, InvalidValue, IoError, ServerException {
         for (DataRecord indexBarcodeRec : indexBarcodeRecords) {
             boolean found = false;
             for (DataRecord indexConfig : indexAssignmentConfigs) {
@@ -94,7 +94,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                     String adapterSourceRow = autohelper.getAdapterRowPosition(wellPosition);
                     String adapterSourceCol = autohelper.getAdapterColPosition(wellPosition);
                     Double adapterStartConc = indexConfig.getDoubleVal("AdapterConcentration", user);
-                    Double targetAdapterConc = autohelper.getCalculatedTargetAdapterConcentration(dnaInputAmount);
+                    Double targetAdapterConc = autohelper.getCalculatedTargetAdapterConcentration(dnaInputAmount, plateSize);
                     Double adapterVolume = autohelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc);
                     Double waterVolume = autohelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume);
                     Double actualTargetAdapterConc = adapterStartConc/((waterVolume + adapterVolume)/adapterVolume);
