@@ -32,7 +32,8 @@ public class IgoLimsPluginUtils {
         InputStream dataStream = new ByteArrayInputStream(fileContent);
         try (BufferedReader fileReader = new BufferedReader(new InputStreamReader(dataStream))) {
             String temp;
-            while ((temp = fileReader.readLine()) != null) {
+           // || !temp.replace(",", "").equals(null) || !temp.replace(",", "").equals("")
+            while ((temp = fileReader.readLine()) != null && !temp.replace(",", "").equals(null)) { //to check that there are no empty lines at end of file
                 String rowData;
                 rowData = temp;
                 rowDataValues.add(rowData);
