@@ -62,6 +62,7 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
 
     /**
      * Method to validate file extension.
+     *
      * @param file
      * @return true/false
      */
@@ -71,6 +72,7 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
 
     /**
      * Method to validate if file has data.
+     *
      * @param fileData
      * @return true/false
      */
@@ -80,6 +82,7 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
 
     /**
      * Method to valid header row values in file.
+     *
      * @param fileData
      * @return true/false
      */
@@ -89,6 +92,7 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
 
     /**
      * Method to validate that all rows in excel file has required data
+     *
      * @param fileData
      * @return
      */
@@ -98,6 +102,7 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
 
     /**
      * Method to valid file and file data
+     *
      * @param filePath
      * @param fileDataToBytes
      * @return true/false
@@ -134,6 +139,7 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
 
     /**
      * Method to create micronic tube record values from excel data
+     *
      * @param fileData
      * @return List of Maps of micronic tube values
      */
@@ -143,6 +149,7 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
 
     /**
      * Method to get existing MicronicTube Barcodes stored under MicronicTubeTareWeight DataType
+     *
      * @param existingMicronicTubes
      * @return List of MicronicTube Barcodes
      * @throws NotFound
@@ -158,6 +165,7 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
 
     /**
      * Method to get MicronicTube Barcodes from Data
+     *
      * @param micronicTubes
      * @return List of MicronicTube Barcodes
      */
@@ -167,6 +175,7 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
 
     /**
      * Method to check if duplicate MicronicTube Barcodes exist in the data read from the file.
+     *
      * @param micronicTubeBarcodesAlreadyInLims
      * @param newMicronicTubeBarcodes
      * @return true/false
@@ -190,6 +199,7 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
 
     /**
      * Method to concatenate list separated by new line character '\n'.
+     *
      * @param listWithValues
      * @return Strings separated by new line
      */
@@ -199,6 +209,7 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
 
     /**
      * Method to validate no conflict state to add new MicronicTube records.
+     *
      * @param micronicTubes
      * @return true/false
      * @throws ServerException

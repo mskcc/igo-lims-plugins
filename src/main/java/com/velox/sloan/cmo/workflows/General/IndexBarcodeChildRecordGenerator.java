@@ -9,16 +9,20 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.workflows.micronics.NewMicronicTubeTareWeightImporter;
 
 import java.rmi.RemoteException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * A plugin to add IndexBarcode as child record to samples using file upload. This will be used in rare circumstances where DNA Libraries are added
  * to LIMS without creating child record of IndexBarcode type.
  * Created by sharmaa1 on 7/15/19.
  */
-public class IndexBarcodeChildRecordGenerator extends DefaultGenericPlugin{
+public class IndexBarcodeChildRecordGenerator extends DefaultGenericPlugin {
     private String[] permittedUsers = {"Sample Receiving", "Sapio Admin", "Admin"};
     private NewMicronicTubeTareWeightImporter excelFileValidator = new NewMicronicTubeTareWeightImporter();
+
     public IndexBarcodeChildRecordGenerator() {
         setActionMenu(true);
         setLine1Text("Add Index Barcode");
@@ -49,7 +53,7 @@ public class IndexBarcodeChildRecordGenerator extends DefaultGenericPlugin{
 
             for (String row : dataInFile) {
                 Map<String, Object> barcodeInfo = new HashMap<>();
-                String [] values = row.split(",");
+                String[] values = row.split(",");
                 barcodeInfo.put("SampleId", values[0]);
                 barcodeInfo.put("OtherSampleId", values[1]);
                 barcodeInfo.put("IndexId", values[2]);
@@ -59,13 +63,13 @@ public class IndexBarcodeChildRecordGenerator extends DefaultGenericPlugin{
 
             List<DataRecord> samples = dataRecordManager.queryDataRecords("Sample", "SampleId", getSampleIds(dataInFile), user);
             logInfo("Total samples: " + samples.toString());
-            if (!samples.isEmpty()){
-                for (DataRecord sample : samples){
+            if (!samples.isEmpty()) {
+                for (DataRecord sample : samples) {
                     String sampleId = sample.getStringVal("SampleId", user);
                     String otherSampleId = sample.getStringVal("OtherSampleId", user);
                     logInfo(sampleId);
-                    for (Map<String, Object> barcodeInfo : barcodeRecords){
-                        if (sampleId.equals(barcodeInfo.get("SampleId")) && otherSampleId.equals(barcodeInfo.get("OtherSampleId"))){
+                    for (Map<String, Object> barcodeInfo : barcodeRecords) {
+                        if (sampleId.equals(barcodeInfo.get("SampleId")) && otherSampleId.equals(barcodeInfo.get("OtherSampleId"))) {
                             sample.addChild("IndexBarcode", barcodeInfo, user);
                         }
                     }
@@ -73,7 +77,7 @@ public class IndexBarcodeChildRecordGenerator extends DefaultGenericPlugin{
             }
             dataRecordManager.storeAndCommit("Added child records to samples %s " + getSampleIds(dataInFile).toString(), null, user);
 
-        }catch (Exception e){
+        } catch (Exception e) {
             clientCallback.displayError(String.format("Error while while creating Index Barcode records.\n" +
                     "Cause: \n%s", e));
             logError(e);
@@ -81,9 +85,9 @@ public class IndexBarcodeChildRecordGenerator extends DefaultGenericPlugin{
         return new PluginResult(true);
     }
 
-    private List<Object> getSampleIds(String [] dataInFile){
+    private List<Object> getSampleIds(String[] dataInFile) {
         List<Object> sampleIds = new ArrayList<>();
-        for (String row : dataInFile){
+        for (String row : dataInFile) {
             sampleIds.add(row.split(",")[0]);
         }
         logInfo("Found SampleIds: " + sampleIds.toString());

@@ -2,11 +2,7 @@ package com.velox.sloan.cmo.workflows.IgoLimsPluginUtils;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
-import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.*;
 
 import java.io.*;
 import java.util.*;
@@ -20,6 +16,7 @@ public class IgoLimsPluginUtils {
 
     /**
      * Method to check if a file has .csv extension
+     *
      * @param fileName
      * @return true/false
      */
@@ -32,7 +29,7 @@ public class IgoLimsPluginUtils {
         InputStream dataStream = new ByteArrayInputStream(fileContent);
         try (BufferedReader fileReader = new BufferedReader(new InputStreamReader(dataStream))) {
             String temp;
-           // || !temp.replace(",", "").equals(null) || !temp.replace(",", "").equals("")
+            // || !temp.replace(",", "").equals(null) || !temp.replace(",", "").equals("")
             while ((temp = fileReader.readLine()) != null && !temp.replace(",", "").equals(null)) { //to check that there are no empty lines at end of file
                 String rowData;
                 rowData = temp;
@@ -44,6 +41,7 @@ public class IgoLimsPluginUtils {
 
     /**
      * Method to check if file has data other than header row
+     *
      * @param fileData
      * @return true/false
      */
@@ -53,6 +51,7 @@ public class IgoLimsPluginUtils {
 
     /**
      * Method to check if csv file has valid header row values
+     *
      * @param fileData
      * @param expectedHeaderValues
      * @return true/false
@@ -63,16 +62,18 @@ public class IgoLimsPluginUtils {
 
     /**
      * Method to check if csv file header contains the values that are required.
+     *
      * @param fileData
      * @param expectedHeaderValues
      * @return true/false
      */
-    public boolean csvFileContainsRequiredHeaders(List<String> fileData, List<String> expectedHeaderValues){
+    public boolean csvFileContainsRequiredHeaders(List<String> fileData, List<String> expectedHeaderValues) {
         return Arrays.asList(fileData.get(0).split(",")).containsAll(expectedHeaderValues);
     }
 
     /**
      * Method to concatenate List of string separated by new line character '\n'.
+     *
      * @param listWithValues
      * @return String of values separated in new lines
      */
@@ -82,6 +83,7 @@ public class IgoLimsPluginUtils {
 
     /**
      * Method to get Map of Header values and their Index position.
+     *
      * @param fileData
      * @return Map of Header value and Index position.
      */
@@ -96,6 +98,7 @@ public class IgoLimsPluginUtils {
 
     /**
      * Method to validate that a row in csv file has all the values that are required.
+     *
      * @param rowData
      * @param requiredCsvFileColumnHeaders
      * @param headerValues
@@ -115,6 +118,7 @@ public class IgoLimsPluginUtils {
 
     /**
      * Method to validate that all the rows in csv file has required values.
+     *
      * @param fileData
      * @param requiredCsvFileColumnHeaders
      * @return true/false
@@ -132,6 +136,7 @@ public class IgoLimsPluginUtils {
 
     /**
      * Method to get the Row position from given well position
+     *
      * @param plateWellPosition
      * @return row position
      */
@@ -141,6 +146,7 @@ public class IgoLimsPluginUtils {
 
     /**
      * Method to get the Column position from the given well position.
+     *
      * @param plateWellPosition
      * @return column position
      */
@@ -153,6 +159,7 @@ public class IgoLimsPluginUtils {
 
     /**
      * Method to get all the data rows from Excel File.
+     *
      * @param inputData
      * @return Row data from excel file
      * @throws IOException
@@ -170,6 +177,7 @@ public class IgoLimsPluginUtils {
 
     /**
      * Method to create HashMap of Header values as key and their index as value.
+     *
      * @param rowData
      * @return header values and positions.
      */
@@ -186,18 +194,17 @@ public class IgoLimsPluginUtils {
 
     /**
      * Method to validate if excel file has valid extension.
+     *
      * @param excelFileName
      * @return true/false
      */
     public boolean isValidExcelFile(String excelFileName) {
-        if (excelFileName.toLowerCase().endsWith("xlsx") || excelFileName.toLowerCase().endsWith("xls")) {
-            return true;
-        }
-        return false;
+        return excelFileName.toLowerCase().endsWith("xlsx") || excelFileName.toLowerCase().endsWith("xls");
     }
 
     /**
      * Method to validate if excel file has valid Header values when compared to expected header values.
+     *
      * @param dataRows
      * @param expectedHeaderValues
      * @return true/false
@@ -214,6 +221,7 @@ public class IgoLimsPluginUtils {
 
     /**
      * Method to validate if the excel file has data.
+     *
      * @param dataRows
      * @return true/false
      */

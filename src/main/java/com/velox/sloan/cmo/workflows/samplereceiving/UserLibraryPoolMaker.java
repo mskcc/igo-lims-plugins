@@ -13,7 +13,10 @@ import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 import org.apache.commons.lang3.StringUtils;
 
 import java.rmi.RemoteException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -35,8 +38,8 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
     @Override
     public boolean shouldRun() throws RemoteException, ServerException, NotFound {
         List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
-        return activeTask.getTask().getTaskOptions().keySet().contains("CREATE USER LIBRARY POOLS") && isValidSampleType(attachedSamples)
-                && !activeTask.getTask().getTaskOptions().keySet().contains("USER POOLS CREATED");
+        return activeTask.getTask().getTaskOptions().containsKey("CREATE USER LIBRARY POOLS") && isValidSampleType(attachedSamples)
+                && !activeTask.getTask().getTaskOptions().containsKey("USER POOLS CREATED");
     }
 
     public PluginResult run() throws ServerException {
@@ -95,19 +98,19 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
     }
 
     private List<String> getSampleIdsSortedAscending(List<DataRecord> attchedSamples) throws NotFound, RemoteException {
-        List <String> sampleIds = new ArrayList<>();
-        for(DataRecord sample : attchedSamples){
+        List<String> sampleIds = new ArrayList<>();
+        for (DataRecord sample : attchedSamples) {
             sampleIds.add(sample.getStringVal("SampleId", user));
         }
         return sampleIds.stream().sorted(new AlphaNumericComparator()).collect(Collectors.toList());
     }
 
-    private List<DataRecord> sortDataRecordsBySampleId(List<DataRecord>attachedSamples, List<String> sortedSampleIds) throws NotFound, RemoteException {
+    private List<DataRecord> sortDataRecordsBySampleId(List<DataRecord> attachedSamples, List<String> sortedSampleIds) throws NotFound, RemoteException {
         List<DataRecord> sortedSampleDataRecords = new ArrayList<>();
-        for(String sampleId : sortedSampleIds){
-            for(DataRecord sample : attachedSamples){
-                String id = sample.getStringVal("SampleId",user);
-                if (id.equals(sampleId)){
+        for (String sampleId : sortedSampleIds) {
+            for (DataRecord sample : attachedSamples) {
+                String id = sample.getStringVal("SampleId", user);
+                if (id.equals(sampleId)) {
                     sortedSampleDataRecords.add(sample);
                 }
             }
@@ -115,7 +118,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
         return sortedSampleDataRecords;
     }
 
-    private List<String> getUniqueMicronicTubeBarcodesInAttachedSamples(List<DataRecord>attachedSamples) throws NotFound, RemoteException {
+    private List<String> getUniqueMicronicTubeBarcodesInAttachedSamples(List<DataRecord> attachedSamples) throws NotFound, RemoteException {
         List<String> uniqueMicronicBarcodes = new ArrayList<>();
 
         for (DataRecord sample : attachedSamples) {
@@ -159,7 +162,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
     }
 
     private String getPoolId(String requestId, int counter) {
-        return "Pool-" + requestId + "-Tube" + String.valueOf(counter);
+        return "Pool-" + requestId + "-Tube" + counter;
     }
 
     private String concatenateStringValues(List<DataRecord> userPool, String fieldType) throws NullPointerException, NotFound, RemoteException {
@@ -178,7 +181,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
 
     private String getSequencingRunType(List<DataRecord> userPoolSamples) throws NullPointerException, RemoteException, NotFound, ServerException {
         String sequencingRunType = userPoolSamples.get(0).getDescendantsOfType("SeqRequirement", user).get(0).getStringVal("SequencingRunType", user);
-        if (StringUtils.isBlank(sequencingRunType)){
+        if (StringUtils.isBlank(sequencingRunType)) {
             clientCallback.displayError("Sequencing RunType not defined for Samples");
             logError("Sequencing RunType not defined for Samples");
             return "";
@@ -190,7 +193,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
         double totalReads = 0.0;
         for (DataRecord sample : userPoolSamples) {
             double readsRequestedForSample = sample.getDescendantsOfType("SeqRequirement", user).get(0).getDoubleVal("RequestedReads", user);
-            if ((Object)readsRequestedForSample == null){
+            if ((Object) readsRequestedForSample == null) {
                 clientCallback.displayError(String.format("Minimum number of Reads required is not defined for Sample : %s", sample.getStringVal("SampleId", user)));
                 logError(String.format("Minimum number of Reads required is not defined for Sample : %s", sample.getStringVal("SampleId", user)));
             }
@@ -248,7 +251,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
         }
         List<ActiveTask> activeTasks = activeWorkflow.getActiveTaskList();
         for (ActiveTask task : activeTasks) {
-            if (task.getTask().getTaskOptions().keySet().contains("CREATE USER LIBRARY POOLS") || "Store Samples".equals(task.getTaskName()) ||
+            if (task.getTask().getTaskOptions().containsKey("CREATE USER LIBRARY POOLS") || "Store Samples".equals(task.getTaskName()) ||
                     "Downstream Process Assignment".equals(task.getTaskName())) {
                 TaskUtilManager.removeRecordsFromTask(task, attachedSamples);
                 TaskUtilManager.attachRecordsToTask(task, sampleIdsForSamplePools);
@@ -258,8 +261,8 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
 
     private void setSampleStatusForSamples(List<DataRecord> attachedSamples) throws ServerException, RemoteException, NotFound {
         List<Map<String, Object>> sampleStatusFields = new ArrayList<>();
-        for (DataRecord sample : attachedSamples){
-            Map<String,Object> sampleStatus = new HashMap<>();
+        for (DataRecord sample : attachedSamples) {
+            Map<String, Object> sampleStatus = new HashMap<>();
             String sampleId = sample.getStringVal("SampleId", user);
             sampleStatus.put("SampleId", sampleId);
             sampleStatus.put("ExemplarSampleStatus", "Processing Completed");

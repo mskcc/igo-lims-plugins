@@ -11,14 +11,15 @@ import com.velox.sapioutils.shared.enums.PluginOrder;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
-import java.util.*;
-import java.util.function.DoubleUnaryOperator;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * This is the plugin class is designed to update the values for 'AutoIndexAssignmentConfig' records based on the 'IndexBarcode' DataRecord values manually assigned by the Users. This will help to track the
  * Volumes for 'AutoIndexAssignmentConfig' DataRecords.
  * 'Index Barcode and Adapter' terms are used interchangeably and have the same meaning.
  * 'AutoIndexAssignmentConfig' is the DataType which holds the Index Barcode metadata that is used for Auto Index Assignment to the samples.
+ *
  * @author sharmaa1
  */
 public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
@@ -72,7 +73,8 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
 
 
     /**
-     *  Get the plate size given the Sample DataRecord(s) that is on a plate.
+     * Get the plate size given the Sample DataRecord(s) that is on a plate.
+     *
      * @param samples
      * @return Integer plate size.
      * @throws IoError
@@ -89,6 +91,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
 
     /**
      * Method to add the metadata for 'IndexBarcode' records, that is not added during Manual Index Assignment process.
+     *
      * @param indexAssignmentConfigs
      * @param indexBarcodeRecords
      * @param minVolInAdapterPlate
@@ -105,7 +108,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
             for (DataRecord indexConfig : indexAssignmentConfigs) {
                 if (indexBarcodeRec.getStringVal("IndexId", user).equals(indexConfig.getStringVal("IndexId", user))
                         && indexBarcodeRec.getStringVal("IndexTag", user).equals(indexConfig.getStringVal("IndexTag", user))) {
-                    found=true;
+                    found = true;
                     Double dnaInputAmount = Double.parseDouble(indexBarcodeRec.getStringVal("InitialInput", user));
                     String wellPosition = indexConfig.getStringVal("WellId", user);
                     String adapterSourceRow = autohelper.getAdapterRowPosition(wellPosition);
@@ -114,7 +117,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                     Double targetAdapterConc = autohelper.getCalculatedTargetAdapterConcentration(dnaInputAmount, plateSize);
                     Double adapterVolume = autohelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc);
                     Double waterVolume = autohelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume);
-                    Double actualTargetAdapterConc = adapterStartConc/((waterVolume + adapterVolume)/adapterVolume);
+                    Double actualTargetAdapterConc = adapterStartConc / ((waterVolume + adapterVolume) / adapterVolume);
                     //Double adapterConcentration = autohelper.getAdapterConcentration(indexConfig, adapterVolume, waterVolume);
                     setUpdatedIndexAssignmentConfigVol(indexConfig, adapterVolume);
                     indexBarcodeRec.setDataField("BarcodePlateID", indexConfig.getStringVal("AdapterPlateId", user), user);
@@ -125,7 +128,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                     indexBarcodeRec.setDataField("IndexBarcodeConcentration", actualTargetAdapterConc, user);
                 }
             }
-            if (!found){
+            if (!found) {
                 clientCallback.displayError(String.format("No Active '%s' record found for Index ID '%s'. Please double check to avoid discrepancies in '%s' record volumes.",
                         INDEX_ASSIGNMENT_CONFIG_DATATYPE, indexBarcodeRec.getStringVal("IndexId", user), INDEX_ASSIGNMENT_CONFIG_DATATYPE));
             }
@@ -135,6 +138,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
 
     /**
      * Method to check for the DataRecords in 'AutoIndexAssignmentConfig' for which the value of 'IsDepelted' should to marked to true.
+     *
      * @param indexAssignmentConfigs
      * @throws NotFound
      * @throws RemoteException
@@ -143,8 +147,8 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
      * @throws ServerException
      */
     private void checkIndexAssignmentsForDepletedAdapters(List<DataRecord> indexAssignmentConfigs) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
-        for (DataRecord rec: indexAssignmentConfigs){
-            if (rec.getDoubleVal("AdapterVolume", user) < 10.00){
+        for (DataRecord rec : indexAssignmentConfigs) {
+            if (rec.getDoubleVal("AdapterVolume", user) < 10.00) {
                 rec.setDataField("IsDepelted", true, user);
                 rec.setDataField("IsActive", false, user);
                 clientCallback.displayWarning(String.format("AutoIndexAssignmentConfig with Index ID '%s' on Adapter Plate '%s' has volume less than 10ul. It is now marked as Inactive and depleted.",
@@ -157,6 +161,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
 
     /**
      * To set the value of Volume field on the records under 'AutoIndexAssignmentConfig' DataType.
+     *
      * @param indexAssignmentConfig
      * @param adapterVolumeUsed
      * @return Updated AutoIndexAssignmentConfig DataRecord

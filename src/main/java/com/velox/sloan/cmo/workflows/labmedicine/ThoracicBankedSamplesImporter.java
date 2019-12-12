@@ -19,9 +19,9 @@ import java.rmi.RemoteException;
 import java.util.*;
 
 /**
- *  This plugin is designed to read Thoracic Banked Sample information from an excel file and assign unique Id's to the samples.
+ * This plugin is designed to read Thoracic Banked Sample information from an excel file and assign unique Id's to the samples.
  *
- *  @author sharmaa1@mskcc.org ~Ajay Sharma
+ * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
 public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
     private final List<String> excelFileHeaderValues = Arrays.asList("Accession#", "DrawDate", "DrawTime", "Pi", "TubeType", "#ofTubes", "BoxDate", "SpecimenType", "Aliquot#", "Comments");
@@ -46,7 +46,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
                 logInfo("Path to excel file is empty. Or file not uploaded and process canceled by the usr.");
                 return new PluginResult(false);
             }
-            if(!isValidExcelFile(excelFilePath)){
+            if (!isValidExcelFile(excelFilePath)) {
                 return new PluginResult(false);
             }
             Sheet sheet = getSheetFromFile(excelFilePath);
@@ -78,6 +78,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
 
     /**
      * Method to get excel sheet containing data.
+     *
      * @param excelFilePath
      * @return Excel Sheet
      * @throws IOException
@@ -92,6 +93,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
 
     /**
      * Method to check if excel file has valid extension 'xlsx' or 'xls'.
+     *
      * @param fileName
      * @return true/false
      * @throws ServerException
@@ -107,6 +109,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
 
     /**
      * Method to check if excel file is valid file.
+     *
      * @param sheet
      * @param headerValues
      * @param fileName
@@ -129,6 +132,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
 
     /**
      * Method to parse header values from the excel file.
+     *
      * @param sheet
      * @param headerValues
      * @return
@@ -139,6 +143,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
 
     /**
      * Method to read Thoracic Banked Sample records from excel file.
+     *
      * @param sheet
      * @param fileHeader
      * @return List of Maps for Thoracic Banked Sample records
@@ -153,6 +158,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
 
     /**
      * Method to get the last LabMedicine DataRecord added to LIMS.
+     *
      * @return RecordID for the DataRecord
      * @throws ServerException
      * @throws NotFound
@@ -176,6 +182,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
 
     /**
      * Get all the existing Uuids related to Thoracic Banked Sample in LIMS.
+     *
      * @return List of existing UUIDS
      * @throws RemoteException
      * @throws NotFound
@@ -192,6 +199,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
 
     /**
      * Get UUID values from a Thoracic Banked Sample DataRecord.
+     *
      * @param existingRecord
      * @return UUID value
      */
@@ -209,6 +217,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
 
     /**
      * Method to check if new child records should be added LabMedicine DataType in LIMS.
+     *
      * @param mostRecentLabMedicineRecord
      * @return
      * @throws IoError

@@ -19,7 +19,6 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 import org.apache.commons.lang3.StringUtils;
-import org.mockito.internal.matchers.Not;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -45,7 +44,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
 
     @Override
     public boolean shouldRun() throws RemoteException {
-        return activeTask.getStatus() != ActiveTask.COMPLETE && activeTask.getTask().getTaskOptions().keySet().contains("SORT AND ASSIGN SAMPLES TO PLATE");
+        return activeTask.getStatus() != ActiveTask.COMPLETE && activeTask.getTask().getTaskOptions().containsKey("SORT AND ASSIGN SAMPLES TO PLATE");
     }
 
     @Override
@@ -344,7 +343,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * Get the quadrant values that each source plate must be assigned to.
      *
      * @param uniquePlateIds
-     * @return List<Map       <       String       ,       Object>>
+     * @return List<Map < String, Object>>
      */
     private List<Map<String, Object>> getValueMapForPlateQuadrant(List<String> uniquePlateIds) {
         List<Map<String, Object>> uniquePlates = new ArrayList<>();
@@ -370,6 +369,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
 
     /**
      * Method to create DataForm to show table entry to get user input.
+     *
      * @param tempPlate
      * @param fieldDefList
      * @return TemporaryDatatype
@@ -500,7 +500,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * Get PlateId and corresponding quadrant number from user via table input dialog box.
      *
      * @param attachedSamples
-     * @return List<Map       <       String       ,               Object>>
+     * @return List<Map < String, Object>>
      * @throws com.velox.api.util.ServerException
      * @throws RemoteException
      * @throws NotFound
@@ -665,7 +665,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
         if (plateNumber == 1 || plateNumber == 2)
             rowOffSet--;
         char resultRow = (char) (64 + rowOffSet);
-        Integer column = Integer.parseInt(rowAndColumn.substring(1, rowAndColumn.length()));
+        Integer column = Integer.parseInt(rowAndColumn.substring(1));
         Integer toColumn = column * 2;
         if (plateNumber == 1 || plateNumber == 3)
             toColumn--;

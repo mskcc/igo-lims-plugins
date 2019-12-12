@@ -44,7 +44,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                     }
                 }
             }
-        // if there's an error
+            // if there's an error
         } catch (Exception e) {
             // display the error to the user
             clientCallback.displayError(e.toString());
@@ -54,6 +54,6 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
             return new PluginResult();
         }
         // if there's no error
-        return new PluginResult(error == null, error == null ? new ArrayList<Object>() : Arrays.asList((Object)error));
+        return new PluginResult(error == null, error == null ? new ArrayList<Object>() : Arrays.asList(error));
     }
 }

@@ -3,30 +3,27 @@ package com.velox.sloan.cmo.workflows.IgoLimsPluginUtils;
  * The Alphanum Algorithm is an improved sorting algorithm for strings
  * containing numbers.  Instead of sorting numbers in ASCII order like
  * a standard sort, this algorithm sorts numbers in numeric order.
- *
+ * <p>
  * The Alphanum Algorithm is discussed at http://www.DaveKoelle.com
- *
- *
+ * <p>
+ * <p>
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or any later version.
- *
+ * <p>
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- *
+ * <p>
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-import com.velox.api.datarecord.DataRecord;
-import com.velox.api.datarecord.NotFound;
 import com.velox.api.user.User;
 
-import java.rmi.RemoteException;
 import java.util.Comparator;
 
 /**
@@ -40,6 +37,7 @@ import java.util.Comparator;
 public class AlphaNumericComparator implements Comparator<String> {
 
     User user;
+
     private final boolean isDigit(char ch) {
         return ((ch >= 48) && (ch <= 57));
     }

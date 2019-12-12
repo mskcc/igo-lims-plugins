@@ -31,7 +31,7 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
 
     @Override
     public boolean shouldRun() throws RemoteException {
-        return activeTask.getStatus() != activeTask.COMPLETE && activeTask.getTask().getTaskOptions().keySet().contains("OVERWRITE POOLID WITH SAMPLEID");
+        return activeTask.getStatus() != activeTask.COMPLETE && activeTask.getTask().getTaskOptions().containsKey("OVERWRITE POOLID WITH SAMPLEID");
     }
 
     @Override
@@ -113,7 +113,7 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
     }
 
     private String getSampleTypeToAssign(DataRecord sample) throws IoError, RemoteException, NotFound {
-        return sample.getParentsOfType("Sample", user).get(0).getStringVal("ExemplarSampleType",user);
+        return sample.getParentsOfType("Sample", user).get(0).getStringVal("ExemplarSampleType", user);
     }
 
     /**
@@ -129,15 +129,15 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
      */
     private void replacePoolIdWithSampleId(List<DataRecord> samples) throws NotFound, RemoteException, IoError, ServerException {
         for (DataRecord sample : samples) {
-            if (sample.getStringVal("SampleId", user).contains("Pool-")){
+            if (sample.getStringVal("SampleId", user).contains("Pool-")) {
                 Map<String, Object> newValues = new HashMap<>();
                 newValues.put("SampleId", getNextSampleId(sample));
                 newValues.put("ExemplarSampleType", getSampleTypeToAssign(sample));
                 sample.setFields(newValues, user);
-                if(sample.getChildrenOfType("SeqRequirementPooled", user).length>0){
+                if (sample.getChildrenOfType("SeqRequirementPooled", user).length > 0) {
                     List<DataRecord> seqRequirementPooledChild = Arrays.asList(sample.getChildrenOfType("SeqRequirementPooled", user));
                     logInfo("Found SeqRequirementPooled for Sample " + seqRequirementPooledChild.get(0).getStringVal("SampleId", user) +
-                    ". It is an ampliseq DNA pool, therefore associated  SeqRequirementPooled records will be deleted. Because the PoolId is overwritten, the " +
+                            ". It is an ampliseq DNA pool, therefore associated  SeqRequirementPooled records will be deleted. Because the PoolId is overwritten, the " +
                             "associated SeqRequirementPooled are not relevant.");
                     dataRecordManager.deleteDataRecords(seqRequirementPooledChild, null, false, user);
                 }

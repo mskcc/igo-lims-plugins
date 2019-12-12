@@ -17,6 +17,7 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
 
     /**
      * Method to generate a random Alphanumeric ID for new Banked Samp to be stored in LIMS.
+     *
      * @return unique ID.
      */
     @Override
@@ -35,6 +36,7 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
 
     /**
      * Method to generate only unique IDs. If a generated unique ID exists in LIMS then it is skipped and a new ID is generated.
+     *
      * @param existingUuids
      * @return unique ID
      */
@@ -53,6 +55,7 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
 
     /**
      * Method to valid if the excel file has valid extension.
+     *
      * @param fileName
      * @return true/false
      */
@@ -63,6 +66,7 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
 
     /**
      * Method to check if excel file has row data other than header row.
+     *
      * @param sheet
      * @return true/false
      */
@@ -73,6 +77,7 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
 
     /**
      * Method to check if excel file has valid Header values.
+     *
      * @param sheet
      * @param expectedHeaderValues
      * @param fileName
@@ -94,6 +99,7 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
 
     /**
      * Method to parse header values from the excel file.
+     *
      * @param sheet
      * @param headerValues
      * @return Map of Header value and Index position
@@ -114,6 +120,7 @@ public class ThoracicBankedSampleDataReader implements ThoracicBankedSampleGener
 
     /**
      * Method to read and create Thoracic Banked Sample records from excel file.
+     *
      * @param sheet
      * @param fileHeader
      * @param existingUuids

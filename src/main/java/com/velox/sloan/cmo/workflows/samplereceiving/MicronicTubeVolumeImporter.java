@@ -30,13 +30,13 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
     }
 
     public boolean shouldRun() throws Throwable {
-        return activeTask.getTask().getTaskOptions().keySet().contains("UPDATE MICRONIC VOLUMES USING TARE WEIGHT");
+        return activeTask.getTask().getTaskOptions().containsKey("UPDATE MICRONIC VOLUMES USING TARE WEIGHT");
     }
 
     @Override
     public boolean onTaskFormToolbar(ActiveWorkflow activeWorkflow, ActiveTask activeTask) {
         try {
-            return activeTask.getTask().getTaskOptions().keySet().contains("UPDATE MICRONIC VOLUMES USING TARE WEIGHT");
+            return activeTask.getTask().getTaskOptions().containsKey("UPDATE MICRONIC VOLUMES USING TARE WEIGHT");
         } catch (Exception e) {
             logInfo(Arrays.toString(e.getStackTrace()));
         }
@@ -46,7 +46,7 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
     @Override
     public boolean onTaskTableToolbar(ActiveWorkflow activeWorkflow, ActiveTask activeTask) {
         try {
-            return activeTask.getTask().getTaskOptions().keySet().contains("UPDATE MICRONIC VOLUMES USING TARE WEIGHT");
+            return activeTask.getTask().getTaskOptions().containsKey("UPDATE MICRONIC VOLUMES USING TARE WEIGHT");
         } catch (Exception e) {
             logInfo(Arrays.toString(e.getStackTrace()));
         }
