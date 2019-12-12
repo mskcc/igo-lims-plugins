@@ -10,7 +10,6 @@ import com.velox.sapioutils.shared.managers.ManagerContext;
 
 import java.rmi.RemoteException;
 import java.util.List;
-import java.util.function.DoubleUnaryOperator;
 
 
 /**
@@ -20,37 +19,6 @@ import java.util.function.DoubleUnaryOperator;
  */
 
 public class AutoIndexAssignmentHelper extends ManagerBase{
-
-    public AutoIndexAssignmentHelper(ManagerContext managerContext){
-
-        setManagerContext(managerContext);
-    }
-
-    /**
-     * To set the value of Volume field on the records under 'AutoIndexAssignmentConfig' DataType.
-     * @param indexAssignmentConfig
-     * @param adapterVolumeUsed
-     * @return Updated AutoIndexAssignmentConfig DataRecord
-     * @throws NotFound
-     * @throws RemoteException
-     * @throws IoError
-     * @throws InvalidValue
-     * @throws ServerException
-     */
-    public DataRecord setUpdatedIndexAssignmentConfigVol(DataRecord indexAssignmentConfig, Double adapterVolumeUsed) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
-        Double previousVol = indexAssignmentConfig.getDoubleVal("AdapterVolume", user);
-        Double newVolume = previousVol - adapterVolumeUsed;
-        indexAssignmentConfig.setDataField("AdapterVolume", newVolume, user);
-
-        if (newVolume <= 10) {
-            indexAssignmentConfig.setDataField("IsDepelted", true, user);
-            indexAssignmentConfig.setDataField("IsActive", false, user);
-            clientCallback.displayWarning(String.format("The Volume for adapter '%s'on Adapter Plate with ID '%s' is below 10ul.\nThis adapter will be marked as depleted and will be ignored for future assignments.",
-                    indexAssignmentConfig.getStringVal("IndexId", user), indexAssignmentConfig.getStringVal("AdapterPlateId", user)));
-        }
-        return indexAssignmentConfig;
-    }
-
 
     /**
      * Get the minimum liquid volume for the Index Barcode to be present in a plate well for a plate given its plate size.
@@ -126,22 +94,6 @@ public class AutoIndexAssignmentHelper extends ManagerBase{
     }
 
     /**
-     *  Get the plate size given the Sample DataRecord(s) that is on a plate.
-     * @param samples
-     * @return Integer plate size.
-     * @throws IoError
-     * @throws RemoteException
-     * @throws NotFound
-     * @throws ServerException
-     */
-    public Integer getPlateSize(List<DataRecord> samples) throws IoError, RemoteException, NotFound, ServerException {
-        DataRecord plate = samples.get(0).getParentsOfType("Plate", user).get(0);
-        Integer plateSizeIndex = Integer.parseInt(plate.getValue("PlateWellCnt", user).toString());
-        String plateSize = dataMgmtServer.getPickListManager(user).getPickListConfig("Plate Sizes").getEntryList().get(plateSizeIndex);
-        return Integer.parseInt(plateSize.split("-")[0]);
-    }
-
-    /**
      * Get the maximim volume a plate well can hold given plate size.
      * @param plateSize
      * @return Double volume
@@ -155,7 +107,6 @@ public class AutoIndexAssignmentHelper extends ManagerBase{
         }
         return 150.00;
     }
-
 
     /**
      * Get Row Position of Index Barcode on plate given its Well ID.
@@ -175,6 +126,15 @@ public class AutoIndexAssignmentHelper extends ManagerBase{
      */
     public String getAdapterColPosition(String wellPosition) {
         return wellPosition.replaceAll("\\D+", "");
+    }
+
+    /**
+     * To check if a int value is odd.
+     * @param value
+     * @return
+     */
+    public boolean isOddValue( int value){
+        return value % 2 != 0;
     }
 
 }

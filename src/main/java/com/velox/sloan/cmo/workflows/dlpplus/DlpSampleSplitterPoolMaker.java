@@ -527,6 +527,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         int negativeControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPNegativeCONTROL"));
         int salControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPSalCONTROL"));
         int gmControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPGmCONTROL"));
+        int noCellControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPNoCellCONTROL"));
         recipe = samples.get(0).getStringVal("Recipe", user);
         for (DataRecord sample : samples) {
             String sampleId = sample.getStringVal("SampleId", user);
@@ -562,6 +563,13 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                             gmControlIncrement += 1;
                             newSampleId = "DLPGmCONTROL" + "-" + gmControlIncrement;
                             newOtherSampleId = "DLPGmCONTROL" + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
+                            altId = newSampleId;
+                            isControl = true;
+                            break;
+                        case "6.0":
+                            noCellControlIncrement += 1;
+                            newSampleId = "DLPNoCellCONTROL" + "-" + noCellControlIncrement;
+                            newOtherSampleId = "DLPNoCellCONTROL" + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
                             altId = newSampleId;
                             isControl = true;
                             break;

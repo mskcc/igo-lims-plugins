@@ -45,7 +45,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
     }
 
     public PluginResult run() throws ServerException {
-        autoHelper = new AutoIndexAssignmentHelper(managerContext);
+        autoHelper = new AutoIndexAssignmentHelper();
         try {
             List<DataRecord> attachedSamplesList = activeTask.getAttachedDataRecords("Sample", user);
             List<DataRecord> attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IndexBarcode", user);
@@ -76,7 +76,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
             List<DataRecord> sortedProtocolRecords = getSampleProtocolRecordsSortedByWellPositionColumnWise(attachedIndexBarcodeRecords);
-            Integer plateSize = autoHelper.getPlateSize(attachedSamplesList);
+            Integer plateSize = getPlateSize(attachedSamplesList);
             Double minAdapterVol = autoHelper.getMinAdapterVolumeRequired(plateSize);
             if (plateSize == 96) {
                 assignIndicesToSamples(sortedProtocolRecords, indexConfigsToUse, minAdapterVol, plateSize);
@@ -238,6 +238,22 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
     }
 
     /**
+     *  Get the plate size given the Sample DataRecord(s) that is on a plate.
+     * @param samples
+     * @return Integer plate size.
+     * @throws IoError
+     * @throws RemoteException
+     * @throws NotFound
+     * @throws ServerException
+     */
+    public Integer getPlateSize(List<DataRecord> samples) throws IoError, RemoteException, NotFound, ServerException {
+        DataRecord plate = samples.get(0).getParentsOfType("Plate", user).get(0);
+        Integer plateSizeIndex = Integer.parseInt(plate.getValue("PlateWellCnt", user).toString());
+        String plateSize = dataMgmtServer.getPickListManager(user).getPickListConfig("Plate Sizes").getEntryList().get(plateSizeIndex);
+        return Integer.parseInt(plateSize.split("-")[0]);
+    }
+
+    /**
      * Method to populate field values of 'IndexBarcode' DataRecord.
      *
      * @param indexBarcode
@@ -270,7 +286,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         Double adapterVolume = autoHelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc);
         Double waterVolume = autoHelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume);
         Double actualTargetAdapterConc = adapterStartConc / ((waterVolume + adapterVolume) / adapterVolume);
-        autoHelper.setUpdatedIndexAssignmentConfigVol(indexAssignmentConfig, adapterVolume);
+        setUpdatedIndexAssignmentConfigVol(indexAssignmentConfig, adapterVolume);
         Map<String, Object> indexAssignmentValues = new HashMap<>();
         indexAssignmentValues.put("IndexId", indexId);
         indexAssignmentValues.put("IndexTag", indexTag);
@@ -283,6 +299,30 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         return indexAssignmentValues;
     }
 
+    /**
+     * To set the value of Volume field on the records under 'AutoIndexAssignmentConfig' DataType.
+     * @param indexAssignmentConfig
+     * @param adapterVolumeUsed
+     * @return Updated AutoIndexAssignmentConfig DataRecord
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws IoError
+     * @throws InvalidValue
+     * @throws ServerException
+     */
+    public DataRecord setUpdatedIndexAssignmentConfigVol(DataRecord indexAssignmentConfig, Double adapterVolumeUsed) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
+        Double previousVol = indexAssignmentConfig.getDoubleVal("AdapterVolume", user);
+        Double newVolume = previousVol - adapterVolumeUsed;
+        indexAssignmentConfig.setDataField("AdapterVolume", newVolume, user);
+
+        if (newVolume <= 10) {
+            indexAssignmentConfig.setDataField("IsDepelted", true, user);
+            indexAssignmentConfig.setDataField("IsActive", false, user);
+            clientCallback.displayWarning(String.format("The Volume for adapter '%s'on Adapter Plate with ID '%s' is below 10ul.\nThis adapter will be marked as depleted and will be ignored for future assignments.",
+                    indexAssignmentConfig.getStringVal("IndexId", user), indexAssignmentConfig.getStringVal("AdapterPlateId", user)));
+        }
+        return indexAssignmentConfig;
+    }
     /**
      * Split the List of DataRecords by alternate Well ID's. This is useful autoassignment when samples are on 384 well plates.
      *
@@ -302,16 +342,16 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
             int rowValue = (int) protocolRecord.getStringVal("SampleRow", user).charAt(0);
             int colValue = Integer.parseInt(protocolRecord.getStringVal("SampleColumn", user));
 
-            if (isOddValue(rowValue) && isOddValue(colValue)) {
+            if (autoHelper.isOddValue(rowValue) && autoHelper.isOddValue(colValue)) {
                 quad1.add(protocolRecord);
             }
-            if (!isOddValue(rowValue) && isOddValue(colValue)){
+            if (!autoHelper.isOddValue(rowValue) && autoHelper.isOddValue(colValue)){
                 quad2.add(protocolRecord);
             }
-            if (isOddValue(rowValue) && !isOddValue(colValue)){
+            if (autoHelper.isOddValue(rowValue) && !autoHelper.isOddValue(colValue)){
                 quad3.add(protocolRecord);
             }
-            if (!isOddValue(rowValue) && !isOddValue(colValue)){
+            if (!autoHelper.isOddValue(rowValue) && !autoHelper.isOddValue(colValue)){
                 quad4.add(protocolRecord);
             }
         }
@@ -330,14 +370,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         return protocolsByQuadrant;
     }
 
-    /**
-     * To check if a int value is odd.
-     * @param value
-     * @return
-     */
-    private boolean isOddValue( int value){
-        return value % 2 != 0;
-    }
+
 
     /**
      * Method to update 'IndexBarcode' records when samples are present on 96 well plates.

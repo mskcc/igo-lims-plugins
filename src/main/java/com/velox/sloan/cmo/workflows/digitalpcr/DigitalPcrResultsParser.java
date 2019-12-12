@@ -46,30 +46,37 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
             if (filesWithDigitalPcrRawData.isEmpty()) {
                 return new PluginResult(false);
             }
-            List<String> fileData = readDataFromFiles(filesWithDigitalPcrRawData);
-            if (!isValidFile(filesWithDigitalPcrRawData, fileData)) {
+            List<String> dataInFiles = readDataFromFiles(filesWithDigitalPcrRawData);
+            if (!isValidFile(filesWithDigitalPcrRawData, dataInFiles)) {
                 return new PluginResult(false);
             }
-            removeDuplicateHeaderFromCombinedData(fileData);
-            Map<String, Integer> headerValueMap = igoUtils.getCsvHeaderValueMap(fileData);
-            List<List<String>> channel1Data = getChannel1Data(fileData, headerValueMap);
-            List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap);
-            List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap);
-            Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData);
-            List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1", user);
-            if (attachedProtocolRecords.isEmpty()) {
-                clientCallback.displayError("No attached 'DdPcrProtocol1' records found attached to this task.");
-                logError("No attached 'DdPcrProtocol1' records found attached to this task.");
-                return new PluginResult(false);
+            //removeDuplicateHeaderFromCombinedData(fileData);
+            for (String file : filesWithDigitalPcrRawData) {
+                List<String> fileData = igoUtils.readDataFromCsvFile(clientCallback.readBytes(file));
+                Map<String, Integer> headerValueMap = igoUtils.getCsvHeaderValueMap(fileData);
+                List<List<String>> channel1Data = getChannel1Data(fileData, headerValueMap);
+                List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap);
+                List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap);
+                logInfo("Flattened data");
+                logInfo(channel1Channe2CombinedData.toString());
+                Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData);
+                logInfo(groupedData.toString());
+                clientCallback.displayInfo(groupedData.toString());
+                List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1", user);
+                if (attachedProtocolRecords.isEmpty()) {
+                    clientCallback.displayError("No attached 'DdPcrProtocol1' records found attached to this task.");
+                    logError("No attached 'DdPcrProtocol1' records found attached to this task.");
+                    return new PluginResult(false);
+                }
+                List<Map<String, Object>> analyzedData = runDataAnalysisForAssays(groupedData, attachedProtocolRecords);
+                List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
+                if (attachedProtocolRecords.isEmpty()) {
+                    clientCallback.displayError("No attached 'Sample' records found attached to this task.");
+                    logError("No attached 'Sample' records found attached to this task.");
+                    return new PluginResult(false);
+                }
+                addResultsAsChildRecords(analyzedData, attachedSampleRecords);
             }
-            List<Map<String, Object>> analyzedData = runDataAnalysisForAssays(groupedData, attachedProtocolRecords);
-            List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
-            if (attachedProtocolRecords.isEmpty()) {
-                clientCallback.displayError("No attached 'Sample' records found attached to this task.");
-                logError("No attached 'Sample' records found attached to this task.");
-                return new PluginResult(false);
-            }
-            addResultsAsChildRecords(analyzedData, attachedSampleRecords);
         } catch (Exception e) {
             clientCallback.displayError(String.format("Error while parsing the ddPCR Results file:\n%s", e));
             logError(Arrays.toString(e.getStackTrace()));

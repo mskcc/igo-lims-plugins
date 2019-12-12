@@ -37,7 +37,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
     }
 
     public PluginResult run() throws ServerException {
-        autohelper = new AutoIndexAssignmentHelper(managerContext);
+        autohelper = new AutoIndexAssignmentHelper();
         try {
             List<DataRecord> attachedSamplesList = activeTask.getAttachedDataRecords("Sample", user);
             List<DataRecord> attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IndexBarcode", user);
@@ -57,7 +57,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                 logError("Could not find any active 'AutoIndexAssignmentConfig'");
                 return new PluginResult(false);
             }
-            Integer plateSize = autohelper.getPlateSize(attachedSamplesList);
+            Integer plateSize = getPlateSize(attachedSamplesList);
             Double minAdapterVolInPlate = autohelper.getMinAdapterVolumeRequired(plateSize);
             Double maxPlateVolume = autohelper.getMaxVolumeLimit(plateSize);
             setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords, minAdapterVolInPlate, maxPlateVolume, plateSize);
@@ -68,6 +68,23 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
             return new PluginResult(false);
         }
         return new PluginResult(true);
+    }
+
+
+    /**
+     *  Get the plate size given the Sample DataRecord(s) that is on a plate.
+     * @param samples
+     * @return Integer plate size.
+     * @throws IoError
+     * @throws RemoteException
+     * @throws NotFound
+     * @throws ServerException
+     */
+    public Integer getPlateSize(List<DataRecord> samples) throws IoError, RemoteException, NotFound, ServerException {
+        DataRecord plate = samples.get(0).getParentsOfType("Plate", user).get(0);
+        Integer plateSizeIndex = Integer.parseInt(plate.getValue("PlateWellCnt", user).toString());
+        String plateSize = dataMgmtServer.getPickListManager(user).getPickListConfig("Plate Sizes").getEntryList().get(plateSizeIndex);
+        return Integer.parseInt(plateSize.split("-")[0]);
     }
 
     /**
@@ -99,7 +116,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                     Double waterVolume = autohelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume);
                     Double actualTargetAdapterConc = adapterStartConc/((waterVolume + adapterVolume)/adapterVolume);
                     //Double adapterConcentration = autohelper.getAdapterConcentration(indexConfig, adapterVolume, waterVolume);
-                    autohelper.setUpdatedIndexAssignmentConfigVol(indexConfig, adapterVolume);
+                    setUpdatedIndexAssignmentConfigVol(indexConfig, adapterVolume);
                     indexBarcodeRec.setDataField("BarcodePlateID", indexConfig.getStringVal("AdapterPlateId", user), user);
                     indexBarcodeRec.setDataField("IndexRow", adapterSourceRow, user);
                     indexBarcodeRec.setDataField("IndexCol", adapterSourceCol, user);
@@ -136,5 +153,30 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                         rec.getStringVal("IndexId", user), rec.getStringVal("AdapterPlateId", user)));
             }
         }
+    }
+
+    /**
+     * To set the value of Volume field on the records under 'AutoIndexAssignmentConfig' DataType.
+     * @param indexAssignmentConfig
+     * @param adapterVolumeUsed
+     * @return Updated AutoIndexAssignmentConfig DataRecord
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws IoError
+     * @throws InvalidValue
+     * @throws ServerException
+     */
+    public DataRecord setUpdatedIndexAssignmentConfigVol(DataRecord indexAssignmentConfig, Double adapterVolumeUsed) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
+        Double previousVol = indexAssignmentConfig.getDoubleVal("AdapterVolume", user);
+        Double newVolume = previousVol - adapterVolumeUsed;
+        indexAssignmentConfig.setDataField("AdapterVolume", newVolume, user);
+
+        if (newVolume <= 10) {
+            indexAssignmentConfig.setDataField("IsDepelted", true, user);
+            indexAssignmentConfig.setDataField("IsActive", false, user);
+            clientCallback.displayWarning(String.format("The Volume for adapter '%s'on Adapter Plate with ID '%s' is below 10ul.\nThis adapter will be marked as depleted and will be ignored for future assignments.",
+                    indexAssignmentConfig.getStringVal("IndexId", user), indexAssignmentConfig.getStringVal("AdapterPlateId", user)));
+        }
+        return indexAssignmentConfig;
     }
 }
