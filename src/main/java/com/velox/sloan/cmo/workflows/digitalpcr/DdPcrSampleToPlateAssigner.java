@@ -152,7 +152,7 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
         dataFieldValueMap.put("SampleId", row.getCell(headerValueMap.get("IGO ID")).getStringCellValue());
         dataFieldValueMap.put("OtherSampleId", row.getCell(headerValueMap.get("Sample Name")).getStringCellValue());
         if (row.getCell(headerValueMap.get("AltId")) != null)
-                //&& row.getCell(headerValueMap.get("AltId")).getStringCellValue() != null)
+        //&& row.getCell(headerValueMap.get("AltId")).getStringCellValue() != null)
         {
             dataFieldValueMap.put("AltId", row.getCell(headerValueMap.get("AltId")).getStringCellValue());
         }
@@ -181,8 +181,8 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
     }
 
     private List<Long> getRecotdIds(List<DataRecord> records) throws NotFound, RemoteException {
-        List<Long>recordIds = new ArrayList<>();
-        for (DataRecord rec: records){
+        List<Long> recordIds = new ArrayList<>();
+        for (DataRecord rec : records) {
             recordIds.add(rec.getLongVal("RecordId", user));
         }
         return recordIds;
@@ -203,7 +203,7 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
         List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords(targetDataTypeName, user);
         activeTask.removeTaskAttachments(getRecotdIds(attachedProtocolRecords));
         activeWorkflow.getNext(activeTask).removeTaskAttachments(getRecotdIds(attachedProtocolRecords));
-        dataRecordManager.deleteDataRecords(attachedProtocolRecords,null,false,user);
+        dataRecordManager.deleteDataRecords(attachedProtocolRecords, null, false, user);
         List<DataRecord> newDataRecords = new ArrayList<>();
         for (DataRecord sample : attachedSamples) {
             String sampleId = sample.getStringVal("SampleId", user);

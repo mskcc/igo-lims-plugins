@@ -87,6 +87,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
 
     /**
      * Check if the passed file is a valid CSV file.
+     *
      * @param fileNames
      * @param fileData
      * @return
@@ -115,6 +116,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
 
     /**
      * Method to read data when users upload multiple CSV files.
+     *
      * @param fileNames
      * @return Combined data from multiples CSV files
      * @throws ServerException
@@ -122,7 +124,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      */
     private List<String> readDataFromFiles(List<String> fileNames) throws ServerException, IOException {
         List<String> combinedFileData = new ArrayList<>();
-        for (String file : fileNames){
+        for (String file : fileNames) {
             List<String> data = igoUtils.readDataFromCsvFile(clientCallback.readBytes(file));
             combinedFileData.addAll(data);
         }
@@ -131,10 +133,11 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
 
     /**
      * Remove duplicate headers when data from multiple files is combined
+     *
      * @param data
      */
-    private void removeDuplicateHeaderFromCombinedData(List<String> data){
-        if(Arrays.asList(data.get(0).split(",")).containsAll(expectedRawResultsHeaders)){
+    private void removeDuplicateHeaderFromCombinedData(List<String> data) {
+        if (Arrays.asList(data.get(0).split(",")).containsAll(expectedRawResultsHeaders)) {
             for (int i = 1; i < data.size(); i++) {
                 if (Arrays.asList(data.get(i).split(",")).containsAll(expectedRawResultsHeaders)) {
                     data.remove(i);
@@ -295,8 +298,8 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
             analyzedData.put("Channel1PosChannel2Pos", getSum(groupedData.get(key), "Channel1PosChannel2Pos"));
             analyzedData.put("Channel1PosChannel2Neg", getSum(groupedData.get(key), "Channel1PosChannel2Neg"));
             analyzedData.put("Channel1NegChannel2Pos", getSum(groupedData.get(key), "Channel1NegChannel2Pos"));
-            Integer dropletCountMutation = (Integer) analyzedData.get("Channel1PosChannel2Pos") + (Integer) analyzedData.get("Channel1PosChannel2Neg");
-            Integer dropletCountWildType = (Integer) analyzedData.get("Channel1PosChannel2Pos") + (Integer) analyzedData.get("Channel1NegChannel2Pos");
+            Integer dropletCountMutation = analyzedData.get("Channel1PosChannel2Pos") + analyzedData.get("Channel1PosChannel2Neg");
+            Integer dropletCountWildType = analyzedData.get("Channel1PosChannel2Pos") + analyzedData.get("Channel1NegChannel2Pos");
             Double totalDnaDetected = calculateTotalDnaDetected((Double) analyzedData.get("ConcentrationMutation"), (Double) analyzedData.get("ConcentrationWildType"));
             analyzedData.put("DropletCountMutation", dropletCountMutation);
             analyzedData.put("DropletCountWildType", dropletCountWildType);
@@ -315,7 +318,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
     }
 
 
-        /**
+    /**
      * Add the results as Children to the Sample DataType.
      *
      * @param analyzedDataValues
@@ -338,7 +341,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 if (analyzedDataSampleId.equals(otherSampleId) && data.get("SampleId") == null) {
                     data.put("SampleId", sampleId);
                     logInfo(data.toString());
-                    DataRecord  recordToAttach = sample.addChild(activeTask.getInputDataTypeName(), data, user);
+                    DataRecord recordToAttach = sample.addChild(activeTask.getInputDataTypeName(), data, user);
                     recordsToAttachToTask.add(recordToAttach);
                 }
             }

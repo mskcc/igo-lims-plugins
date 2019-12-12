@@ -31,13 +31,13 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
     }
 
     public boolean shouldRun() throws Throwable {
-        return activeTask.getTask().getTaskOptions().keySet().contains("UPDATE VOLUME FOR SAMPLES ON PLATE");
+        return activeTask.getTask().getTaskOptions().containsKey("UPDATE VOLUME FOR SAMPLES ON PLATE");
     }
 
     @Override
     public boolean onTaskFormToolbar(ActiveWorkflow activeWorkflow, ActiveTask activeTask) {
         try {
-            return activeTask.getTask().getTaskOptions().keySet().contains("UPDATE VOLUME FOR SAMPLES ON PLATE");
+            return activeTask.getTask().getTaskOptions().containsKey("UPDATE VOLUME FOR SAMPLES ON PLATE");
         } catch (Exception e) {
             logInfo(Arrays.toString(e.getStackTrace()));
         }
@@ -47,7 +47,7 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
     @Override
     public boolean onTaskTableToolbar(ActiveWorkflow activeWorkflow, ActiveTask activeTask) {
         try {
-            return activeTask.getTask().getTaskOptions().keySet().contains("UPDATE VOLUME FOR SAMPLES ON PLATE");
+            return activeTask.getTask().getTaskOptions().containsKey("UPDATE VOLUME FOR SAMPLES ON PLATE");
         } catch (Exception e) {
             logInfo(Arrays.toString(e.getStackTrace()));
         }

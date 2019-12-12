@@ -80,9 +80,9 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
             Double minAdapterVol = autoHelper.getMinAdapterVolumeRequired(plateSize);
             if (plateSize == 96) {
                 assignIndicesToSamples(sortedProtocolRecords, indexConfigsToUse, minAdapterVol, plateSize);
-            } else if (plateSize==384){
+            } else if (plateSize == 384) {
                 List<List<DataRecord>> protocolsSplitByAlternateWell = getQuadrantsFromProtocols(sortedProtocolRecords);
-                for (List<DataRecord> protocolsList: protocolsSplitByAlternateWell){
+                for (List<DataRecord> protocolsList : protocolsSplitByAlternateWell) {
                     assignIndicesToSamples(protocolsList, indexConfigsToUse, minAdapterVol, plateSize);
                 }
             }
@@ -238,7 +238,8 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
     }
 
     /**
-     *  Get the plate size given the Sample DataRecord(s) that is on a plate.
+     * Get the plate size given the Sample DataRecord(s) that is on a plate.
+     *
      * @param samples
      * @return Integer plate size.
      * @throws IoError
@@ -301,6 +302,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
 
     /**
      * To set the value of Volume field on the records under 'AutoIndexAssignmentConfig' DataType.
+     *
      * @param indexAssignmentConfig
      * @param adapterVolumeUsed
      * @return Updated AutoIndexAssignmentConfig DataRecord
@@ -323,6 +325,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         }
         return indexAssignmentConfig;
     }
+
     /**
      * Split the List of DataRecords by alternate Well ID's. This is useful autoassignment when samples are on 384 well plates.
      *
@@ -339,19 +342,19 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         List<DataRecord> quad3 = new ArrayList<>();
         List<DataRecord> quad4 = new ArrayList<>();
         for (DataRecord protocolRecord : protocolRecords) {
-            int rowValue = (int) protocolRecord.getStringVal("SampleRow", user).charAt(0);
+            int rowValue = protocolRecord.getStringVal("SampleRow", user).charAt(0);
             int colValue = Integer.parseInt(protocolRecord.getStringVal("SampleColumn", user));
 
             if (autoHelper.isOddValue(rowValue) && autoHelper.isOddValue(colValue)) {
                 quad1.add(protocolRecord);
             }
-            if (!autoHelper.isOddValue(rowValue) && autoHelper.isOddValue(colValue)){
+            if (!autoHelper.isOddValue(rowValue) && autoHelper.isOddValue(colValue)) {
                 quad2.add(protocolRecord);
             }
-            if (autoHelper.isOddValue(rowValue) && !autoHelper.isOddValue(colValue)){
+            if (autoHelper.isOddValue(rowValue) && !autoHelper.isOddValue(colValue)) {
                 quad3.add(protocolRecord);
             }
-            if (!autoHelper.isOddValue(rowValue) && !autoHelper.isOddValue(colValue)){
+            if (!autoHelper.isOddValue(rowValue) && !autoHelper.isOddValue(colValue)) {
                 quad4.add(protocolRecord);
             }
         }
@@ -369,7 +372,6 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         }
         return protocolsByQuadrant;
     }
-
 
 
     /**
@@ -432,12 +434,12 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                         rec.getStringVal("IndexId", user), indexPlateId));
                 logInfo(String.format("Index ID '%s' on Adapter Plate '%s' has volume less than 10ul.Entire column will be marked Inactive and depleted.",
                         rec.getStringVal("IndexId", user), rec.getStringVal("AdapterPlateId", user)));
-                for (DataRecord record : indexAssignmentConfigs){
+                for (DataRecord record : indexAssignmentConfigs) {
                     String recPlateId = record.getStringVal("AdapterPlateId", user);
                     int set = record.getIntegerVal("SetId", user);
-                    if (indexPlateId.equals(recPlateId) && set == setId){
+                    if (indexPlateId.equals(recPlateId) && set == setId) {
                         String col = record.getStringVal("WellId", user).substring(1);
-                        if (col.equals(column)){
+                        if (col.equals(column)) {
                             record.setDataField("IsDepelted", true, user);
                             record.setDataField("IsActive", false, user);
                         }

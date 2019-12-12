@@ -33,7 +33,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
 
     @Override
     public boolean shouldRun() throws RemoteException {
-        return activeTask.getStatus() != activeTask.COMPLETE && activeTask.getTask().getTaskOptions().keySet().contains("DISPLAY CUSTOM FIELDS");
+        return activeTask.getStatus() != activeTask.COMPLETE && activeTask.getTask().getTaskOptions().containsKey("DISPLAY CUSTOM FIELDS");
     }
 
     @Override
@@ -87,7 +87,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
         do {
             DataRecord startSample = samplePile.pop();
             List<DataRecord> parentRecords = startSample.getParentsOfType("Sample", user);
-            if (!parentRecords.isEmpty() && parentRecords.get(0).getChildrenOfType(childDataType, user).length>0) {
+            if (!parentRecords.isEmpty() && parentRecords.get(0).getChildrenOfType(childDataType, user).length > 0) {
                 record = parentRecords.get(0);
             }
             if (!parentRecords.isEmpty() && record == null) {

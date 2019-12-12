@@ -42,18 +42,18 @@ public class QcReportGenerator extends DefaultGenericPlugin {
 
     @Override
     public boolean shouldRun() throws RemoteException, ServerException, NotFound {
-        if (activeTask.getTaskName().equals("Generate QC report for DNA") && activeTask.getTask().getTaskOptions().keySet().contains("GENERATE QC REPORT") &&
-                !activeTask.getTask().getTaskOptions().keySet().contains("QC REPORT GENERATED")) {
+        if (activeTask.getTaskName().equals("Generate QC report for DNA") && activeTask.getTask().getTaskOptions().containsKey("GENERATE QC REPORT") &&
+                !activeTask.getTask().getTaskOptions().containsKey("QC REPORT GENERATED")) {
             return DNA_SAMPLE_TYPES.contains(activeTask.getAttachedDataRecords("Sample", user).get(0).getStringVal("ExemplarSampleType", user).toLowerCase());
         }
 
-        if (activeTask.getTaskName().equals("Generate QC report for RNA") && activeTask.getTask().getTaskOptions().keySet().contains("GENERATE QC REPORT") &&
-                !activeTask.getTask().getTaskOptions().keySet().contains("QC REPORT GENERATED")) {
+        if (activeTask.getTaskName().equals("Generate QC report for RNA") && activeTask.getTask().getTaskOptions().containsKey("GENERATE QC REPORT") &&
+                !activeTask.getTask().getTaskOptions().containsKey("QC REPORT GENERATED")) {
             return RNA_SAMPLE_TYPES.contains(activeTask.getAttachedDataRecords("Sample", user).get(0).getStringVal("ExemplarSampleType", user).toLowerCase());
         }
 
-        if (activeTask.getTaskName().equals("Generate QC report for Libraries") && activeTask.getTask().getTaskOptions().keySet().contains("GENERATE QC REPORT") &&
-                !activeTask.getTask().getTaskOptions().keySet().contains("QC REPORT GENERATED")) {
+        if (activeTask.getTaskName().equals("Generate QC report for Libraries") && activeTask.getTask().getTaskOptions().containsKey("GENERATE QC REPORT") &&
+                !activeTask.getTask().getTaskOptions().containsKey("QC REPORT GENERATED")) {
             return LIBRARY_SAMPLE_TYPES.contains(activeTask.getAttachedDataRecords("Sample", user).get(0).getStringVal("ExemplarSampleType", user).toLowerCase());
         }
         return false;
