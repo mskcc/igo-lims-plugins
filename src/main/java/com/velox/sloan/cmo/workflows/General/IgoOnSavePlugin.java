@@ -1,13 +1,18 @@
 package com.velox.sloan.cmo.workflows.General;
 
 import com.velox.api.datarecord.DataRecord;
+import com.velox.api.datarecord.InvalidValue;
+import com.velox.api.datarecord.IoError;
+import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Stack;
 
 
 /**
@@ -44,6 +49,12 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                     }
                 }
             }
+
+            //set Human Percentage on QcReportDna DataRecords when Saving DdPcrAssayResults and HumanPercentageValues are present
+            mapHumanPercentageFromDdpcrResultsToDnaQcReport(theSavedRecords);
+
+            //update volume at sample level to show correct values.
+
             // if there's an error
         } catch (Exception e) {
             // display the error to the user
@@ -55,5 +66,35 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
         }
         // if there's no error
         return new PluginResult(error == null, error == null ? new ArrayList<Object>() : Arrays.asList(error));
+    }
+
+    private List<DataRecord> getQcReportRecords(DataRecord sample, String requestId) throws IoError, RemoteException, NotFound {
+        List<DataRecord> qcReports = new ArrayList<>();
+        Stack<DataRecord> sampleStack = new Stack();
+        sampleStack.add(sample);
+        while (sampleStack.size()>0){
+            DataRecord nextSample = sampleStack.pop();
+            if (requestId.equalsIgnoreCase(nextSample.getStringVal("RequestId",user)) && nextSample.getChildrenOfType("QcReportDna", user).length > 0){
+                return Arrays.asList(nextSample.getChildrenOfType("QcReportDna", user));
+            }
+        }
+        return qcReports;
+    }
+
+    private void mapHumanPercentageFromDdpcrResultsToDnaQcReport(List<DataRecord> savedRecords) throws IoError, RemoteException, NotFound, InvalidValue {
+        for (DataRecord rec : savedRecords){
+            if (rec.getDataTypeName().equalsIgnoreCase("DdPcrAssayResults") && rec.getValue("HumanPercentage", user) != null){
+                List<DataRecord> parentSamples = rec.getParentsOfType("Sample", user);
+                Double humanPercentage = rec.getDoubleVal("HumanPercentage", user);
+                if (parentSamples.size()> 0){
+                    DataRecord parentSample = parentSamples.get(0);
+                    String requestId = parentSample.getStringVal("RequestId", user);
+                    List<DataRecord> qcReports = getQcReportRecords(parentSample, requestId);
+                    for (DataRecord qr : qcReports){
+                        qr.setDataField("HumanPercentage", humanPercentage, user);
+                    }
+                }
+            }
+        }
     }
 }

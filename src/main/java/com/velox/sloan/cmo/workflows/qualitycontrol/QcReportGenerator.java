@@ -5,6 +5,7 @@ import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
+import com.velox.api.workflow.ActiveTask;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sapioutils.shared.managers.TaskUtilManager;
@@ -42,19 +43,16 @@ public class QcReportGenerator extends DefaultGenericPlugin {
 
     @Override
     public boolean shouldRun() throws RemoteException, ServerException, NotFound {
-        if (activeTask.getTaskName().equals("Generate QC report for DNA") && activeTask.getTask().getTaskOptions().containsKey("GENERATE QC REPORT") &&
-                !activeTask.getTask().getTaskOptions().containsKey("QC REPORT GENERATED")) {
-            return DNA_SAMPLE_TYPES.contains(activeTask.getAttachedDataRecords("Sample", user).get(0).getStringVal("ExemplarSampleType", user).toLowerCase());
+        if (activeTask.getTaskName().equals("Generate QC report for DNA") && activeTask.getTask().getTaskOptions().containsKey("GENERATE QC REPORT")) {
+            return DNA_SAMPLE_TYPES.contains(activeTask.getAttachedDataRecords("Sample", user).get(0).getStringVal("ExemplarSampleType", user).toLowerCase()) && activeTask.getStatus() != ActiveTask.COMPLETE;
         }
 
-        if (activeTask.getTaskName().equals("Generate QC report for RNA") && activeTask.getTask().getTaskOptions().containsKey("GENERATE QC REPORT") &&
-                !activeTask.getTask().getTaskOptions().containsKey("QC REPORT GENERATED")) {
-            return RNA_SAMPLE_TYPES.contains(activeTask.getAttachedDataRecords("Sample", user).get(0).getStringVal("ExemplarSampleType", user).toLowerCase());
+        if (activeTask.getTaskName().equals("Generate QC report for RNA") && activeTask.getTask().getTaskOptions().containsKey("GENERATE QC REPORT")) {
+            return RNA_SAMPLE_TYPES.contains(activeTask.getAttachedDataRecords("Sample", user).get(0).getStringVal("ExemplarSampleType", user).toLowerCase()) && activeTask.getStatus() != ActiveTask.COMPLETE;
         }
 
-        if (activeTask.getTaskName().equals("Generate QC report for Libraries") && activeTask.getTask().getTaskOptions().containsKey("GENERATE QC REPORT") &&
-                !activeTask.getTask().getTaskOptions().containsKey("QC REPORT GENERATED")) {
-            return LIBRARY_SAMPLE_TYPES.contains(activeTask.getAttachedDataRecords("Sample", user).get(0).getStringVal("ExemplarSampleType", user).toLowerCase());
+        if (activeTask.getTaskName().equals("Generate QC report for Libraries") && activeTask.getTask().getTaskOptions().containsKey("GENERATE QC REPORT")) {
+            return LIBRARY_SAMPLE_TYPES.contains(activeTask.getAttachedDataRecords("Sample", user).get(0).getStringVal("ExemplarSampleType", user).toLowerCase()) && activeTask.getStatus() != ActiveTask.COMPLETE;
         }
         return false;
     }
@@ -67,11 +65,21 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
             List<Object> sampleIds = getSampleIds(samples);
+            String reportName = getReportName(samples.get(0));
+            List<DataRecord> attachedReportData = activeTask.getAttachedDataRecords(reportName, user);
+
+            if (attachedReportData.size() > 0){
+                activeTask.removeTaskAttachments(getAttachedRecordIds(attachedReportData));
+                dataRecordManager.deleteDataRecords(attachedReportData, null, false, user);
+//                List<List<DataRecord>> sampleReportsToRemove = new ArrayList<>();
+//                sampleReportsToRemove.add(attachedReportData);
+//                dataRecordManager.removeChildren(samples, sampleReportsToRemove , user);
+            }
             List<DataRecord> qcRecords = getQcRecordsForSamples(sampleIds);
             List<DataRecord> qcProtocolRecords = getQcProtocolRecordsForSamples(sampleIds);
             if (qcRecords.size() < sampleIds.size()) {
-                clientCallback.displayWarning("Number of QC Records found: %d are LESS than number of samples attached %d." +
-                        "\nPlease make sure all the samples have at least one QC record.");
+                clientCallback.displayWarning(String.format("Number of QC Records found: %d are LESS than number of samples attached %d." +
+                        "\nPlease make sure all the samples have at least one QC record.", qcRecords.size(), sampleIds.size()));
             }
             generateQcReport(samples, qcRecords, qcProtocolRecords);
         } catch (Exception e) {
@@ -82,6 +90,57 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return new PluginResult(true);
     }
 
+    /**
+     * get QcReport DataType name based on sample type attached to the workflow task.
+     * @param sample
+     * @return String
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws ServerException
+     */
+    private String getReportName(DataRecord sample) throws NotFound, RemoteException, ServerException {
+        String sampleType = null;
+        if (sample.getValue("ExemplarSampleType", user) !=null){
+            sampleType = sample.getStringVal("ExemplarSampleType", user).toLowerCase();
+        }
+        if (StringUtils.isBlank(sampleType)){
+            clientCallback.displayError("ExemplarSampleType value missing on at least one Samples attached to this Task.");
+        }
+        if (RNA_SAMPLE_TYPES.contains(sampleType)){
+            return "QcReportRna";
+        }
+        if (DNA_SAMPLE_TYPES.contains(sampleType)){
+            return "QcReportDna";
+        }
+        if (LIBRARY_SAMPLE_TYPES.contains(sampleType)){
+            return "QcReportLibrary";
+        }
+        return "";
+    }
+
+    /**
+     * get RecordId values for DataRecords.
+     * @param records
+     * @return List<long>
+     * @throws NotFound
+     * @throws RemoteException
+     */
+    private List<Long> getAttachedRecordIds(List<DataRecord> records) throws NotFound, RemoteException {
+        List<Long> ids = new ArrayList<>();
+        for(DataRecord rec : records){
+            ids.add(rec.getLongVal("RecordId", user));
+        }
+        return ids;
+    }
+
+
+    /**
+     * Get SampleId values for the DataRecords.
+     * @param samples
+     * @return List<Object>
+     * @throws NotFound
+     * @throws RemoteException
+     */
     private List<Object> getSampleIds(List<DataRecord> samples) throws NotFound, RemoteException {
         List<Object> sampleIds = new ArrayList<>();
         for (DataRecord sample : samples) {
@@ -95,10 +154,28 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return sampleIds;
     }
 
+    /**
+     * get QCDatum DataRecords for a sample.
+     * @param sampleIdList
+     * @return List<DataRecord>
+     * @throws RemoteException
+     * @throws IoError
+     * @throws NotFound
+     * @throws ServerException
+     */
     private List<DataRecord> getQcRecordsForSamples(List<Object> sampleIdList) throws RemoteException, IoError, NotFound, ServerException {
         return dataRecordManager.queryDataRecords("QCDatum", "SampleId", sampleIdList, user);
     }
 
+    /**
+     * get QCDatum records based on type of QC.
+     * @param sampleId
+     * @param qcDataRecords
+     * @param QcType
+     * @return List<DataRecord>
+     * @throws NotFound
+     * @throws RemoteException
+     */
     private List<DataRecord> getQcRecordsByQcType(String sampleId, List<DataRecord> qcDataRecords, String QcType) throws NotFound, RemoteException {
         List<DataRecord> sampleQcRecordsByQcType = new ArrayList<>();
         for (DataRecord qcRecord : qcDataRecords) {
@@ -110,6 +187,13 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return sampleQcRecordsByQcType;
     }
 
+    /**
+     * get most recently added QCDarum record for a sample
+     * @param qcRecords
+     * @return DataRecord
+     * @throws NotFound
+     * @throws RemoteException
+     */
     private DataRecord getMostRecentQcRecord(List<DataRecord> qcRecords) throws NotFound, RemoteException {
         if (qcRecords.size() == 1) {
             return qcRecords.get(0);
@@ -123,6 +207,15 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return mostRecentQcRecord;
     }
 
+    /**
+     * get DIN value from QCDatum records for sample.
+     * @param sampleId
+     * @param qcRecords
+     * @return Double
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws ServerException
+     */
     private Double getDinValueFromQcRecord(String sampleId, List<DataRecord> qcRecords) throws NotFound, RemoteException, ServerException {
         List<DataRecord> qcRecordsForSample = getQcRecordsByQcType(sampleId, qcRecords, QC_TYPE_FOR_DIN);
         Double dinValue = 0.00;
@@ -137,6 +230,15 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return dinValue;
     }
 
+    /**
+     * get RQN value from QCDatum records for sample.
+     * @param sampleId
+     * @param qcRecords
+     * @return Double
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws ServerException
+     */
     private Double getRqnValueFromQcRecord(String sampleId, List<DataRecord> qcRecords) throws NotFound, RemoteException, ServerException {
         List<DataRecord> qcRecordsWithRqnForSample = getQcRecordsByQcType(sampleId, qcRecords, QC_TYPE_FOR_RQN);
         Double rqnValue = 0.00;
@@ -155,6 +257,15 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return rqnValue;
     }
 
+    /**
+     * get RIN value from QCDatum records for sample.
+     * @param sampleId
+     * @param qcRecords
+     * @return String
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws ServerException
+     */
     private String getRinValueFromQcRecord(String sampleId, List<DataRecord> qcRecords) throws NotFound, RemoteException, ServerException {
         List<DataRecord> qcRecordsWithRinForSample = getQcRecordsByQcType(sampleId, qcRecords, QC_TYPE_FOR_RIN);
         String rinValue = "";
@@ -173,6 +284,15 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return rinValue;
     }
 
+    /**
+     * get DV200 value from QCDatum records for sample.
+     * @param sampleId
+     * @param qcRecords
+     * @return Double
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws ServerException
+     */
     private Double getDv200ValueFromQcRecord(String sampleId, List<DataRecord> qcRecords) throws NotFound, RemoteException, ServerException {
         List<DataRecord> qcRecordswithDv200ForSample = getQcRecordsByQcType(sampleId, qcRecords, QC_TYPE_FOR_DV200);
         Double dv200Value = 0.00;
@@ -191,10 +311,28 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return dv200Value;
     }
 
+    /**
+     * get QcProtocol records for samples.
+     * @param sampleIdList
+     * @return List<DataRecord>
+     * @throws RemoteException
+     * @throws IoError
+     * @throws NotFound
+     * @throws ServerException
+     */
     private List<DataRecord> getQcProtocolRecordsForSamples(List<Object> sampleIdList) throws RemoteException, IoError, NotFound, ServerException {
         return dataRecordManager.queryDataRecords("QCProtocol", "SampleId", sampleIdList, user);
     }
 
+    /**
+     * get IgoRecommendation value from QcProtocol records for sample
+     * @param sampleId
+     * @param qcProtocolRecords
+     * @return String
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws ServerException
+     */
     private String getIgoRecommendationValue(String sampleId, List<DataRecord> qcProtocolRecords) throws NotFound, RemoteException, ServerException {
         String igoRecommendationValue = "";
         if (!qcProtocolRecords.isEmpty()) {
@@ -212,6 +350,14 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return igoRecommendationValue;
     }
 
+    /**
+     * get QcComments value from QcProtocol records for sample.
+     * @param sampleId
+     * @param qcDataRecords
+     * @return String
+     * @throws NotFound
+     * @throws RemoteException
+     */
     private String getQcCommentsValue(String sampleId, List<DataRecord> qcDataRecords) throws NotFound, RemoteException {
         String igoQcCommentsValue = "";
         if (!qcDataRecords.isEmpty()) {
@@ -228,6 +374,15 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return igoQcCommentsValue;
     }
 
+    /**
+     * get AverageSize of Library for a Sample from QcProtocol records.
+     * @param sampleId
+     * @param qcRecords
+     * @return Double
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws ServerException
+     */
     private Double getAverageLibrarySizeValue(String sampleId, List<DataRecord> qcRecords) throws NotFound, RemoteException, ServerException {
         List<DataRecord> qcRecordsWithAvgBpSizeForSample = getQcRecordsByQcType(sampleId, qcRecords, QC_TYPE_FOR_AVERAGE_BP_SIZE);
         Double averageBasePairSize = 0.0;
@@ -246,8 +401,18 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return averageBasePairSize;
     }
 
-    private List<Map<String, Object>> generateDnaQcReportFieldValuesMap(List<DataRecord> samples, List<DataRecord> qcDataRecords, List<DataRecord> qcProtocolRecords) throws NotFound, RemoteException, ServerException {
-        List<Map<String, Object>> dnaQcRecords = new ArrayList<>();
+    /**
+     * Create DNA QC REPORT DataRecords for Samples.
+     * @param samples
+     * @param qcDataRecords
+     * @param qcProtocolRecords
+     * @return List<DataRecord>
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws ServerException
+     */
+    private List<DataRecord> generateDnaQcReportFieldValuesMap(List<DataRecord> samples, List<DataRecord> qcDataRecords, List<DataRecord> qcProtocolRecords) throws NotFound, RemoteException, ServerException {
+        List<DataRecord> dnaQcRecords = new ArrayList<>();
         for (DataRecord sample : samples) {
             Map<String, Object> qcRecord = new HashMap<>();
             String sampleId = sample.getStringVal("SampleId", user);
@@ -275,13 +440,23 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             if (!StringUtils.isBlank(comments)) {
                 qcRecord.put("Comments", comments);
             }
-            dnaQcRecords.add(qcRecord);
+            dnaQcRecords.add(sample.addChild("QcReportDna", qcRecord, user));
         }
         return dnaQcRecords;
     }
 
-    private List<Map<String, Object>> generateRnaQcReportFieldValuesMap(List<DataRecord> samples, List<DataRecord> qcRecords, List<DataRecord> qcProtocolRecords) throws NotFound, RemoteException, ServerException {
-        List<Map<String, Object>> rnaQcRecords = new ArrayList<>();
+    /**
+     * generate RNA QC REPORT DataRecords for Samples.
+     * @param samples
+     * @param qcRecords
+     * @param qcProtocolRecords
+     * @return List<DataRecord>
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws ServerException
+     */
+    private List<DataRecord> generateRnaQcReportFieldValuesMap(List<DataRecord> samples, List<DataRecord> qcRecords, List<DataRecord> qcProtocolRecords) throws NotFound, RemoteException, ServerException {
+        List<DataRecord> rnaQcRecords = new ArrayList<>();
         for (DataRecord sample : samples) {
             Map<String, Object> qcRecord = new HashMap<>();
             String sampleId = sample.getStringVal("SampleId", user);
@@ -315,13 +490,23 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             if (!StringUtils.isBlank(comments)) {
                 qcRecord.put("Comments", comments);
             }
-            rnaQcRecords.add(qcRecord);
+            rnaQcRecords.add(sample.addChild("QcReportRna", qcRecord, user));
         }
         return rnaQcRecords;
     }
 
-    private List<Map<String, Object>> generateLibraryQcReportFieldValuesMap(List<DataRecord> samples, List<DataRecord> qcRecords, List<DataRecord> qcProtocolRecords) throws NotFound, RemoteException, ServerException {
-        List<Map<String, Object>> libraryQcRecords = new ArrayList<>();
+    /**
+     * Generate LIBRARY QC REPORT DataRecords for Samples.
+     * @param samples
+     * @param qcRecords
+     * @param qcProtocolRecords
+     * @return List<DataRecord>
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws ServerException
+     */
+    private List<DataRecord> generateLibraryQcReportFieldValuesMap(List<DataRecord> samples, List<DataRecord> qcRecords, List<DataRecord> qcProtocolRecords) throws NotFound, RemoteException, ServerException {
+        List<DataRecord> libraryQcRecords = new ArrayList<>();
         for (DataRecord sample : samples) {
             Map<String, Object> qcRecord = new HashMap<>();
             String sampleId = sample.getStringVal("SampleId", user);
@@ -332,7 +517,12 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             qcRecord.put("Concentration", sample.getDoubleVal("Concentration", user));
             qcRecord.put("ConcentrationUnits", sample.getStringVal("ConcentrationUnits", user));
             qcRecord.put("Volume", sample.getDoubleVal("Volume", user));
-            qcRecord.put("TotalMass", sample.getDoubleVal("TotalMass", user) * NANOMOLAR_TO_FEMTOMOLAR_CONVERSION_FACTOR); //convert nM to fM by multiplying by 1000000
+            if (sample.getStringVal("ConcentrationUnits", user).trim().equalsIgnoreCase("ng/uL")){
+                qcRecord.put("TotalMass", sample.getDoubleVal("Concentration", user) * sample.getDoubleVal("Volume", user));
+            }
+            else {
+                qcRecord.put("TotalMass", sample.getDoubleVal("TotalMass", user) * NANOMOLAR_TO_FEMTOMOLAR_CONVERSION_FACTOR); //convert nM to fM by multiplying by 1000000
+            }
             qcRecord.put("TumorOrNormal", sample.getStringVal("TumorOrNormal", user));
             qcRecord.put("Recipe", sample.getStringVal("Recipe", user));
             Double averageBpSize = getAverageLibrarySizeValue(sampleId, qcRecords);
@@ -347,27 +537,33 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             if (!StringUtils.isBlank(comments)) {
                 qcRecord.put("Comments", comments);
             }
-            libraryQcRecords.add(qcRecord);
+            libraryQcRecords.add(sample.addChild("QcReportLibrary", qcRecord, user));
         }
         return libraryQcRecords;
     }
 
+    /**
+     * Generate QC report records
+     * @param samples
+     * @param qcRecords
+     * @param qcProtocolRecords
+     * @throws ServerException
+     * @throws RemoteException
+     * @throws NotFound
+     */
     private void generateQcReport(List<DataRecord> samples, List<DataRecord> qcRecords, List<DataRecord> qcProtocolRecords) throws ServerException, RemoteException, NotFound {
         String attachedSampleTypes = samples.get(0).getStringVal("ExemplarSampleType", user);
         if (DNA_SAMPLE_TYPES.contains(attachedSampleTypes.toLowerCase())) {
-            List<Map<String, Object>> dnaQcRecords = generateDnaQcReportFieldValuesMap(samples, qcRecords, qcProtocolRecords);
-            TaskUtilManager.attachRecordsToTask(activeTask, dataRecordManager.addDataRecords("QcReportDna", dnaQcRecords, user));
-            activeTask.getTask().setTaskOption("QC REPORT GENERATED", "");
+            List<DataRecord> dnaQcRecords = generateDnaQcReportFieldValuesMap(samples, qcRecords, qcProtocolRecords);
+            activeTask.addAttachedDataRecords(dnaQcRecords);
         }
         if (RNA_SAMPLE_TYPES.contains(attachedSampleTypes.toLowerCase())) {
-            List<Map<String, Object>> rnaQcRecords = generateRnaQcReportFieldValuesMap(samples, qcRecords, qcProtocolRecords);
-            TaskUtilManager.attachRecordsToTask(activeTask, dataRecordManager.addDataRecords("QcReportRna", rnaQcRecords, user));
-            activeTask.getTask().setTaskOption("QC REPORT GENERATED", "");
+            List<DataRecord> rnaQcRecords = generateRnaQcReportFieldValuesMap(samples, qcRecords, qcProtocolRecords);
+            activeTask.addAttachedDataRecords(rnaQcRecords);
         }
         if (LIBRARY_SAMPLE_TYPES.contains(attachedSampleTypes.toLowerCase())) {
-            List<Map<String, Object>> libraryQcRecords = generateLibraryQcReportFieldValuesMap(samples, qcRecords, qcProtocolRecords);
-            TaskUtilManager.attachRecordsToTask(activeTask, dataRecordManager.addDataRecords("QcReportLibrary", libraryQcRecords, user));
-            activeTask.getTask().setTaskOption("QC REPORT GENERATED", "");
+            List<DataRecord> libraryQcRecords = generateLibraryQcReportFieldValuesMap(samples, qcRecords, qcProtocolRecords);
+            activeTask.addAttachedDataRecords(libraryQcRecords);
         }
     }
 }
