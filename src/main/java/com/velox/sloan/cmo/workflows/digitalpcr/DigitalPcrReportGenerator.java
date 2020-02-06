@@ -37,8 +37,8 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
     private List<String> redReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count Mu", "Droplet Count WT", "Ratio ([Mu]/[WT])", "Accepted Droplets", "Micronic Tube Barcode", "Human %");
 
     public DigitalPcrReportGenerator() {
-        setTaskTableToolbar(true);
-        setTaskFormToolbar(true);
+        setTaskToolbar(true);
+        setFormToolbar(true);
         setLine1Text("Generate ddPCR");
         setLine2Text("Report");
         setDescription("Generates report for ddPCR experiment with specific columns.");
@@ -52,7 +52,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
     }
 
     @Override
-    public boolean onTaskFormToolbar(ActiveWorkflow activeWorkflow, ActiveTask activeTask) {
+    public boolean onTaskToolbar(ActiveWorkflow activeWorkflow, ActiveTask activeTask) {
         try {
             return activeTask.getTask().getTaskOptions().containsKey("GENERATE DDPCR REPORT");
         } catch (RemoteException e) {
@@ -62,13 +62,8 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
     }
 
     @Override
-    public boolean onTaskTableToolbar(ActiveWorkflow activeWorkflow, ActiveTask activeTask) {
-        try {
-            return activeTask.getTask().getTaskOptions().containsKey("GENERATE DDPCR REPORT");
-        } catch (RemoteException e) {
-            logError(Arrays.toString(e.getStackTrace()));
-        }
-        return false;
+    public boolean onTaskFormToolbar(ActiveWorkflow activeWorkflow, ActiveTask activeTask) {
+        return onTaskToolbar(activeWorkflow, activeTask);
     }
 
     public PluginResult run() throws ServerException {
