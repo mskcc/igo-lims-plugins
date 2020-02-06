@@ -420,6 +420,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             qcRecord.put("OtherSampleId", sample.getStringVal("OtherSampleId", user));
             qcRecord.put("UserSampleID", sample.getStringVal("UserSampleID", user));
             qcRecord.put("AltId", sample.getStringVal("AltId", user));
+            qcRecord.put("RequestId", sample.getStringVal("RequestId", user));
             qcRecord.put("Concentration", sample.getDoubleVal("Concentration", user));
             qcRecord.put("ConcentrationUnits", sample.getStringVal("ConcentrationUnits", user));
             qcRecord.put("Volume", sample.getDoubleVal("Volume", user));
@@ -464,6 +465,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             qcRecord.put("OtherSampleId", sample.getStringVal("OtherSampleId", user));
             qcRecord.put("UserSampleID", sample.getStringVal("UserSampleID", user));
             qcRecord.put("AltId", sample.getStringVal("AltId", user));
+            qcRecord.put("RequestId", sample.getStringVal("RequestId", user));
             qcRecord.put("Concentration", sample.getDoubleVal("Concentration", user));
             qcRecord.put("ConcentrationUnits", sample.getStringVal("ConcentrationUnits", user));
             qcRecord.put("Volume", sample.getDoubleVal("Volume", user));
@@ -514,6 +516,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             qcRecord.put("OtherSampleId", sample.getStringVal("OtherSampleId", user));
             qcRecord.put("UserSampleID", sample.getStringVal("UserSampleID", user));
             qcRecord.put("AltId", sample.getStringVal("AltId", user));
+            qcRecord.put("RequestId", sample.getStringVal("RequestId", user));
             qcRecord.put("Concentration", sample.getDoubleVal("Concentration", user));
             qcRecord.put("ConcentrationUnits", sample.getStringVal("ConcentrationUnits", user));
             qcRecord.put("Volume", sample.getDoubleVal("Volume", user));

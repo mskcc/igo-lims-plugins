@@ -59,9 +59,10 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
             Integer plateSize = getPlateSize(attachedSamplesList);
+            String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
             Double minAdapterVolInPlate = autohelper.getMinAdapterVolumeRequired(plateSize);
             Double maxPlateVolume = autohelper.getMaxVolumeLimit(plateSize);
-            setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords, minAdapterVolInPlate, maxPlateVolume, plateSize);
+            setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords, minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType);
             checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
         } catch (Exception e) {
             clientCallback.displayError(String.format("Error while updating Index assignment values after manual Index assignment to samples:\n%s", ExceptionUtils.getStackTrace(e)));
@@ -102,7 +103,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
      * @throws IoError
      * @throws ServerException
      */
-    private void setUpdatedIndexAssignmentValues(List<DataRecord> indexAssignmentConfigs, List<DataRecord> indexBarcodeRecords, Double minVolInAdapterPlate, Double maxPlateVolume, Integer plateSize) throws NotFound, RemoteException, InvalidValue, IoError, ServerException {
+    private void setUpdatedIndexAssignmentValues(List<DataRecord> indexAssignmentConfigs, List<DataRecord> indexBarcodeRecords, Double minVolInAdapterPlate, Double maxPlateVolume, Integer plateSize, String sampleType) throws NotFound, RemoteException, InvalidValue, IoError, ServerException {
         for (DataRecord indexBarcodeRec : indexBarcodeRecords) {
             boolean found = false;
             for (DataRecord indexConfig : indexAssignmentConfigs) {
@@ -114,9 +115,9 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                     String adapterSourceRow = autohelper.getAdapterRowPosition(wellPosition);
                     String adapterSourceCol = autohelper.getAdapterColPosition(wellPosition);
                     Double adapterStartConc = indexConfig.getDoubleVal("AdapterConcentration", user);
-                    Double targetAdapterConc = autohelper.getCalculatedTargetAdapterConcentration(dnaInputAmount, plateSize);
-                    Double adapterVolume = autohelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc);
-                    Double waterVolume = autohelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume);
+                    Double targetAdapterConc = autohelper.getCalculatedTargetAdapterConcentration(dnaInputAmount, plateSize, sampleType);
+                    Double adapterVolume = autohelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType);
+                    Double waterVolume = autohelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume, sampleType);
                     Double actualTargetAdapterConc = adapterStartConc / ((waterVolume + adapterVolume) / adapterVolume);
                     //Double adapterConcentration = autohelper.getAdapterConcentration(indexConfig, adapterVolume, waterVolume);
                     setUpdatedIndexAssignmentConfigVol(indexConfig, adapterVolume);

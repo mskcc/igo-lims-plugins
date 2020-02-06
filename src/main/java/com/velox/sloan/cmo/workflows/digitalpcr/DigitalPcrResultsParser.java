@@ -36,21 +36,29 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
 
     @Override
     public boolean shouldRun() throws RemoteException {
-        return activeTask.getStatus() != activeTask.COMPLETE && activeTask.getTask().getTaskOptions().containsKey("PARSE DDPCR RESULTS")
-                && !activeTask.getTask().getTaskOptions().containsKey("_DDPCR RESULTS PARSED");
+        return activeTask.getStatus() != activeTask.COMPLETE && activeTask.getTask().getTaskOptions().containsKey("PARSE DDPCR RESULTS");
     }
 
     public PluginResult run() throws ServerException {
         try {
             List<String> filesWithDigitalPcrRawData = clientCallback.showMultiFileDialog("Please upload Raw Data files", null);
-            if (filesWithDigitalPcrRawData.isEmpty()) {
+            if (filesWithDigitalPcrRawData.size()==0) {
+                clientCallback.displayError("User did not upload results file.");
                 return new PluginResult(false);
             }
             List<String> dataInFiles = readDataFromFiles(filesWithDigitalPcrRawData);
             if (!isValidFile(filesWithDigitalPcrRawData, dataInFiles)) {
                 return new PluginResult(false);
             }
-            //removeDuplicateHeaderFromCombinedData(fileData);
+            //remove already attached records from task if already created. This is done to allow for the task to run again;
+            if (activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user).size()>0){
+                List<Long> recordIds = new ArrayList<>();
+                for (DataRecord rec: activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user)){
+                    recordIds.add(rec.getRecordId());
+                }
+                activeTask.removeTaskAttachments(recordIds);
+            }
+            //read data from file and create new ddpcr assay results.
             for (String file : filesWithDigitalPcrRawData) {
                 List<String> fileData = igoUtils.readDataFromCsvFile(clientCallback.readBytes(file));
                 Map<String, Integer> headerValueMap = igoUtils.getCsvHeaderValueMap(fileData);
@@ -61,7 +69,6 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 logInfo(channel1Channe2CombinedData.toString());
                 Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData);
                 logInfo(groupedData.toString());
-                clientCallback.displayInfo(groupedData.toString());
                 List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1", user);
                 if (attachedProtocolRecords.isEmpty()) {
                     clientCallback.displayError("No attached 'DdPcrProtocol1' records found attached to this task.");
@@ -328,8 +335,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws IoError
      */
-    private void addResultsAsChildRecords(List<Map<String, Object>> analyzedDataValues, List<DataRecord> attachedSamples) throws NotFound, RemoteException, ServerException, IoError {
-        //List<Object> alreadyAdded = new ArrayList<>();
+    private void addResultsAsChildRecords(List<Map<String, Object>> analyzedDataValues, List<DataRecord> attachedSamples) throws NotFound, RemoteException, ServerException{
         List<DataRecord> recordsToAttachToTask = new ArrayList<>();
         logInfo(Integer.toString(analyzedDataValues.size()));
         for (Map<String, Object> data : analyzedDataValues) {
@@ -347,9 +353,6 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
             }
         }
         activeTask.addAttachedDataRecords(recordsToAttachToTask);
-        activeTask.getTask().getTaskOptions().put("_DDPCR RESULTS PARSED", "");
     }
-
-
 }
 

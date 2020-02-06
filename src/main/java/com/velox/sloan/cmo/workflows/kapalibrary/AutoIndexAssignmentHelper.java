@@ -4,6 +4,8 @@ import com.velox.api.datarecord.NotFound;
 import com.velox.sapioutils.shared.managers.ManagerBase;
 
 import java.rmi.RemoteException;
+import java.util.Arrays;
+import java.util.List;
 
 
 /**
@@ -15,6 +17,7 @@ import java.rmi.RemoteException;
 
 public class AutoIndexAssignmentHelper extends ManagerBase {
 
+    private final List<String> RNA_SAMPLE_TYPES = Arrays.asList("rna", "cdna");
     /**
      * Get the minimum liquid volume for the Index Barcode to be present in a plate well for a plate given its plate size.
      *
@@ -37,7 +40,10 @@ public class AutoIndexAssignmentHelper extends ManagerBase {
      * @param targetAdapterConcentration
      * @return Double volume
      */
-    public Double getAdapterInputVolume(Double startingAdapterConcentration, Double minAdapterVolume, Double targetAdapterConcentration) {
+    public Double getAdapterInputVolume(Double startingAdapterConcentration, Double minAdapterVolume, Double targetAdapterConcentration, String sampleType) {
+        if (RNA_SAMPLE_TYPES.contains(sampleType.toLowerCase())){
+            return 5.0;
+        }
         Double c1 = startingAdapterConcentration;
         Double v1 = minAdapterVolume;
         Double c2 = targetAdapterConcentration;
@@ -55,7 +61,10 @@ public class AutoIndexAssignmentHelper extends ManagerBase {
      * @param dnaInputAmount
      * @return Double Concentration
      */
-    public Double getCalculatedTargetAdapterConcentration(Double dnaInputAmount, Integer plateSize) {
+    public Double getCalculatedTargetAdapterConcentration(Double dnaInputAmount, Integer plateSize, String sampleType) {
+        if (RNA_SAMPLE_TYPES.contains(sampleType.toLowerCase())){
+            return 15.00;
+        }
         if (plateSize == 96 && dnaInputAmount < 50.00) {
             return (15 * dnaInputAmount) / 50.00;
         }
@@ -74,7 +83,10 @@ public class AutoIndexAssignmentHelper extends ManagerBase {
      * @param maxPlateVolume
      * @return Double volume
      */
-    public Double getVolumeOfWater(Double startingAdapterConcentration, Double minAdapterVolume, Double targetAdapterConcentration, Double maxPlateVolume) {
+    public Double getVolumeOfWater(Double startingAdapterConcentration, Double minAdapterVolume, Double targetAdapterConcentration, Double maxPlateVolume, String sampleType) {
+        if (RNA_SAMPLE_TYPES.contains(sampleType.toLowerCase())){
+            return 0.0;
+        }
         Double c1 = startingAdapterConcentration;
         Double v1 = minAdapterVolume;
         Double c2 = targetAdapterConcentration;

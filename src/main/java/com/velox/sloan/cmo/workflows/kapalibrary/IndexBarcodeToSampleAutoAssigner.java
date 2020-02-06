@@ -30,9 +30,8 @@ import java.util.stream.Collectors;
 public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
 
     private final List<String> RECIPES_TO_USE_SPECIAL_ADAPTERS = Arrays.asList("CRISPRSeq", "AmpliconSeq");
-    private final String INDEX_ASSIGNMENT_CONFIG_DATATYPE = "AutoIndexAssignmentConfig";
-    IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
-    AutoIndexAssignmentHelper autoHelper;
+    private IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
+    private AutoIndexAssignmentHelper autoHelper;
 
     public IndexBarcodeToSampleAutoAssigner() {
         setTaskEntry(true);
@@ -78,18 +77,19 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
             List<DataRecord> sortedProtocolRecords = getSampleProtocolRecordsSortedByWellPositionColumnWise(attachedIndexBarcodeRecords);
             Integer plateSize = getPlateSize(attachedSamplesList);
             Double minAdapterVol = autoHelper.getMinAdapterVolumeRequired(plateSize);
+            String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
             if (plateSize == 96) {
-                assignIndicesToSamples(sortedProtocolRecords, indexConfigsToUse, minAdapterVol, plateSize);
+                assignIndicesToSamples(sortedProtocolRecords, indexConfigsToUse, minAdapterVol, plateSize, sampleType);
             } else if (plateSize == 384) {
                 List<List<DataRecord>> protocolsSplitByAlternateWell = getQuadrantsFromProtocols(sortedProtocolRecords);
                 for (List<DataRecord> protocolsList : protocolsSplitByAlternateWell) {
-                    assignIndicesToSamples(protocolsList, indexConfigsToUse, minAdapterVol, plateSize);
+                    assignIndicesToSamples(protocolsList, indexConfigsToUse, minAdapterVol, plateSize, sampleType);
                 }
             }
         } catch (Exception e) {
             clientCallback.displayError(String.format("Error while Auto Index assignment to samples:\n%s", ExceptionUtils.getStackTrace(e)));
             clientCallback.displayError(e.toString());
-            logError(String.format("Error: %s", e.getStackTrace().toString()));
+            logError(String.format("Error: %s", Arrays.toString(e.getStackTrace())));
             return new PluginResult(false);
         }
         return new PluginResult(true);
@@ -144,7 +144,8 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
      * @throws ServerException
      */
     private List<DataRecord> getIndexAssignmentConfigsForIndexType(String indexTypes, List<String> recipes) throws IoError, RemoteException, NotFound, ServerException {
-        Boolean isCrisprOrAmpliconSeq = recipes.stream().filter(RECIPES_TO_USE_SPECIAL_ADAPTERS::contains).collect(Collectors.toList()).size() > 0;
+        boolean isCrisprOrAmpliconSeq = recipes.stream().anyMatch(RECIPES_TO_USE_SPECIAL_ADAPTERS::contains);
+        String INDEX_ASSIGNMENT_CONFIG_DATATYPE = "AutoIndexAssignmentConfig";
         if (!isCrisprOrAmpliconSeq) {
             logInfo("Library samples do not have recipe values Crispr or AmpliconSeq, reserved indexes in set5 will not be used.");
             return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + "AND IsActive=1 AND SetId!=5", user);
@@ -268,13 +269,13 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
      * @throws IoError
      * @throws ServerException
      */
-    private Map<String, Object> setAssignedIndicesDataRecordFieldValues(DataRecord indexBarcode, DataRecord indexAssignmentConfig, Double minVolInAdapterPlate, Double maxPlateVolume, Integer plateSize) throws NotFound, RemoteException, InvalidValue, IoError, ServerException {
-        Double dnaInputAmount = 0.0;
+    private Map<String, Object> setAssignedIndicesDataRecordFieldValues(DataRecord indexBarcode, DataRecord indexAssignmentConfig, Double minVolInAdapterPlate, Double maxPlateVolume, Integer plateSize, String sampleType) throws NotFound, RemoteException, InvalidValue, IoError, ServerException {
+        Double sampleInputAmount = 0.0;
         if (indexBarcode.getValue("InitialInput", user) != null) {
-            dnaInputAmount = Double.parseDouble(indexBarcode.getStringVal("InitialInput", user));
+            sampleInputAmount = Double.parseDouble(indexBarcode.getStringVal("InitialInput", user));
         } else {
-            clientCallback.displayError(String.format("Dna Input for Sample '%s' cannot be null. Please correct the values", indexBarcode.getStringVal("SampleId", user)));
-            logError(String.format("Dna Input for Sample '%s' cannot be null. Please correct the values", indexBarcode.getStringVal("SampleId", user)));
+            clientCallback.displayError(String.format("Sample Input for Sample '%s' cannot be null. Please correct the values", indexBarcode.getStringVal("SampleId", user)));
+            logError(String.format("Sample Input for Sample '%s' cannot be null. Please correct the values", indexBarcode.getStringVal("SampleId", user)));
         }
         String indexId = indexAssignmentConfig.getStringVal("IndexId", user);
         String indexTag = indexAssignmentConfig.getStringVal("IndexTag", user);
@@ -283,9 +284,9 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         String adapterSourceRow = autoHelper.getAdapterRowPosition(wellPosition);
         String adapterSourceCol = autoHelper.getAdapterColPosition(wellPosition);
         Double adapterStartConc = indexAssignmentConfig.getDoubleVal("AdapterConcentration", user);
-        Double targetAdapterConc = autoHelper.getCalculatedTargetAdapterConcentration(dnaInputAmount, plateSize);
-        Double adapterVolume = autoHelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc);
-        Double waterVolume = autoHelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume);
+        Double targetAdapterConc = autoHelper.getCalculatedTargetAdapterConcentration(sampleInputAmount, plateSize, sampleType);
+        Double adapterVolume = autoHelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType);
+        Double waterVolume = autoHelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume, sampleType);
         Double actualTargetAdapterConc = adapterStartConc / ((waterVolume + adapterVolume) / adapterVolume);
         setUpdatedIndexAssignmentConfigVol(indexAssignmentConfig, adapterVolume);
         Map<String, Object> indexAssignmentValues = new HashMap<>();
@@ -387,7 +388,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
      * @throws InvalidValue
      * @throws ServerException
      */
-    private void assignIndicesToSamples(List<DataRecord> indexAssignmentProtocolRecordsSortedColumnWise, List<DataRecord> indexAssignmentConfigs, Double minAdapterVol, Integer plateSize) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
+    private void assignIndicesToSamples(List<DataRecord> indexAssignmentProtocolRecordsSortedColumnWise, List<DataRecord> indexAssignmentConfigs, Double minAdapterVol, Integer plateSize, String sampleType) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
         Integer positionOfLastUsedIndex = getPositionOfLastUsedIndex(indexAssignmentConfigs);
         Double maxPlateVolume = autoHelper.getMaxVolumeLimit(plateSize);
         Integer updatedLastIndexUsed = getStartIndexAssignmentConfigPosition(positionOfLastUsedIndex, indexAssignmentConfigs);
@@ -395,7 +396,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         for (int i = updatedLastIndexUsed, j = 0; i < indexAssignmentConfigs.size() && j < indexAssignmentProtocolRecordsSortedColumnWise.size(); i++, j++) {
             DataRecord indexAssignmentConfig = indexAssignmentConfigs.get(i);
             DataRecord indexBarcodeProtocolRecord = indexAssignmentProtocolRecordsSortedColumnWise.get(j);
-            Map<String, Object> indexAssignmentValues = setAssignedIndicesDataRecordFieldValues(indexBarcodeProtocolRecord, indexAssignmentConfig, minAdapterVol, maxPlateVolume, plateSize);
+            Map<String, Object> indexAssignmentValues = setAssignedIndicesDataRecordFieldValues(indexBarcodeProtocolRecord, indexAssignmentConfig, minAdapterVol, maxPlateVolume, plateSize, sampleType);
             indexBarcodeProtocolRecord.setFields(indexAssignmentValues, user);
             indexAssignmentConfigPlatesToUse.add(indexAssignmentConfig.getStringVal("AdapterPlateId", user));
             if (i == indexAssignmentConfigs.size() - 1 && j <= indexAssignmentProtocolRecordsSortedColumnWise.size()) {
