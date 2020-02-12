@@ -140,11 +140,13 @@ public class GenerateStrSampleSheet extends DefaultGenericPlugin {
     private List<List<String>> getStrSampleSheetData(List<DataRecord> protocolRecords, String plateId) throws IOException, NotFound {
         List <List<String>> csvData = new ArrayList<>();
         List<String> headerRow1 = Arrays.asList("Version", "1");
-        List<String> headerRow2 = Arrays.asList(plateId,"#Plate Application Type", "#Barcode",	"#Owner", "#SangerAnalysisSoftware");
-        List<String> headerRow3 = Arrays.asList("#Well ID", "#Sample Name", "#Application Type", "#Sample Type", "#Size Standard", "#Dye set", "#Run module");
+        List<String> headerRow2 = Arrays.asList("#Plate Application Type", "#Barcode",	"#Owner", "#SangerAnalysisSoftware");
+        List<String> headerRow3 = Arrays.asList(plateId, "Fragment Analysis");
+        List<String> headerRow4 = Arrays.asList("#Well ID", "#Sample Name", "#Application Type", "#Sample Type", "#Size Standard", "#Dye set", "#Run module");
         csvData.add(headerRow1);
         csvData.add(headerRow2);
         csvData.add(headerRow3);
+        csvData.add(headerRow4);
         for(DataRecord rec : protocolRecords){
             List<String> row = new ArrayList<>();
             row.add(rec.getStringVal(strWellIdFieldName, user));
