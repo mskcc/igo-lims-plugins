@@ -98,9 +98,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                     DataRecord parentSample = parentSamples.get(0);
                     String requestId = parentSample.getStringVal("RequestId", user);
                     List<DataRecord> qcReports = getQcReportRecords(parentSample, requestId);
-                    clientCallback.displayInfo("" + qcReports.size());
                     for (DataRecord qr : qcReports){
-                        clientCallback.displayInfo(qr.getStringVal("SampleId", user));
                         qr.setDataField("HumanPercentage", humanPercentage, user);
                     }
                 }
