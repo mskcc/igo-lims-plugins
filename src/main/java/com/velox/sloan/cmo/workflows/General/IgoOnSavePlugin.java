@@ -51,9 +51,9 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
             }
 
             //set Human Percentage on QcReportDna DataRecords when Saving DdPcrAssayResults and HumanPercentageValues are present
-            mapHumanPercentageFromDdpcrResultsToDnaQcReport(theSavedRecords);
-
-            //update volume at sample level to show correct values.
+            if(theSavedRecords.get(0).getDataTypeName().equalsIgnoreCase("DdPcrAssayResults")){
+                mapHumanPercentageFromDdpcrResultsToDnaQcReport(theSavedRecords);
+            }
 
             // if there's an error
         } catch (Exception e) {
@@ -69,6 +69,9 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
     }
 
     private List<DataRecord> getQcReportRecords(DataRecord sample, String requestId) throws IoError, RemoteException, NotFound {
+        if (sample.getChildrenOfType("QcReportDna", user).length>0){
+            return Arrays.asList(sample.getChildrenOfType("QcReportDna", user));
+        }
         List<DataRecord> qcReports = new ArrayList<>();
         Stack<DataRecord> sampleStack = new Stack();
         sampleStack.add(sample);
@@ -77,11 +80,16 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
             if (requestId.equalsIgnoreCase(nextSample.getStringVal("RequestId",user)) && nextSample.getChildrenOfType("QcReportDna", user).length > 0){
                 return Arrays.asList(nextSample.getChildrenOfType("QcReportDna", user));
             }
+            List<DataRecord> parentSamples = nextSample.getParentsOfType("Sample", user);
+            if (parentSamples.size()>0 && parentSamples.get(0).getValue("RequestId", user)!= null
+                    && parentSamples.get(0).getStringVal("RequestId", user).equals(requestId)){
+                sampleStack.addAll(parentSamples);
+            }
         }
         return qcReports;
     }
 
-    private void mapHumanPercentageFromDdpcrResultsToDnaQcReport(List<DataRecord> savedRecords) throws IoError, RemoteException, NotFound, InvalidValue {
+    private void mapHumanPercentageFromDdpcrResultsToDnaQcReport(List<DataRecord> savedRecords) throws IoError, RemoteException, NotFound, InvalidValue, ServerException {
         for (DataRecord rec : savedRecords){
             if (rec.getDataTypeName().equalsIgnoreCase("DdPcrAssayResults") && rec.getValue("HumanPercentage", user) != null){
                 List<DataRecord> parentSamples = rec.getParentsOfType("Sample", user);
@@ -90,7 +98,9 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                     DataRecord parentSample = parentSamples.get(0);
                     String requestId = parentSample.getStringVal("RequestId", user);
                     List<DataRecord> qcReports = getQcReportRecords(parentSample, requestId);
+                    clientCallback.displayInfo("" + qcReports.size());
                     for (DataRecord qr : qcReports){
+                        clientCallback.displayInfo(qr.getStringVal("SampleId", user));
                         qr.setDataField("HumanPercentage", humanPercentage, user);
                     }
                 }
