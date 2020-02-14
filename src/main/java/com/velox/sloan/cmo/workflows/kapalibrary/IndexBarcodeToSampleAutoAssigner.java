@@ -200,15 +200,14 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
      */
     private int getStartIndexAssignmentConfigPosition(int lastUsedIndexPosition, List<DataRecord> indexAssignmentConfigs) throws ServerException, NotFound, RemoteException {
         if (lastUsedIndexPosition >= indexAssignmentConfigs.size() - 1) {
+            logInfo("Reached last Index, will start from first index position.");
             return 0;
-        } else if (indexAssignmentConfigs.get(lastUsedIndexPosition).getStringVal("WellId", user).toUpperCase().contains("A")) {
-            return lastUsedIndexPosition;
-        } else {
-            for (int i = lastUsedIndexPosition; i <= indexAssignmentConfigs.size(); i++)
-                if (indexAssignmentConfigs.get(i).getStringVal("WellId", user).toUpperCase().contains("A")) {
-                    return i;
-                }
         }
+        int nextIndexToUse = lastUsedIndexPosition + 1; //start with one index position after last index used.
+        for (int i = nextIndexToUse; i <= indexAssignmentConfigs.size(); i++)
+            if (indexAssignmentConfigs.get(i).getStringVal("WellId", user).toUpperCase().contains("A")) {
+                return i;
+            }
         return 0;
     }
 
@@ -248,7 +247,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws ServerException
      */
-    public Integer getPlateSize(List<DataRecord> samples) throws IoError, RemoteException, NotFound, ServerException {
+    private Integer getPlateSize(List<DataRecord> samples) throws IoError, RemoteException, NotFound, ServerException {
         DataRecord plate = samples.get(0).getParentsOfType("Plate", user).get(0);
         Integer plateSizeIndex = Integer.parseInt(plate.getValue("PlateWellCnt", user).toString());
         String plateSize = dataMgmtServer.getPickListManager(user).getPickListConfig("Plate Sizes").getEntryList().get(plateSizeIndex);
@@ -306,14 +305,13 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
      *
      * @param indexAssignmentConfig
      * @param adapterVolumeUsed
-     * @return Updated AutoIndexAssignmentConfig DataRecord
      * @throws NotFound
      * @throws RemoteException
      * @throws IoError
      * @throws InvalidValue
      * @throws ServerException
      */
-    public DataRecord setUpdatedIndexAssignmentConfigVol(DataRecord indexAssignmentConfig, Double adapterVolumeUsed) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
+    private void setUpdatedIndexAssignmentConfigVol(DataRecord indexAssignmentConfig, Double adapterVolumeUsed) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
         Double previousVol = indexAssignmentConfig.getDoubleVal("AdapterVolume", user);
         Double newVolume = previousVol - adapterVolumeUsed;
         indexAssignmentConfig.setDataField("AdapterVolume", newVolume, user);
@@ -324,7 +322,6 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
             clientCallback.displayWarning(String.format("The Volume for adapter '%s'on Adapter Plate with ID '%s' is below 10ul.\nThis adapter will be marked as depleted and will be ignored for future assignments.",
                     indexAssignmentConfig.getStringVal("IndexId", user), indexAssignmentConfig.getStringVal("AdapterPlateId", user)));
         }
-        return indexAssignmentConfig;
     }
 
     /**
