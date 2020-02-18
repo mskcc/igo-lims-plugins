@@ -91,7 +91,7 @@ public class IgoLimsPluginUtils {
         List<String> headerRow = Arrays.asList(fileData.get(0).split(","));
         Map<String, Integer> headerValues = new HashMap<>();
         for (String value : headerRow) {
-            headerValues.put(value, headerRow.indexOf(value));
+            headerValues.put(value.trim(), headerRow.indexOf(value));
         }
         return headerValues;
     }
@@ -186,7 +186,7 @@ public class IgoLimsPluginUtils {
         Row row = rowData.get(0);
         int i = 0;
         for (Cell cell : row) {
-            headerValuesMap.put(cell.getStringCellValue(), i);
+            headerValuesMap.put(cell.getStringCellValue().trim(), i);
             i++;
         }
         return headerValuesMap;
