@@ -81,6 +81,17 @@ public class IgoLimsPluginUtils {
         return StringUtils.join(listWithValues, "\n");
     }
 
+
+    /**
+     * Method to concatenate List of string separated by comma.
+     *
+     * @param listWithValues
+     * @return String of values separated by comma
+     */
+    public String convertListToCommaSeparatedString(List<String> listWithValues) {
+        return StringUtils.join(listWithValues, ",");
+    }
+
     /**
      * Method to get Map of Header values and their Index position.
      *
