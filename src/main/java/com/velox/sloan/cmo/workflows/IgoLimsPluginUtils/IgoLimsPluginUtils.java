@@ -30,7 +30,7 @@ public class IgoLimsPluginUtils {
         try (BufferedReader fileReader = new BufferedReader(new InputStreamReader(dataStream))) {
             String temp;
             // || !temp.replace(",", "").equals(null) || !temp.replace(",", "").equals("")
-            while ((temp = fileReader.readLine()) != null && !temp.replace(",", "").equals(null)) { //to check that there are no empty lines at end of file
+            while ((temp = fileReader.readLine()) != null) { //to check that there are no empty lines at end of file
                 String rowData;
                 rowData = temp;
                 rowDataValues.add(rowData);
@@ -89,7 +89,13 @@ public class IgoLimsPluginUtils {
      * @return String of values separated by comma
      */
     public String convertListToCommaSeparatedString(List<String> listWithValues) {
-        return StringUtils.join(listWithValues, ",");
+        List<String> nonNullvalues = new ArrayList<>();
+        for (String v: listWithValues){
+            if(!StringUtils.isBlank(v) && !v.trim().equalsIgnoreCase("OL")){
+                nonNullvalues.add(v);
+            }
+        }
+        return StringUtils.join(nonNullvalues, ",");
     }
 
     /**
@@ -239,4 +245,5 @@ public class IgoLimsPluginUtils {
     public boolean excelFileHasData(List<Row> dataRows) {
         return dataRows.size() > 1;
     }
+
 }

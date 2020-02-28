@@ -7,16 +7,19 @@ sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
+    jcenter()
 }
 
 dependencies {
     compile files('lib/veloxapi-10.6.1-b777.jar', 'lib/sloancmo-2.21.1-LIMS10.6.1_b84.jar', 'lib/sapio-commons-15.0.0-LIMS10.6.1.jar', 'lib/sapioutils-15.0.0-LIMS10.6.1.jar', 'lib/accessionservice-LIMS10.6.1.jar', 'lib/sapiogeneric-15.0.0-LIMS10.6.1.jar'),
             ('org.apache.poi:poi-ooxml:3.17')//,('org.apache.commons:commons-lang3:3.7')
-    compile group:'org.json', name: 'json', version: '20180813'
     compile group: 'org.apache.poi', name: 'poi', version: '3.17'
     compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.7'
     compile group: 'org.apache.httpcomponents', name: 'httpcore', version: '4.3.2'
     compile 'org.apache.httpcomponents:httpclient:4.5.11'
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.0.1'
+    compile group: 'com.google.code.gson', name: 'gson', version: '2.7'
+    compile group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1'
 
     compile ('junit:junit:4.12') {
         exclude group: 'org.hamcrest'

@@ -654,7 +654,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         seqReqValues.put("OtherSampleId", otherSampleId);
         seqReqValues.put("AltId", otherSampleId);
         seqReqValues.put("SequencingRunType", seqRunTypeByQuadrant.get(quadrant));
-        seqReqValues.put("RequestedReads", numberOfSamples * 2.0);
+        seqReqValues.put("RequestedReads", numberOfSamples * 1.0); //this is a constant value 1M/sample defined value confirmed with Juan Li from innovation team
         return seqReqValues;
     }
 
