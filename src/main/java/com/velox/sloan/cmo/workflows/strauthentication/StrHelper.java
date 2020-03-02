@@ -27,7 +27,7 @@ public class StrHelper {
      * @return Map<String, Map<String, Object>>
      * @throws ServerException
      */
-     public Map<String, Map<String, Object>> aggregateDataBySample(List<String> fileData, Map<String, Integer> headerValueMap) throws ServerException {
+     public Map<String, Map<String, Object>> aggregateDataBySample(List<String> fileData, Map<String, Integer> headerValueMap, String species) throws ServerException {
         Map<String, Map<String, Object>> sampleData = new HashMap<>();
         for (int i = 1; i < fileData.size(); i++) {
             List<String> rowData = Arrays.asList(fileData.get(i).split(","));
@@ -36,6 +36,12 @@ public class StrHelper {
             String marker = rowData.get(headerValueMap.get("Marker")).trim();
             if (marker.equalsIgnoreCase("amel")){
                 marker = "Amelogenin";
+            }
+            if (species.equalsIgnoreCase("mouse") && (marker.equalsIgnoreCase(" D4S2408") || marker.equalsIgnoreCase(" D8S1106"))){
+                continue;
+            }
+            if (species.equalsIgnoreCase("mouse")){
+                marker = "Mouse STR " + marker;
             }
             String allele1 = rowData.get(headerValueMap.get("Allele 1")).trim();
             String allele2 = rowData.get(headerValueMap.get("Allele 2")).trim();
@@ -47,6 +53,7 @@ public class StrHelper {
             data.putIfAbsent("scoringMode", 1);
             data.putIfAbsent("scoreFilter", 75);
             data.putIfAbsent("includeAmelogenin", true);
+            data.putIfAbsent("species", species);
             sampleData.putIfAbsent(sampleName, data);
             if (!StringUtils.isBlank(alleles)) {
                 data.putIfAbsent(marker, "");
@@ -109,7 +116,7 @@ public class StrHelper {
      * @param sampleName
      * @return List<String>
      */
-    public List<String> getSampleParamsSentToApi(Map<String,Map<String, Object>> sampleParamsData, String sampleName) {
+    public List<String> getSampleParamsSentToApi(Map<String,Map<String, Object>> sampleParamsData, String sampleName, List<String> markers) {
         Map<String, Object> sampleParams = sampleParamsData.get(sampleName);
         List<String> values = new ArrayList<>();
         if (!sampleParams.isEmpty()) {
@@ -117,7 +124,8 @@ public class StrHelper {
             values.add(sampleName);
             values.add(sampleName);
             values.add("");// add empty value for score
-            for (String mark : STR_MARKERS) {
+            for (String mark : markers) {
+
                 values.add(getValueFromMap(sampleParams, mark));
             }
         }

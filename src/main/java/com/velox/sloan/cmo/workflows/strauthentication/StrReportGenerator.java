@@ -34,9 +34,34 @@ import java.util.*;
 public class StrReportGenerator extends DefaultGenericPlugin {
     IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
     StrHelper strHelper = new StrHelper();
-    private final List<String> STR_MARKERS = Arrays.asList("Amelogenin","CSF1PO","D2S1338","D3S1358","D5S818","D7S820","D8S1179","D13S317","D16S539","D18S51", "D19S433", "D21S11", "FGA", "TH01", "TPOX", "vWA");
-    private final List<String> STR_REPORT_HEADERS = Arrays.asList("IGO ID", "Accession","Name","Score","AMEL","CSF1PO","D2S1338","D3S1358","D5S818","D7S820","D8S1179","D13S317","D16S539","D18S51", "D19S433", "D21S11", "FGA", "TH01", "TPOX", "vWA");
+
+    private final List<String> STR_MARKERS_HUMAN = Arrays.asList("Amelogenin","CSF1PO","D2S1338","D3S1358","D5S818","D7S820","D8S1179",
+            "D13S317","D16S539","D18S51", "D19S433", "D21S11", "FGA", "TH01", "TPOX", "vWA");
+
+    private final List<String> STR_MARKERS_MOUSE = Arrays.asList("Mouse STR 1-1", "Mouse STR 1-2", "Mouse STR 11-1","Mouse STR 11-2","Mouse STR 12-1", "Mouse STR 13-1",
+            "Mouse STR 15-3", "Mouse STR 17-2", "Mouse STR 18-3", "Mouse STR 19-2", "Mouse STR 2-1", "Mouse STR 3-2",
+            "Mouse STR 4-2", "Mouse STR 5-5", "Mouse STR 6-4", "Mouse STR 6-7", "Mouse STR 7-1", "Mouse STR 8-1",  "Mouse STR X-1");
+
+    private final List<String> STR_REPORT_HEADERS_HUMAN = Arrays.asList("IGO ID", "Accession","Name","Score","AMEL","CSF1PO","D2S1338","D3S1358",
+            "D5S818","D7S820","D8S1179","D13S317","D16S539","D18S51", "D19S433", "D21S11", "FGA", "TH01", "TPOX", "vWA");
+
+    private final List<String> STR_REPORT_HEADERS_MOUSE= Arrays.asList("IGO ID", "Accession","Name","Score",
+            "Mouse STR 1-1", "Mouse STR 1-2", "Mouse STR 11-1","Mouse STR 11-2","Mouse STR 12-1", "Mouse STR 13-1",
+            "Mouse STR 15-3", "Mouse STR 17-2", "Mouse STR 18-3", "Mouse STR 19-2", "Mouse STR 2-1", "Mouse STR 3-2",
+            "Mouse STR 4-2", "Mouse STR 5-5", "Mouse STR 6-4", "Mouse STR 6-7", "Mouse STR 7-1", "Mouse STR 8-1",  "Mouse STR X-1");
+
+    /*
+        Note: Mouse markers are not constant in this process, for example, Markers in raw data uploaded by user does not contain any prefix (1-1, 1-2, 1-3 etc),
+        Markers in API request data must have "Mouse STR " prefix (Mouse STR 1-1, Mouse STR 1-2, Mouse STR 1-3 etc.), and Markers in data returned by API contain
+        prefix "STR "(STR 1-1, STR 1-2, STR 1-3 etc.). Therefore, the STR markers are modified to add/remove prefixes in different methods below to send/parse data
+        successfully.
+        For Human markers, it is the case with 'Amelogenin' marker.
+     */
+
     private final String STR_REPORT_TAG = "GENERATE STR REPORT";
+    private String species = "";
+    private List<String> reportHeaders;
+    private List<String> markers;
 
     public StrReportGenerator() {
         setTaskEntry(true);
@@ -77,16 +102,28 @@ public class StrReportGenerator extends DefaultGenericPlugin {
             if(!fileHasData(fileData, uploadedFile)){
                 return new PluginResult(false);
             }
+            List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
+            //set prerequisites for report generation
+            species = getSpecies(attachedSamples);
+            reportHeaders = getReportHeaders();
+            markers = getStrMarkers();
+            //validate prerequisite values
+            if (!hasValidPrerequisites()){
+                clientCallback.displayError(String.format("Invalid prerequisites for report generation.\nSpecies:\n%s\nReport Headers:\n%s\nMarkers:\n%s\n", species, reportHeaders, markers));
+            }
             Map<String, Integer> headerValueMap = utils.getCsvHeaderValueMap(fileData);
+            //validate raw data file against species, markers.
+            if (!isValidRawDataFile(fileData, headerValueMap, species)){
+                return new PluginResult(false);
+            }
             //read and clean data for posting to api
-            Map<String,Map<String, Object>> data = strHelper.aggregateDataBySample(fileData, headerValueMap);
+            Map<String,Map<String, Object>> data = strHelper.aggregateDataBySample(fileData, headerValueMap, species);
             List<String> jsonData = strHelper.convertSampleDataToJson(data);
             //call method to get data from api
             JSONArray results = getStrResultsFromApi(jsonData.toString());
             //process data coming from api
             if (results == null) throw new AssertionError();
             Map<String, Map<String,Map<String, Object>>> sampleData = strHelper.getSampleDataFromApiData(results);
-            List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
             if (attachedSamples.size()==0){
                 clientCallback.displayError("Samples not found attached to this task.");
                 return new PluginResult(false);
@@ -95,7 +132,7 @@ public class StrReportGenerator extends DefaultGenericPlugin {
             parseDataForCsvFile(sampleData, attachedSamples, data);
         } catch (Exception e) {
             logError(Arrays.asList(e.getStackTrace()).toString());
-            clientCallback.displayError(e.getMessage());
+            clientCallback.displayError(e.toString());
         }
         return new PluginResult(true);
     }
@@ -107,7 +144,7 @@ public class StrReportGenerator extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws IOException
      */
-    private boolean isValidFile(String uploadedFile) throws ServerException, IOException {
+    private boolean isValidFile(String uploadedFile) throws ServerException {
         if (!utils.isCsvFile(uploadedFile)) {
             clientCallback.displayError(String.format("Not a valid csv file\n%s", uploadedFile));
             return false;
@@ -128,6 +165,104 @@ public class StrReportGenerator extends DefaultGenericPlugin {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Method to get species value present on samples attached to the task.
+     * @param attachedSamples
+     * @return
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws ServerException
+     */
+    private String getSpecies(List<DataRecord>attachedSamples) throws NotFound, RemoteException, ServerException {
+        for(DataRecord record: attachedSamples){
+            if (record.getValue("Species", user)!=null && !StringUtils.isBlank(record.getStringVal("Species", user))){
+                return record.getPickListVal("Species", user);
+            }
+        }
+        clientCallback.displayError("Could not determine species as Species value is not present on samples.\n" +
+                "Aborting report generation process");
+        return "";
+    }
+
+    /**
+     * Method to get markers from raw data file.
+     * @param uploadedData
+     * @param headerValueMap
+     * @return
+     */
+    private List<String> getMarkersFromRawDataFile(List<String> uploadedData, Map<String, Integer> headerValueMap){
+        List<String> markers = new ArrayList<>();
+        for (String d : uploadedData){
+            List<String> rowData = Arrays.asList(d.split(","));
+            markers.add(rowData.get(headerValueMap.get("Marker")).trim());
+        }
+        return markers;
+    }
+
+    private boolean isValidRawDataFile(List<String> fileData, Map<String, Integer> headerValueMap, String species) throws ServerException {
+        List<String> markersInFile = getMarkersFromRawDataFile(fileData, headerValueMap);
+        if (species.equalsIgnoreCase("mouse")){
+            assert markers != null;
+            for (String m : markers){
+                String marker = m.replace("Mouse STR ","").trim(); //header in raw data file does not contain prefix 'Mouse STR '. This prefix is necessary for api calls.
+                if (!markersInFile.contains(marker)){
+                    clientCallback.displayError(String.format("Markers in uploaded raw data file are not valid for '%s' species.", species));
+                    return false;
+                }
+            }
+        }
+        if (species.equalsIgnoreCase("human")){
+            assert markers != null;
+            for (String marker : markers){
+                // marker 'Amelogenin' is named 'AMEL' in valid markers. The nomenclature is not constant across processes from file upload, Sending request to API,
+                // and receiving data from API. This has to be handled in the code.
+                String updatedMarker = marker.replace("Amelogenin", "AMEL");
+                if (!markersInFile.contains(updatedMarker)){
+                    clientCallback.displayError(String.format("Markers in uploaded raw data file are not valid for '%s' species.", species));
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Method to get STR report headers based on species.
+     * @return
+     */
+    private List<String> getReportHeaders(){
+        if (species.equalsIgnoreCase("mouse")){
+            return STR_REPORT_HEADERS_MOUSE;
+
+        }
+        else if (species.equalsIgnoreCase("human")){
+            return STR_REPORT_HEADERS_HUMAN;
+        }
+        return null;
+    }
+
+    /**
+     * Method to get STR report markers based on species.
+     * @return
+     */
+    private List<String> getStrMarkers(){
+        if (species.equalsIgnoreCase("mouse")){
+            return STR_MARKERS_MOUSE;
+        }
+        else if (species.equalsIgnoreCase("human")){
+            return STR_MARKERS_HUMAN;
+        }
+        return null;
+    }
+
+    /**
+     * Method to validate species, reportHeaders and markers that are prerequisites for the plugin to work correctly.
+     * @return
+     */
+    private Boolean hasValidPrerequisites(){
+        return !StringUtils.isBlank(species) && reportHeaders.size() != 0 && markers.size() != 0;
     }
 
     /**
@@ -154,7 +289,7 @@ public class StrReportGenerator extends DefaultGenericPlugin {
             if (responseCode == HttpURLConnection.HTTP_OK) { //success
                 BufferedReader in = new BufferedReader(new InputStreamReader(
                         postConnection.getInputStream()));
-                String inputLine = "";
+                String inputLine;
                 while ((inputLine = in.readLine()) != null) {
                     response.append(inputLine.trim());
                 }
@@ -166,7 +301,8 @@ public class StrReportGenerator extends DefaultGenericPlugin {
             logInfo(Arrays.toString(e.getStackTrace()));
         }
         if (response.toString().length()==0){
-            clientCallback.displayInfo(String.format("API returned 0 result hits.\nData sent to server is:\n%s", sampleData));
+            clientCallback.displayInfo(String.format("API returned 0 result hits.\nData sent to server is:\n%s",
+                    sampleData));
             return null;
         }
         return (JSONArray)parser.parse(response.toString());
@@ -204,21 +340,14 @@ public class StrReportGenerator extends DefaultGenericPlugin {
      */
     private void parseDataForCsvFile(Map<String, Map<String,Map<String, Object>>> extractedData, List<DataRecord> attachedSamples, Map<String,Map<String, Object>> sampleParamsData) throws NotFound, IOException, ServerException {
         List<List<String>> data =  new ArrayList<>();
-        data.add(STR_REPORT_HEADERS);
+        data.add(reportHeaders);
         Set<String> keySet = extractedData.keySet();
         for (String sampleName : keySet){
-            List<String> sampleParams = strHelper.getSampleParamsSentToApi(sampleParamsData, sampleName); // first add line containing sample data sent to api
+            List<String> sampleParams = strHelper.getSampleParamsSentToApi(sampleParamsData, sampleName, markers); // first add line containing sample data sent to api
             sampleParams.set(0, getIgoId(attachedSamples, sampleName)); // add IGO ID to sample
             data.add(sampleParams);
             Map<String, Map<String, Object>> valuesByAccession = extractedData.get(sampleName);
             Set<String> accessionKeySet = valuesByAccession.keySet();
-//            if (accessionKeySet.isEmpty()){
-//                List<String> rowValues = new ArrayList<>();
-//                rowValues.add(getIgoId(attachedSamples, sampleName)); // add IGO ID's to row data
-//                rowValues.add(""); //add accession value to row data
-//                rowValues.add(sampleName); // add sampleName to row Data.
-//                data.add(rowValues); // add a row with minimal data if api did not return any results for a sample
-//            }
             for(String accession : accessionKeySet){
                 //add one row for each result returned by the api. API could return multiple results per sample if there is at least 75% match.
                 List<String> rowValues = new ArrayList<>();
@@ -233,8 +362,10 @@ public class StrReportGenerator extends DefaultGenericPlugin {
                 else{
                     rowValues.add(scoreValue);
                 }
-                for (String value : STR_MARKERS){
-                    rowValues.add(strHelper.getValueFromMap(alleleData, value));
+                for (String value : markers){
+                    //markers in mouse data returned by api does not contain prefix "Mouse ", therefore it should be removed to parse data successfully for report.
+                    String markerValueFromApi = value.replace("Mouse ", "").replace("Amelogenin","AMEL");
+                    rowValues.add(strHelper.getValueFromMap(alleleData, markerValueFromApi));
                 }
                 data.add(rowValues);
             }
