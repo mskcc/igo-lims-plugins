@@ -8,6 +8,8 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+
+import java.lang.reflect.Array;
 import java.util.*;
 
 public class StrHelper {
@@ -130,6 +132,23 @@ public class StrHelper {
             }
         }
         return values;
+    }
+
+    public void sortData(List<List<String>> data) {
+        boolean sorted = false;
+        while (!sorted) {
+            sorted=true;
+            for (int i = 1; i < data.size() - 1; i++) {
+                String currentValScore = data.get(i).get(3).trim();
+                String nextValScore = data.get(i + 1).get(3).trim();
+                if (!StringUtils.isBlank(currentValScore) && !StringUtils.isBlank(nextValScore)) {
+                    if (Double.parseDouble(nextValScore) > Double.parseDouble(currentValScore)) {
+                        Collections.swap(data, i, i + 1);
+                        sorted=false;
+                    }
+                }
+            }
+        }
     }
 
     /**

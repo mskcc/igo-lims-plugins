@@ -102,16 +102,16 @@ public class StrReportGenerator extends DefaultGenericPlugin {
             if(!fileHasData(fileData, uploadedFile)){
                 return new PluginResult(false);
             }
+            Map<String, Integer> headerValueMap = utils.getCsvHeaderValueMap(fileData);
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
             //set prerequisites for report generation
-            species = getSpecies(attachedSamples);
+            species = getSpecies(fileData, headerValueMap);
             reportHeaders = getReportHeaders();
             markers = getStrMarkers();
             //validate prerequisite values
             if (!hasValidPrerequisites()){
                 clientCallback.displayError(String.format("Invalid prerequisites for report generation.\nSpecies:\n%s\nReport Headers:\n%s\nMarkers:\n%s\n", species, reportHeaders, markers));
             }
-            Map<String, Integer> headerValueMap = utils.getCsvHeaderValueMap(fileData);
             //validate raw data file against species, markers.
             if (!isValidRawDataFile(fileData, headerValueMap, species)){
                 return new PluginResult(false);
@@ -169,21 +169,24 @@ public class StrReportGenerator extends DefaultGenericPlugin {
 
     /**
      * Method to get species value present on samples attached to the task.
-     * @param attachedSamples
+     * @param fileData
      * @return
      * @throws NotFound
      * @throws RemoteException
      * @throws ServerException
      */
-    private String getSpecies(List<DataRecord>attachedSamples) throws NotFound, RemoteException, ServerException {
-        for(DataRecord record: attachedSamples){
-            if (record.getValue("Species", user)!=null && !StringUtils.isBlank(record.getStringVal("Species", user))){
-                return record.getPickListVal("Species", user);
+    private String getSpecies(List<String>fileData, Map<String,Integer> headerValueMap) throws NotFound, RemoteException, ServerException {
+        for(String row : fileData){
+            List<String> rowValues = Arrays.asList(row.split(","));
+            Object marker = rowValues.get(headerValueMap.get("Marker"));
+            if (marker != null && !StringUtils.isBlank(marker.toString().trim())){
+                String markerVal = marker.toString().trim();
+                if (markerVal.equalsIgnoreCase("1-1") || markerVal.equalsIgnoreCase("5-5") || markerVal.equalsIgnoreCase("6-4") || markerVal.equalsIgnoreCase("7-1")){
+                    return "mouse";
+                }
             }
         }
-        clientCallback.displayError("Could not determine species as Species value is not present on samples.\n" +
-                "Aborting report generation process");
-        return "";
+        return "human";
     }
 
     /**
@@ -351,10 +354,10 @@ public class StrReportGenerator extends DefaultGenericPlugin {
             for(String accession : accessionKeySet){
                 //add one row for each result returned by the api. API could return multiple results per sample if there is at least 75% match.
                 List<String> rowValues = new ArrayList<>();
+                Map<String,Object> alleleData =  valuesByAccession.get(accession);
                 rowValues.add(getIgoId(attachedSamples, sampleName)); // add IGO ID's to row data
                 rowValues.add(accession); //add accession value to row data
-                rowValues.add(sampleName); // add sampleName to row Data.
-                Map<String,Object> alleleData =  valuesByAccession.get(accession);
+                rowValues.add(strHelper.getValueFromMap(alleleData,"name"));
                 String scoreValue = strHelper.getValueFromMap(alleleData, "score");
                 if (!StringUtils.isBlank(scoreValue) && scoreValue.length() >= (scoreValue.indexOf(".") + 3)){
                     rowValues.add(strHelper.getValueFromMap(alleleData, "score").substring(0,scoreValue.indexOf(".") +3));
@@ -370,6 +373,7 @@ public class StrReportGenerator extends DefaultGenericPlugin {
                 data.add(rowValues);
             }
         }
+        strHelper.sortData(data);
         byte [] bytes = CsvHelper.writeCSV(data, null);
         clientCallback.writeBytes(bytes, "STR Report.csv");
     }
