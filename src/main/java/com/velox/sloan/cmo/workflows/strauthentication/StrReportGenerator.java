@@ -2,6 +2,7 @@ package com.velox.sloan.cmo.workflows.strauthentication;
 
 import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.NotFound;
+import com.velox.api.datatype.TemporaryDataType;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.api.workflow.ActiveTask;
@@ -310,7 +311,6 @@ public class StrReportGenerator extends DefaultGenericPlugin {
         }
         return (JSONArray)parser.parse(response.toString());
     }
-
 
     /**
      * Method to get IGO ID for samples in the report.
