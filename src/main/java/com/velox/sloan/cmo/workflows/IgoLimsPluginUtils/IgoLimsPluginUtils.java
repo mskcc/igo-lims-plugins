@@ -30,7 +30,7 @@ public class IgoLimsPluginUtils {
         try (BufferedReader fileReader = new BufferedReader(new InputStreamReader(dataStream))) {
             String temp;
             // || !temp.replace(",", "").equals(null) || !temp.replace(",", "").equals("")
-            while ((temp = fileReader.readLine()) != null && !temp.replace(",", "").equals(null)) { //to check that there are no empty lines at end of file
+            while ((temp = fileReader.readLine()) != null) { //to check that there are no empty lines at end of file
                 String rowData;
                 rowData = temp;
                 rowDataValues.add(rowData);
@@ -81,6 +81,23 @@ public class IgoLimsPluginUtils {
         return StringUtils.join(listWithValues, "\n");
     }
 
+
+    /**
+     * Method to concatenate List of string separated by comma.
+     *
+     * @param listWithValues
+     * @return String of values separated by comma
+     */
+    public String convertListToCommaSeparatedString(List<String> listWithValues) {
+        List<String> nonNullvalues = new ArrayList<>();
+        for (String v: listWithValues){
+            if(!StringUtils.isBlank(v) && !v.trim().equalsIgnoreCase("OL")){
+                nonNullvalues.add(v);
+            }
+        }
+        return StringUtils.join(nonNullvalues, ",");
+    }
+
     /**
      * Method to get Map of Header values and their Index position.
      *
@@ -91,7 +108,7 @@ public class IgoLimsPluginUtils {
         List<String> headerRow = Arrays.asList(fileData.get(0).split(","));
         Map<String, Integer> headerValues = new HashMap<>();
         for (String value : headerRow) {
-            headerValues.put(value, headerRow.indexOf(value));
+            headerValues.put(value.trim(), headerRow.indexOf(value));
         }
         return headerValues;
     }
@@ -186,7 +203,7 @@ public class IgoLimsPluginUtils {
         Row row = rowData.get(0);
         int i = 0;
         for (Cell cell : row) {
-            headerValuesMap.put(cell.getStringCellValue(), i);
+            headerValuesMap.put(cell.getStringCellValue().trim(), i);
             i++;
         }
         return headerValuesMap;
@@ -228,4 +245,5 @@ public class IgoLimsPluginUtils {
     public boolean excelFileHasData(List<Row> dataRows) {
         return dataRows.size() > 1;
     }
+
 }
