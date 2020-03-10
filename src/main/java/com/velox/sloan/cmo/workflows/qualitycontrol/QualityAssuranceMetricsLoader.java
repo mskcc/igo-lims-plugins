@@ -1,6 +1,8 @@
 package com.velox.sloan.cmo.workflows.qualitycontrol;
 
+import com.velox.api.datafielddefinition.DataFieldDefinition;
 import com.velox.api.datatype.TemporaryDataType;
+import com.velox.api.datatype.fielddefinition.VeloxFieldDefinition;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.api.workflow.ActiveTask;
@@ -9,6 +11,7 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 
 import java.rmi.RemoteException;
+import java.util.*;
 
 public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
 
@@ -35,7 +38,6 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
         }
     }
 
-
     @Override
     public PluginResult run() throws ServerException {
         try {
@@ -46,6 +48,8 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
             }
             String numOfQaMetricsToLoad = clientCallback.showInputDialog("How many rows would you like to add?");
             if (isValidInteger(numOfQaMetricsToLoad)){
+                clientCallback.displayInfo("running load temp info");
+                List<Map<String,Object>> dataFieldValues = getQaDataFromUser(Integer.parseInt(numOfQaMetricsToLoad));
             }
         }catch (Exception e){
             return new PluginResult(false);
@@ -63,11 +67,27 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
         }
     }
 
-    private void getQaDataFromUser() throws ServerException, RemoteException {
-        TemporaryDataType temporaryDataType = new TemporaryDataType("QualityAssuranceMeasure", "QA Metrics");
-        clientCallback.displayInfo(temporaryDataType.getDataTypeLayout().getDescription());
-    //dataMgmtServer.getDataFieldDefManager(user).getDataFieldDefinitions("QA").getDataFieldDefinitionList().
+    private List<Map<String, Object>> getQaDataFromUser(Integer numToAdd) throws ServerException, RemoteException {
+        List<VeloxFieldDefinition<?>> temporaryDataTypeFieldDefinitions = dataMgmtServer.getDataTypeManager(user).getDataTypeDefinition("QualityAssuranceMeasure").getTemporaryDataType(user).getVeloxFieldDefinitionList();
+        TemporaryDataType dataType = new TemporaryDataType("QualityAssuranceMeasure", "QualityAssurance Measures");
+        dataType.setVeloxFieldDefinitionList(temporaryDataTypeFieldDefinitions);
+        List<DataFieldDefinition> dataFieldDefinitions = dataMgmtServer.getDataFieldDefManager(user).getDataFieldDefinitions("QualityAssuranceMeasure").getDataFieldDefinitionList();
+        List<String> columnNamesToSkip = Arrays.asList("DataRecordName","RecordId","DateCreated","CreatedBy","DateModified","RelatedRecord3","RelatedRecord151");
+        List<Map<String, Object>> initialValues = new ArrayList<>();
+        for(int i=0; i<numToAdd; i++){
+            Map<String, Object> values = new HashMap<>();
+            values.put("QAValidationType", "Hello");
+//             for(DataFieldDefinition dfd : dataFieldDefinitions){
+//                 String colName = dfd.dataFieldName;
+//                 if (!columnNamesToSkip.contains(colName)){
+//                     clientCallback.displayInfo(colName);
+//                     values.put(colName, null);
+//                 }
+//             }
+            initialValues.add(values);
+            initialValues.add(values);
+        }
+        List<Map<String, Object>> userInput = clientCallback.showTableEntryDialog("QualityAssuranceMeasure", "Add Quality Assurance measurements in table below", dataType, initialValues);
+        return null;//clientCallback.showTableEntryDialog("QualityAssuranceMeasure", "Add Quality Assurance measurements in table below", dataType, null);
     }
-
-
 }
