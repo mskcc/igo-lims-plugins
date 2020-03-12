@@ -37,8 +37,10 @@ public class QcReportGenerator extends DefaultGenericPlugin {
 
     public QcReportGenerator() {
         setTaskEntry(true);
-        setActionDataField(true);
+        setLine1Text("Generate");
+        setLine2Text("BioMek File");
         setOrder(PluginOrder.EARLY.getOrder());
+        setIcon("com/velox/sloan/cmo/resources/import_32.gif");
     }
 
     @Override
