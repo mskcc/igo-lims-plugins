@@ -113,11 +113,11 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
         VeloxPickListFieldDefinition instrument = VeloxFieldDefinition.pickListFieldBuilder().displayName("Instrument Analyzed On").dataFieldName("Instrument").visible(true).pickListName("QC Instruments").build();
         VeloxPickListFieldDefinition qaReagentType = VeloxFieldDefinition.pickListFieldBuilder().displayName("Material Used for QA Validation").dataFieldName("QAReagentType").visible(true).pickListName("Quality Assurance Reagent").build();
         VeloxPickListFieldDefinition controlMeasured = VeloxFieldDefinition.pickListFieldBuilder().displayName("Control Measured").dataFieldName("ControlMeasured").visible(true).pickListName("Quality Assurance Sample Type").build();
-        VeloxDoubleFieldDefinition concentration = VeloxFieldDefinition.doubleFieldBuilder().displayName("Concentration (ng/uL) Measured").dataFieldName("Concentration").visible(true).maxValue(100000000).minValue(0).precision((short)3).build();
-        VeloxIntegerFieldDefinition bpSize = VeloxFieldDefinition.integerFieldBuilder().displayName("Base Pair Size").dataFieldName("BPSize").visible(true).maxValue(10000000).minValue(0).build();
-        VeloxDoubleFieldDefinition din = VeloxFieldDefinition.doubleFieldBuilder().displayName("DIN").dataFieldName("DIN").visible(true).maxValue(100000000).minValue(0).precision((short)3).build();
-        VeloxDoubleFieldDefinition rin = VeloxFieldDefinition.doubleFieldBuilder().displayName("RIN").dataFieldName("RIN").visible(true).maxValue(100000000).minValue(0).precision((short)3).build();
-        VeloxDoubleFieldDefinition totalMass = VeloxFieldDefinition.doubleFieldBuilder().displayName("Total Mass (ng)").dataFieldName("TotalMass").visible(true).maxValue(100000000).minValue(0).precision((short)3).build();
+        VeloxDoubleFieldDefinition concentration = VeloxFieldDefinition.doubleFieldBuilder().displayName("Concentration (ng/uL) Measured").dataFieldName("Concentration").visible(true).maxValue(100000000).minValue(0).precision((short)3).defaultValue(null).build();
+        VeloxIntegerFieldDefinition bpSize = VeloxFieldDefinition.integerFieldBuilder().displayName("Base Pair Size").dataFieldName("BPSize").visible(true).maxValue(10000000).minValue(0).defaultValue(null).build();
+        VeloxDoubleFieldDefinition din = VeloxFieldDefinition.doubleFieldBuilder().displayName("DIN").dataFieldName("DIN").visible(true).maxValue(100000000).minValue(0).precision((short)3).defaultValue(null).build();
+        VeloxDoubleFieldDefinition rin = VeloxFieldDefinition.doubleFieldBuilder().displayName("RIN").dataFieldName("RIN").visible(true).maxValue(100000000).minValue(0).precision((short)3).defaultValue(null).build();
+        VeloxDoubleFieldDefinition totalMass = VeloxFieldDefinition.doubleFieldBuilder().displayName("Total Mass (ng)").dataFieldName("TotalMass").visible(true).maxValue(100000000).minValue(0).precision((short)3).defaultValue(null).build();
         VeloxBooleanFieldDefinition isVerified = VeloxFieldDefinition.booleanFieldBuilder().displayName("Result Verified").dataFieldName("Verified").visible(true).build();
         VeloxStringFieldDefinition comments = VeloxFieldDefinition.stringFieldBuilder().displayName("Comments").dataFieldName("Comments").visible(true).maxLength(100000000).numLines(1).build();
         fieldDefList.add(validationType);
@@ -137,6 +137,11 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
         for (int i = 1; i <= numToAdd; i++) {
             Map<String, Object> values = new HashMap<>();
             values.put("QAValidationType", "");
+//            values.put("Concentration", "");
+//            values.put("BPSize","");
+//            values.put("DIN","");
+//            values.put("RIN", "");
+//            values.put("TotalMass","");
             defaultValuesList.add(values);
         }
         return clientCallback.showTableEntryDialog("Enter QA information",
