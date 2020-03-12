@@ -137,11 +137,6 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
         for (int i = 1; i <= numToAdd; i++) {
             Map<String, Object> values = new HashMap<>();
             values.put("QAValidationType", "");
-//            values.put("Concentration", "");
-//            values.put("BPSize","");
-//            values.put("DIN","");
-//            values.put("RIN", "");
-//            values.put("TotalMass","");
             defaultValuesList.add(values);
         }
         return clientCallback.showTableEntryDialog("Enter QA information",
