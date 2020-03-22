@@ -246,4 +246,40 @@ public class IgoLimsPluginUtils {
         return dataRows.size() > 1;
     }
 
+
+
+    /**
+     * To check if a int value is odd.
+     *
+     * @param value
+     * @return
+     */
+    public boolean isOddValue(int value) {
+        return value % 2 != 0;
+    }
+
+
+    /**
+     * To return the quadrant position of a well on 384 well plate.
+     *
+     * @param wellPosition
+     * @return
+     */
+    public int getPlateQuadrant(String wellPosition){
+        int rowValue = wellPosition.charAt(0);
+        int colValue = Integer.parseInt(wellPosition.substring(1));
+        if (isOddValue(rowValue) && isOddValue(colValue)) {
+           return 1;
+        }
+        if (!isOddValue(rowValue) && isOddValue(colValue)) {
+            return 2;
+        }
+        if (isOddValue(rowValue) && !isOddValue(colValue)) {
+            return 3;
+        }
+        if (!isOddValue(rowValue) && !isOddValue(colValue)) {
+            return 4;
+        }
+        return -1;
+    }
 }
