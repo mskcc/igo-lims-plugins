@@ -14,4 +14,5 @@ public interface Tags {
 
     String STR_SAMPLESHEET_RUN_MODULE = ".*<!--\\s*STR\\s*SAMPLESHEET\\s*RUN\\s*MODULE-->.*";
 
+    String ALIQUOT_DESTINATION_WELL_POSITION = ".*<!--\\s*ALIQUOT\\s*DESTINATION\\s*WELL\\s*POSITION\\s*-->.*";
 }

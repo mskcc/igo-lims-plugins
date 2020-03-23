@@ -42,6 +42,15 @@ public class IgoLimsPluginUtilsTests {
     }
 
     @Test
+    public void getPlateQuadrantBasic() {
+        // TODO review
+        assertEquals(1, IgoLimsPluginUtils.getPlateQuadrant("A1"));
+        assertEquals(3, IgoLimsPluginUtils.getPlateQuadrant("A2"));
+        assertEquals(1, IgoLimsPluginUtils.getPlateQuadrant("A3"));
+        assertEquals(3, IgoLimsPluginUtils.getPlateQuadrant("A4"));
+    }
+
+    @Test
     public void isCsvFile_shouldReturnTrueIfCsvFile() {
         String fileName = "abc.csv";
         String fileNamewithUpperExtension = "xyz.CSV";
