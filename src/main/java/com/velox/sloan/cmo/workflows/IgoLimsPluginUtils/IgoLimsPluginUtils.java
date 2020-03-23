@@ -254,18 +254,17 @@ public class IgoLimsPluginUtils {
      * @param value
      * @return
      */
-    public boolean isOddValue(int value) {
+    public static boolean isOddValue(int value) {
         return value % 2 != 0;
     }
-
 
     /**
      * To return the quadrant position of a well on 384 well plate.
      *
-     * @param wellPosition
+     * @param wellPosition such as A1 or B13
      * @return
      */
-    public int getPlateQuadrant(String wellPosition){
+    public static int getPlateQuadrant(String wellPosition){
         int rowValue = wellPosition.charAt(0);
         int colValue = Integer.parseInt(wellPosition.substring(1));
         if (isOddValue(rowValue) && isOddValue(colValue)) {
