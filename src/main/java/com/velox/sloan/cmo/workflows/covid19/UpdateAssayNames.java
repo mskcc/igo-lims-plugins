@@ -16,14 +16,14 @@ import java.util.List;
 public class UpdateAssayNames extends DefaultGenericPlugin {
 
     private final String UPDATE_COVID19_ASSAY_NAMES = "UPDATE COVID19 ASSAY NAMES";
-    private final List <String> ASSAY_NAMES = Arrays.asList("QUAD4_NA", "QPCR_ASSAY1", "QPCR_ASSAY2", "QPCR_ASSAY3", "QUAD4_NA");
+    private final List<String> ASSAY_NAMES = Arrays.asList("QUAD4_NA", "N1", "N2", "RP", "QUAD4_NA");
 
     public UpdateAssayNames() {
         setTaskEntry(true);
         setTaskToolbar(true);
         setLine1Text("Update Assay Names");
         setIcon("com/velox/sloan/cmo/resources/import_32.gif");
-        setOrder(PluginOrder.LAST.getOrder() +2);
+        setOrder(PluginOrder.LAST.getOrder() + 2);
     }
 
     @Override
@@ -51,7 +51,7 @@ public class UpdateAssayNames extends DefaultGenericPlugin {
                 logError(String.format("%s protocol records are not attached to the task.", activeTask.getInputDataTypeName()));
                 return new PluginResult(false);
             }
-            for (DataRecord rec: attachedProtocolRecords){
+            for (DataRecord rec : attachedProtocolRecords) {
                 String wellPositon = rec.getStringVal("TargetWellPosAliq", user);
                 int quadPosition = utils.getPlateQuadrant(wellPositon);
                 rec.setDataField("QpcrAssayName", ASSAY_NAMES.get(quadPosition), user);
