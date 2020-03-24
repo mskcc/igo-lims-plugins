@@ -104,8 +104,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
                 return false;
             }
             if (!accessionNums.add(accessNm)){
-                clientCallback.displayError(String.format("Found duplicate Accession Number in uploaded file: %s.", accessNm));
-                return false;
+                clientCallback.displayWarning(String.format("Found duplicate Accession Number in uploaded file: %s.", accessNm));
             }
             if(well.length() < 2 || well.length() > 3){
                 clientCallback.displayError(String.format("Invalid well position in uploaded file: %s.", well));
@@ -190,7 +189,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
                 String sampleName = sample.getStringVal("OtherSampleId", user);
                 for (Map<String, Object> data : parsedSampleData){
                     if(data.get("OtherSampleId").toString().equalsIgnoreCase(sampleName)){
-                        clientCallback.displayError(String.format("Duplicate Accession No '%s' in uploaded file. Sample %s already has this Accession No.", sampleName, sampleId));
+                        clientCallback.displayWarning(String.format("Duplicate Accession No '%s' in uploaded file. Sample %s already has this Accession No.", sampleName, sampleId));
                         return true;
                     }
                 }
