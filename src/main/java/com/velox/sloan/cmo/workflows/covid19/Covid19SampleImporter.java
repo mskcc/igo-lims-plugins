@@ -12,7 +12,7 @@ import java.rmi.RemoteException;
 import java.util.*;
 
 /**
- * This plugin is Solely designed to create new Request and new Samples under a project 000019 for COVID Testing.
+ * This plugin is solely designed to create new Request and new Samples under a project 10858 for COVID Testing.
  * The CSV file that will be used to import the samples into LIMS must have informatin in following format:
  * Accession Number, Well ID.
  *
@@ -24,6 +24,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
     private final List<String> REQUIRED_FILE_HEADERS = Arrays.asList("Accession Number", "Well ID");
     private final String COVID_REQUEST_ID = "10858";
     private String[] permittedUsers = {"Sample Receiving", "Sapio Admin", "Admin", "Group Leaders", "Lab Managers", "Lab Techs", "NA Team", "Path Extraction Techs", "Sequencing Techs"};
+
     public Covid19SampleImporter() throws ServerException {
        setActionMenu(true);
        setLine1Text("Import COVID19 Samples");
@@ -76,7 +77,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
 
-        }catch (Exception e){
+        } catch (Exception e){
             String message = String.format("Error while importing new COVID-19 Samples into LIMS\n%s", e.getMessage());
             logError(message);
             return new PluginResult(false);
@@ -89,18 +90,18 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
      * @return String []
      * @throws ServerException
      */
-   private String [] getGroupNames() throws ServerException {
-       List<String> userGroups = new ArrayList<>();
-       try {
-        userGroups =  dataMgmtServer.getUserGroupManager(user).getUserGroupNameList(user);
+    private String[] getGroupNames() throws ServerException {
+        List<String> userGroups = new ArrayList<>();
+        try {
+            userGroups = dataMgmtServer.getUserGroupManager(user).getUserGroupNameList(user);
+            clientCallback.displayInfo(userGroups.toString());
+        } catch (Exception e) {
+            String msg = "Error while retrieving User Group names for the app.";
+            logError(msg);
+        }
         clientCallback.displayInfo(userGroups.toString());
-        }catch (Exception e){
-           String msg = "Error while retrieving User Group names for the app.";
-           logError(msg);
-       }
-       clientCallback.displayInfo(userGroups.toString());
-       return userGroups.toArray(new String[0]);
-   }
+        return userGroups.toArray(new String[0]);
+    }
 
     /**
      * Method to parse
@@ -140,14 +141,15 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
      * Method to get the start incremental count value for new Sample ID's in LIMS.
      * @return Integer
      */
-    private Integer getNextSampleNumber(){
+    private Integer getNextSampleNumber() {
         Integer lastSampleNumber = 0;
         try {
             List<DataRecord> samples = dataRecordManager.queryDataRecords("Sample", "RequestId = '" + COVID_REQUEST_ID + "'", user);
-            if (samples.size()>0){
-                for (DataRecord rec : samples){
-                    Integer sampleNumber = Integer.parseInt(rec.getStringVal("SampleId",user).split("_")[1]);
-                    if(sampleNumber>lastSampleNumber){
+            if (samples.size() > 0) {
+                // traverse all samples saving the highest sample number
+                for (DataRecord rec : samples) {
+                    Integer sampleNumber = Integer.parseInt(rec.getStringVal("SampleId", user).split("_")[1]);
+                    if (sampleNumber > lastSampleNumber) {
                         lastSampleNumber = sampleNumber;
                     }
                 }
@@ -156,7 +158,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
             logError(e.getMessage());
             return null;
         }
-        return lastSampleNumber+1;
+        return lastSampleNumber + 1;
     }
 
     /**
