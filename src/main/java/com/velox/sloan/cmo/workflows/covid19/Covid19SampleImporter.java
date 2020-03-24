@@ -116,9 +116,9 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
             if (rowValues.size()>0){
                 Map<String, Object> sampleVals = new HashMap<>();
                 String sampleId = COVID_REQUEST_ID + "_" + nextSampleNumer;
-                String sampleName = rowValues.get(0);
-                String row = rowValues.get(1).substring(0,1);
-                String column = rowValues.get(1).substring(1);
+                String sampleName = rowValues.get(headrValuesMap.get("Accession Number"));
+                String row = rowValues.get(headrValuesMap.get("Well ID")).substring(0,1);
+                String column = rowValues.get(headrValuesMap.get("Well ID")).substring(1);
                 sampleVals.put("SampleId", sampleId);
                 sampleVals.put("OtherSampleId", sampleName);
                 sampleVals.put("AltId", sampleId);
