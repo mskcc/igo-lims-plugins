@@ -66,7 +66,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
             List<Map<String,Object>> parsedSampleData = parseFleDataToSampleData(fileData, headerValuesMap);
             List<DataRecord> requests = dataRecordManager.queryDataRecords("Request", "RequestId = '" + COVID_REQUEST_ID + "'" , user);
 
-            if (requests.size() == 1 && !hasDuplicateAccessionNumber(parsedSampleData)){
+            if (requests.size() == 1 && !hasDuplicateAccessionNumber(parsedSampleData) && isValidFileData(fileData, headerValuesMap)){
                 requests.get(0).addChildren("Sample", parsedSampleData, user);
                 clientCallback.displayInfo("Adding new Sample to request 10858........");
                 dataRecordManager.storeAndCommit(String.format("Added %d new Samples in LIMS.", parsedSampleData.size()), null, user);
