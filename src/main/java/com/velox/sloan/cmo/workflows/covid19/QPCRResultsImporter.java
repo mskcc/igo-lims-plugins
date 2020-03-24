@@ -15,10 +15,10 @@ import java.util.*;
 /**
  * This plugin is designed to read the 9 columns of interest in the csv file from the output of the qPCR machine.
  */
-public class QPCRSamplesImporter extends DefaultGenericPlugin {
+public class QPCRResultsImporter extends DefaultGenericPlugin {
     private final String IMPORT_QPCR_RESULTS = "IMPORT QPCR RESULTS";
-    IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
-    public QPCRSamplesImporter() {
+    private IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
+    public QPCRResultsImporter() {
         setTaskEntry(true);
         setTaskToolbar(true);
         setLine1Text("Upload qPCR");
@@ -73,7 +73,7 @@ public class QPCRSamplesImporter extends DefaultGenericPlugin {
             saveQpcrData(parsedData);
             logInfo(String.format("Saved %d %s DataRecords created from uploaded file %s", parsedData.size(), activeTask.getInputDataTypeName(), csvFilePath));
         } catch (Exception e) {
-            String errMsg = String.format("Error reading qPCR Sample Information", Arrays.toString(e.getStackTrace()));
+            String errMsg = String.format("Error reading qPCR Sample Information %s", Arrays.toString(e.getStackTrace()));
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
