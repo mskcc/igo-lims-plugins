@@ -7,13 +7,14 @@ import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.rmi.RemoteException;
 import java.util.*;
 
 /**
  * This plugin is solely designed to create new Request and new Samples under a project 10858 for COVID Testing.
- * The CSV file that will be used to import the samples into LIMS must have informatin in following format:
+ * The CSV file that will be used to import the samples into LIMS must have information in following format:
  * Accession Number, Well ID.
  *
  * @author sharmaa1
@@ -23,12 +24,12 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
     private IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
     private final List<String> REQUIRED_FILE_HEADERS = Arrays.asList("Accession Number", "Well ID");
     private final String COVID_REQUEST_ID = "10858";
-    private String[] permittedUsers = {"Sample Receiving", "Sapio Admin", "Admin", "Group Leaders", "Lab Managers", "Lab Techs", "NA Team", "Path Extraction Techs", "Sequencing Techs"};
 
     public Covid19SampleImporter() throws ServerException {
        setActionMenu(true);
        setLine1Text("Import COVID19 Samples");
        setDescription("Plugin to import new COVID-19 Samples into LIMS.");
+       String[] permittedUsers = {"Sample Receiving", "Sapio Admin", "Admin", "Group Leaders", "Lab Managers", "Lab Techs", "NA Team", "Path Extraction Techs", "Sequencing Techs"};
        setUserGroupList(permittedUsers);
    }
 
@@ -86,21 +87,32 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
     }
 
     /**
-     * Method to get all the group names defined in the app.
-     * @return String []
+     * Method to validate file data.
+     * @param fileData
+     * @param headerValuesMap
+     * @return
      * @throws ServerException
      */
-    private String[] getGroupNames() throws ServerException {
-        List<String> userGroups = new ArrayList<>();
-        try {
-            userGroups = dataMgmtServer.getUserGroupManager(user).getUserGroupNameList(user);
-            clientCallback.displayInfo(userGroups.toString());
-        } catch (Exception e) {
-            String msg = "Error while retrieving User Group names for the app.";
-            logError(msg);
+    private boolean isValidFileData(List<String> fileData, Map<String, Integer> headerValuesMap) throws ServerException {
+        Set<String> accessionNums = new HashSet<>();
+        for (int i=1; i<fileData.size(); i++){
+            List<String> rowVals = Arrays.asList(fileData.get(i).trim().split(","));
+            String accessNm = rowVals.get(headerValuesMap.get("Accession Number"));
+            String well = rowVals.get(headerValuesMap.get("Well ID"));
+            if (rowVals.size() < 2 || StringUtils.isBlank(accessNm) || StringUtils.isBlank(well)){
+                clientCallback.displayError(String.format("Invalid Row values in uploaded file: %s.\nRow values must have Accession Number and Well ID values.", fileData.get(i)));
+                return false;
+            }
+            if (!accessionNums.add(accessNm)){
+                clientCallback.displayError(String.format("Found duplicate Accession Number in uploaded file: %s.", accessNm));
+                return false;
+            }
+            if(well.length() < 2 || well.length() > 3){
+                clientCallback.displayError(String.format("Invalid well position in uploaded file: %s.", well));
+                return false;
+            }
         }
-        clientCallback.displayInfo(userGroups.toString());
-        return userGroups.toArray(new String[0]);
+        return true;
     }
 
     /**
