@@ -190,7 +190,6 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
                 for (Map<String, Object> data : parsedSampleData){
                     if(data.get("OtherSampleId").toString().equalsIgnoreCase(sampleName)){
                         clientCallback.displayWarning(String.format("Duplicate Accession No '%s' in uploaded file. Sample %s already has this Accession No.", sampleName, sampleId));
-                        return true;
                     }
                 }
             }
