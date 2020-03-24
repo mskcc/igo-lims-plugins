@@ -63,7 +63,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
             Map<String, Integer> headerValuesMap = utils.getCsvHeaderValueMap(fileData);
-            List<Map<String,Object>> parsedSampleData = parseFleDataToSampleData(fileData, headerValuesMap);
+            List<Map<String,Object>> parsedSampleData = parseFileDataToSampleData(fileData, headerValuesMap);
             List<DataRecord> requests = dataRecordManager.queryDataRecords("Request", "RequestId = '" + COVID_REQUEST_ID + "'" , user);
 
             if (requests.size() == 1 && !hasDuplicateAccessionNumber(parsedSampleData) && isValidFileData(fileData, headerValuesMap)){
@@ -121,7 +121,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
      * @param headrValuesMap
      * @return List<Map<String, Object>>
      */
-   private List<Map<String, Object>> parseFleDataToSampleData(List<String> fileData, Map<String, Integer> headrValuesMap){
+   private List<Map<String, Object>> parseFileDataToSampleData(List<String> fileData, Map<String, Integer> headrValuesMap){
         List<Map<String, Object>> parsedData = new ArrayList<>();
         Integer nextSampleNumer = getNextSampleNumber();
         for (int i = 1; i< fileData.size(); i++){
