@@ -40,6 +40,26 @@ public class IgoLimsPluginUtils {
     }
 
     /**
+     * Read csv file data into byte array
+     * @param fileName
+     * @return byte[]
+     */
+    public byte[] readCsvFileToBytes(String fileName) {
+        File file = new File(Objects.requireNonNull(IgoLimsPluginUtils
+                .class.getClassLoader().getResource(fileName)).getPath());
+        byte[] bytesArray = new byte[(int) file.length()];
+        FileInputStream fileIn;
+        try {
+            fileIn = new FileInputStream(file);
+            fileIn.read(bytesArray);
+            fileIn.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return bytesArray;
+    }
+
+    /**
      * Method to check if file has data other than header row
      *
      * @param fileData
