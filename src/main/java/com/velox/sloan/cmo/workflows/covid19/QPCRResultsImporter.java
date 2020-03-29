@@ -139,13 +139,40 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
     }
 
     /**
+     * Method to check sample data in the uploaded file has corresponding sample in the attached samples.
+     * @param analyzedData
+     * @param attachedSamples
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws ServerException
+     */
+    private void checkForExtraSamplesInQpcrData(List<Map<String, Object>> analyzedData, List<DataRecord> attachedSamples) throws NotFound, RemoteException, ServerException {
+        for (Map<String, Object> data : analyzedData){
+            String sampleName = data.get("OtherSampleId").toString();
+            boolean sampleFound = false;
+            for (DataRecord sample: attachedSamples){
+                Object otherSampleId = sample.getValue("OtherSampleId", user);
+                Object isControl = sample.getValue("IsControl", user);
+                if(otherSampleId!=null && isControl !=null && !(boolean)isControl && otherSampleId.toString().equalsIgnoreCase(sampleName)){
+                    sampleFound=true;
+                    break;
+                }
+            }
+            if(!sampleFound){
+                clientCallback.displayWarning(String.format("Sample with Sample Name %s in uploaded file not found attached to the task.", sampleName));
+            }
+        }
+    }
+
+    /**
      * Method to append sample level information (RNA Plate ID and Well ID) to analyzed data.
      * @param analyzedData
      * @param attachedSamples
      * @throws NotFound
      * @throws RemoteException
      */
-    private void appendSampleInfoToReport(List<Map<String, Object>> analyzedData, List<DataRecord> attachedSamples) throws NotFound, RemoteException {
+    private void appendSampleInfoToReport(List<Map<String, Object>> analyzedData, List<DataRecord> attachedSamples) throws NotFound, RemoteException, ServerException {
+        checkForExtraSamplesInQpcrData(analyzedData, attachedSamples);
         for (DataRecord sample : attachedSamples){
             Object otherSampleId = sample.getValue("OtherSampleId", user);
             Object plateId = sample.getValue("RelatedRecord23", user);

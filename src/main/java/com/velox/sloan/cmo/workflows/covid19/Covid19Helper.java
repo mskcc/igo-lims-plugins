@@ -128,21 +128,6 @@ class Covid19Helper {
         return 0;
     }
 
-//    /**
-//     * Method to get Mean CQ values from QPCR data for sample.
-//     * @param qpcrValues
-//     * @return
-//     */
-//    Object getCqMean (List<Map<String, Object>> qpcrValues){
-//        for (Map<String, Object> vals : qpcrValues){
-//            Object cqMean = vals.get("CqMean");
-//            if (cqMean != null && !vals.get("CqMean").toString().equalsIgnoreCase("undetermined")){
-//                return vals.get("CqMean");
-//            }
-//        }
-//        return 0;
-//    }
-
     /**
      * Method to get annotation value for test results as Positive/Invalid/Undetected/Inconclusive
      *
