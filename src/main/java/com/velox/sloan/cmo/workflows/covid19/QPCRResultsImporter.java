@@ -9,7 +9,6 @@ import com.velox.api.workflow.ActiveWorkflow;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFFont;
@@ -92,7 +91,7 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
 
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
             if(attachedSamples.size()==0){
-                clientCallback.displayWarning("Samples not found attached to the task. Some information may not be available in the report.");
+                clientCallback.displayWarning("Samples not found attached to the task. RNA Sample/Plate information may not be available in the report.");
             }
             appendSampleInfoToReport(analyzedData, attachedSamples);
             exportReport(analyzedData);
