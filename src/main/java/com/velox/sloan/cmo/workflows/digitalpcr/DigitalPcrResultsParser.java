@@ -53,10 +53,13 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
             //remove already attached records from task if already created. This is done to allow for the task to run again;
             if (activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user).size()>0){
                 List<Long> recordIds = new ArrayList<>();
-                for (DataRecord rec: activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user)){
+                List<DataRecord> protocolRecords = activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user);
+                for (DataRecord rec: protocolRecords){
                     recordIds.add(rec.getRecordId());
                 }
                 activeTask.removeTaskAttachments(recordIds);
+                dataRecordManager.deleteDataRecords(protocolRecords, null, false, user);
+                logInfo(String.format("DDPCR results file re-uploaded -> Deleted %s records attached to task created by previous DDPCR results upload", activeTask.getInputDataTypeName()));
             }
             //read data from file and create new ddpcr assay results.
             for (String file : filesWithDigitalPcrRawData) {

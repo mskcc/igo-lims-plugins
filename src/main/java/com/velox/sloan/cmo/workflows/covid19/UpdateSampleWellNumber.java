@@ -96,7 +96,6 @@ public class UpdateSampleWellNumber extends DefaultGenericPlugin {
                count+=1;
            }
        }
-       clientCallback.displayInfo(wellIdToNumberMap.toString());
        return wellIdToNumberMap;
     }
 
