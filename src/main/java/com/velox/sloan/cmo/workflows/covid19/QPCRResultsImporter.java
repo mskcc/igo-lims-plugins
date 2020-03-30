@@ -71,10 +71,13 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
             //remove already attached records from task if already created. This is done to allow for the task to run again and not create duplicate rows of data;
             if (activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user).size()>0){
                 List<Long> recordIds = new ArrayList<>();
-                for (DataRecord rec: activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user)){
+                List<DataRecord> protocolRecords = activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user);
+                for (DataRecord rec: protocolRecords){
                     recordIds.add(rec.getRecordId());
                 }
                 activeTask.removeTaskAttachments(recordIds);
+                dataRecordManager.deleteDataRecords(protocolRecords, null, false, user);
+                logInfo(String.format("QPCR results file re-uploaded -> Deleted %s records attached to task created by previous QPCR results upload", activeTask.getInputDataTypeName()));
             }
             //entire data from file
             List<String> entireFile = utils.readDataFromCsvFile(clientCallback.readBytes(csvFilePath));
