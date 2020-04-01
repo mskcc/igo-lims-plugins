@@ -47,6 +47,7 @@ class Covid19Helper {
                     parsedValues.put("OtherSampleId", otherSampleId);
                     parsedValues.put("TargetAssay", rowValues.get(headerValuesMap.get("Target")));
                     parsedValues.put("CqValue", rowValues.get(headerValuesMap.get("Cq")));
+                    parsedValues.put("WellPosition", rowValues.get(headerValuesMap.get("Well Position")));
                     //parsedValues.put("CqMean", rowValues.get(headerValuesMap.get("Cq Mean")));
                     parsedData.get(otherSampleId).add(parsedValues);
                 }
@@ -76,40 +77,23 @@ class Covid19Helper {
     }
 
     /**
-     * Method to generate analyzed QPCR data.
+     * Method to get QPCR Plate Well ID for an assay from QPCR data for sample.
      *
-     * @param parsedData
+     * @param qpcrValues
+     * @param assayName
      * @return
-     * @throws ServerException
      */
-    List<Map<String, Object>> analyzeParsedQpcrData(Map<String, List<Map<String, Object>>> parsedData) {
-        List<Map<String, Object>> analyzedData = new ArrayList<>();
-        for (String key : parsedData.keySet()) {
-            Map<String, Object> analyzedValues = new HashMap<>();
-            List<Map<String, Object>> sampleQpcrValues = parsedData.get(key);
-            analyzedValues.put("OtherSampleId", key);
-            //analyzedValues.put("CqMean", getCqMean(sampleQpcrValues));
-            //extract cq values for each assay from parse sample values
-            Object cqN1 = getCqValueForAssay(sampleQpcrValues, "N1");
-            Object cqN2 = getCqValueForAssay(sampleQpcrValues, "N2");
-            Object cqRP = getCqValueForAssay(sampleQpcrValues, "RP");
-            //parse cq values to 0 and 1 based on cq values range. Presumption : cq = undetermined = 0
-            Integer translatedCQN1 = getTranslatedCQValue(cqN1);
-            Integer translatedCQN2 = getTranslatedCQValue(cqN2);
-            Integer translatedCQRP = getTranslatedCQValue(cqRP);
-            //get the sum of translated values
-            Integer translatedSum = translatedCQN1 + translatedCQN2 + translatedCQRP;
-            analyzedValues.put("CqN1", cqN1);
-            analyzedValues.put("CqN2", cqN2);
-            analyzedValues.put("CqRP", cqRP);
-            analyzedValues.put("TranslatedCQN1", translatedCQN1);
-            analyzedValues.put("TranslatedCQN2", translatedCQN2);
-            analyzedValues.put("TranslatedCQRP", translatedCQRP);
-            analyzedValues.put("SumCqForAssays", translatedSum);
-            analyzedValues.put("AssayResult", getAssayResult(translatedSum));
-            analyzedData.add(analyzedValues);
+    Object getWellIdForAssay(List<Map<String, Object>> qpcrValues, String assayName) {
+        for (Map<String, Object> vals : qpcrValues) {
+            Object targetAssay = vals.get("TargetAssay");
+            Object wellPosition = vals.get("WellPosition");
+            if (targetAssay != null && targetAssay.toString().equalsIgnoreCase(assayName)) {
+                if (wellPosition != null) {
+                    return wellPosition;
+                }
+            }
         }
-        return analyzedData;
+        return "";
     }
 
     /**
@@ -146,6 +130,51 @@ class Covid19Helper {
                 return "Detected";
         }
         return "Invalid";
+    }
+
+    /**
+     * Method to generate analyzed QPCR data.
+     *
+     * @param parsedData
+     * @return
+     * @throws ServerException
+     */
+    List<Map<String, Object>> analyzeParsedQpcrData(Map<String, List<Map<String, Object>>> parsedData) {
+        List<Map<String, Object>> analyzedData = new ArrayList<>();
+        for (String key : parsedData.keySet()) {
+            Map<String, Object> analyzedValues = new HashMap<>();
+            List<Map<String, Object>> sampleQpcrValues = parsedData.get(key);
+            analyzedValues.put("OtherSampleId", key);
+            //analyzedValues.put("CqMean", getCqMean(sampleQpcrValues));
+            //extract cq values for each assay from parse sample values
+            Object cqN1 = getCqValueForAssay(sampleQpcrValues, "N1");
+            Object cqN2 = getCqValueForAssay(sampleQpcrValues, "N2");
+            Object cqRP = getCqValueForAssay(sampleQpcrValues, "RP");
+            //parse cq values to 0 and 1 based on cq values range. Presumption : cq = undetermined = 0
+            Integer translatedCQN1 = getTranslatedCQValue(cqN1);
+            Integer translatedCQN2 = getTranslatedCQValue(cqN2);
+            Integer translatedCQRP = getTranslatedCQValue(cqRP);
+            //get the sum of translated values
+            Integer translatedSum = translatedCQN1 + translatedCQN2 + translatedCQRP;
+            //get WellID for each assay on qpcr plate
+            Object wellIDN1 = getWellIdForAssay(sampleQpcrValues, "N1");
+            Object wellIDN2 = getWellIdForAssay(sampleQpcrValues, "N2");
+            Object wellIDRP = getWellIdForAssay(sampleQpcrValues, "RP");
+
+            analyzedValues.put("CqN1", cqN1);
+            analyzedValues.put("CqN2", cqN2);
+            analyzedValues.put("CqRP", cqRP);
+            analyzedValues.put("TranslatedCQN1", translatedCQN1);
+            analyzedValues.put("TranslatedCQN2", translatedCQN2);
+            analyzedValues.put("TranslatedCQRP", translatedCQRP);
+            analyzedValues.put("SumCqForAssays", translatedSum);
+            analyzedValues.put("AssayResult", getAssayResult(translatedSum));
+            analyzedValues.put("WellIdN1", wellIDN1);
+            analyzedValues.put("WellIdN2", wellIDN2);
+            analyzedValues.put("WellIdRP", wellIDRP);
+            analyzedData.add(analyzedValues);
+        }
+        return analyzedData;
     }
 
     /**

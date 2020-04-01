@@ -90,13 +90,13 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
 
             //analyze parsed data.
             List<Map<String, Object>> analyzedData = helper.analyzeParsedQpcrData(parsedData);
-            saveQpcrData(analyzedData);
 
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
             if(attachedSamples.size()==0){
                 clientCallback.displayWarning("Samples not found attached to the task. RNA Sample/Plate information may not be available in the report.");
             }
             appendSampleInfoToReport(analyzedData, attachedSamples);
+            saveQpcrData(analyzedData);
             exportReport(analyzedData);
             logInfo(String.format("Saved %d %s DataRecords created from uploaded file %s", analyzedData.size(), activeTask.getInputDataTypeName(), csvFilePath));
         } catch (Exception e) {

@@ -1,6 +1,5 @@
 package com.velox.sloan.cmo.workflows.covid19;
 
-import com.velox.api.util.ServerException;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.junit.Before;
@@ -67,10 +66,19 @@ public class Covid19Tests {
     }
 
     @Test
+    public void getWellIdForAssay_test(){
+        List<String> keys = new ArrayList<>(parsedQpcrData.keySet());
+        List<Map<String,Object>> qpcrData1 = parsedQpcrData.get(keys.get(5));
+        assertEquals(helper.getWellIdForAssay(qpcrData1, "N1"), "C21");
+        assertEquals(helper.getWellIdForAssay(qpcrData1, "N2"), "C22");
+        assertEquals(helper.getWellIdForAssay(qpcrData1, "RP"), "D21");
+    }
+
+    @Test
     public void analyzeParsedQpcrData_Test(){
         List<Map<String, Object>> analyzedData = helper.analyzeParsedQpcrData(parsedQpcrData);
         assertEquals(analyzedData.size(), 98);
-        assertEquals(analyzedData.get(0).size(), 9);
+        assertEquals(analyzedData.get(0).size(), 12);
         assertTrue(analyzedData.get(0).containsKey("AssayResult"));
     }
 
