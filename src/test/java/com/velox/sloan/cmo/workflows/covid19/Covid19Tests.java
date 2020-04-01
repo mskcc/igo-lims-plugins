@@ -1,6 +1,5 @@
 package com.velox.sloan.cmo.workflows.covid19;
 
-import com.velox.api.util.ServerException;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.junit.Before;
