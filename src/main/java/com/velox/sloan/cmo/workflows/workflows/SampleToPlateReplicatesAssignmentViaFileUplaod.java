@@ -15,18 +15,12 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.stream.Collectors;
 
-
-/**
- * This plugin is designed to assign samples to plate using file upload. The plugin reads the Destination Plate ID, Destination Well, Destination Vol and other Aliquoting values from file and assigns
- * these values to Aliquoting/Plate assignment DataType. The plugin is meant to work for most of the Sample to Plate assignment tasks including Pooling.
- *
- * @author sharmaa1
- */
-public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
+public class SampleToPlateReplicatesAssignmentViaFileUplaod extends DefaultGenericPlugin {
     private enum acceptableHeaderValuesEnum {SAMPLE_ID, SAMPLE_NAME, SOURCE_MASS_TO_USE, SOURCE_VOLUME_TO_USE, TARGET_MASS, TARGET_VOLUME, TARGET_CONCENTRATION, DESTINATION_PLATE_ID, DESTINATION_WELL}
     private final List<String> acceptableHeaderList = Arrays.asList("SAMPLE_ID", "SAMPLE_NAME", "SOURCE_MASS_TO_USE", "SOURCE_VOLUME_TO_USE", "TARGET_MASS", "TARGET_VOLUME", "TARGET_CONCENTRATION", "DESTINATION_PLATE_ID", "DESTINATION_WELL");
-    private final List<String> requiredHeaderValues = Arrays.asList("SAMPLE_ID", "SAMPLE_NAME", "DESTINATION_PLATE_ID", "DESTINATION_WELL");
+    private final List<String> requiredHeaderValues = Arrays.asList("SAMPLE_NAME", "DESTINATION_PLATE_ID", "DESTINATION_WELL");
     private String destinationPlateIdFieldName = "";
     private String destinationWellFieldName = "";
     private String sourceMassToUseFieldName = "";
@@ -37,27 +31,27 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
     private Map<String, String> fileHeaderToDataTypeFieldNameValueMap = new HashMap<>();
     private IgoLimsPluginUtils util = new IgoLimsPluginUtils();
 
-    public SampleToPlateAssignmentViaFileUplaod() {
+    public SampleToPlateReplicatesAssignmentViaFileUplaod() {
         setTaskEntry(true);
         setOrder(PluginOrder.LAST.getOrder());
     }
 
     @Override
     public boolean shouldRun() throws RemoteException {
-        return activeTask.getStatus() != activeTask.COMPLETE && activeTask.getTask().getTaskOptions().containsKey("SAMPLE ASSIGNMENT USING FILE");
+        return activeTask.getStatus() != activeTask.COMPLETE && activeTask.getTask().getTaskOptions().containsKey("SAMPLE REPLICATES ASSIGNMENT USING FILE");
     }
 
     @Override
     public PluginResult run() throws ServerException {
         try {
-            String poolingFileName = clientCallback.showFileDialog("Upload Pooling Sheet", ".csv");
-            if (StringUtils.isBlank(poolingFileName)) {
-                logInfo("User did not load pooling sheet. Plate assignment GUI will be rendered instead for manual assignment.");
+            String sampleAssignmentFile = clientCallback.showFileDialog("Upload Pooling Sheet", ".csv");
+            if (StringUtils.isBlank(sampleAssignmentFile)) {
+                logInfo("User did not load file. Plate assignment GUI will be rendered instead for manual assignment.");
                 return new PluginResult(true);
             }
-            List<String> fileData = util.readDataFromCsvFile(clientCallback.readBytes(poolingFileName));
+            List<String> fileData = util.readDataFromCsvFile(clientCallback.readBytes(sampleAssignmentFile));
             Map<String, Integer> headerColumnLocationMap = util.getCsvHeaderValueMap(fileData);
-            if (!isValidCsvFile(poolingFileName, fileData, requiredHeaderValues)) {
+            if (!isValidCsvFile(sampleAssignmentFile, fileData, requiredHeaderValues)) {
                 return new PluginResult(false);
             }
             setRelevantDataTypeFieldNames();
@@ -70,7 +64,7 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
             fileHeaderToDataTypeFieldNameValueMap.put("TARGET_CONCENTRATION", targetConcFieldName);
             fileHeaderToDataTypeFieldNameValueMap.put("DESTINATION_PLATE_ID", destinationPlateIdFieldName);
             fileHeaderToDataTypeFieldNameValueMap.put("DESTINATION_WELL", destinationWellFieldName);
-            List<DataRecord> protocolRecords = activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user);
+            List<DataRecord> protocolRecords = activeTask.getAttachedDataRecords("Sample", user);
             if (protocolRecords.isEmpty()) {
                 clientCallback.displayError(String.format("Did not find %s protocol records attached to this task.", activeTask.getInputDataTypeName()));
                 return new PluginResult(false);
@@ -195,17 +189,19 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
      * @return Object
      * @throws ServerException
      */
-    private Object getFieldValueFromRowValues(String row, Map<String, Integer> headerValueMap, String headerName) throws ServerException {
+    private Object getFieldValueFromRowValues(String row, Map<String, Integer> headerValueMap, String headerName) {
         List<String> values = Arrays.asList(row.split(","));
-        Integer headerPosition = headerValueMap.get(headerName);
-        return values.get(headerPosition);
+        if (headerValueMap.containsKey(headerName)){
+            Integer headerPosition = headerValueMap.get(headerName);
+            return values.get(headerPosition);
+        }
+        return null;
     }
 
     /**
      * Method to get the FieldValues Map from uploaded file for DataRecord
      *
      * @param row
-     * @param rec
      * @param headerValueMap
      * @return
      * @throws ServerException
@@ -214,10 +210,11 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
      * @throws IoError
      * @throws NotFound
      */
-    private Map<String, Object> getUpdatedFieldValues(String row, DataRecord rec, Map<String, Integer> headerValueMap) throws ServerException, RemoteException, InvalidValue, IoError, NotFound {
+    private Map<String, Object> getUpdatedFieldValues(String row, DataRecord sample, Map<String, Integer> headerValueMap) throws ServerException, RemoteException, NotFound {
         List<String> rowValues = Arrays.asList(row.split(",|\n"));
         List<String> fileHeaders = new ArrayList<>(headerValueMap.keySet());
-        Integer headerSize = headerValueMap.size();
+        //Integer headerSize = headerValueMap.size();
+        String sampleId = sample.getStringVal("SampleId", user);
         Map<String, Object> updatedValues = new HashMap<>();
         for (String entry : fileHeaders) {
             logInfo(Boolean.toString(acceptableHeaderList.contains(entry) && !StringUtils.isBlank(fileHeaderToDataTypeFieldNameValueMap.get(entry)) && isValidColumnNameForHeader(entry)));
@@ -229,31 +226,62 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
                 }
             }
         }
+        updatedValues.putIfAbsent("SampleId", sampleId);
         return updatedValues;
     }
 
+    private List<Long> getAttacheProtocolRecordIds() throws RemoteException, ServerException {
+        List<DataRecord> attachedRecords = activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user);
+        return attachedRecords.stream().map(DataRecord::getRecordId).collect(Collectors.toList());
+    }
     /**
-     * Method to update the FieldValues on DataType with values from uploaded file.
+     * Method to update the FieldValues on DataType with values from uploaded file and attach it to the activeTask.
      *
      * @param fileData
      * @param headerValueMap
-     * @param protocolRecords
+     * @param attachedSamples
      * @throws NotFound
      * @throws RemoteException
      * @throws ServerException
      * @throws IoError
      * @throws InvalidValue
      */
-    private void getUpdatedFieldValueList(List<String> fileData, Map<String, Integer> headerValueMap, List<DataRecord> protocolRecords) throws NotFound, RemoteException, ServerException, IoError, InvalidValue {
+    private void getUpdatedFieldValueList(List<String> fileData, Map<String, Integer> headerValueMap, List<DataRecord> attachedSamples) throws NotFound, RemoteException, ServerException, IoError, InvalidValue {
+        String inputDataTypeName = activeTask.getInputDataTypeName();
+        //get attached protocol records for cleanup before we attach new records to the active task.
+        List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords(inputDataTypeName, user);
+        //get the record ids to remove attached protocol records from the active task
+        List<Long> attachedProtocolRecordIds = getAttacheProtocolRecordIds();
+        //remove attached protocol records from active task
+        activeTask.removeTaskAttachments(attachedProtocolRecordIds);
+        //delete already attached protocol records if present on task before creating and attaching new protocol records.
+        //this is done if user decides to re-upload the file with different values or a different file.
+        dataRecordManager.deleteDataRecords(attachedProtocolRecords, null, false, user);
+        List<DataRecord> newProtocolRecords = new ArrayList<>();
         for (int i = 1; i < fileData.size(); i++) {
             String row = fileData.get(i);
+            Object sampleName = getFieldValueFromRowValues(row, headerValueMap, String.valueOf(acceptableHeaderValuesEnum.SAMPLE_NAME));
             Object sampleId = getFieldValueFromRowValues(row, headerValueMap, String.valueOf(acceptableHeaderValuesEnum.SAMPLE_ID));
-            for (DataRecord proc : protocolRecords) {
-                String protSampleId = proc.getStringVal("SampleId", user);
-                if (String.valueOf(sampleId).equals(protSampleId)) {
-                    proc.setFields(getUpdatedFieldValues(row, proc, headerValueMap), user);
+            for (DataRecord rec : attachedSamples) {
+                String sampleNameOnSample = rec.getStringVal("OtherSampleId", user);
+                String sampleIdOnSample = rec.getStringVal("SampleId", user);
+
+                //add new protocol record if Sample ID's are present in uploaded file and match with Sample ID of any samples attached to the task.
+                if (sampleId!= null && !StringUtils.isBlank(String.valueOf(sampleId)) && String.valueOf(sampleId).equals(sampleIdOnSample)) {
+                    Map<String, Object> newProtocolRecVals = getUpdatedFieldValues(row, rec, headerValueMap);
+                    DataRecord newProtocolRec = rec.addChild(inputDataTypeName, newProtocolRecVals, user);
+                    newProtocolRecords.add(newProtocolRec);
+                }
+
+                //this is for special rare case when the uploaded file does not contain Sample ID and the mapping must be done
+                //based on the sample names.
+                else if(String.valueOf(sampleName).equals(sampleNameOnSample)){
+                    Map<String, Object> newProtocolRecVals = getUpdatedFieldValues(row, rec, headerValueMap);
+                    DataRecord newProtocolRec = rec.addChild(inputDataTypeName, newProtocolRecVals, user);
+                    newProtocolRecords.add(newProtocolRec);
                 }
             }
         }
+        activeTask.addAttachedDataRecords(newProtocolRecords);
     }
 }
