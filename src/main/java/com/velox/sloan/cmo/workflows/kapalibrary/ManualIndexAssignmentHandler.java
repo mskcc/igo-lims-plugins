@@ -11,7 +11,6 @@ import com.velox.sapioutils.shared.enums.PluginOrder;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -23,7 +22,6 @@ import java.util.List;
  * @author sharmaa1
  */
 public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
-    private final List<String> RECIPES_TO_USE_SPECIAL_ADAPTERS = Arrays.asList("CRISPRSeq", "AmpliconSeq");
     private final String INDEX_ASSIGNMENT_CONFIG_DATATYPE = "AutoIndexAssignmentConfig";
     AutoIndexAssignmentHelper autohelper;
 
@@ -85,7 +83,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
      */
     public Integer getPlateSize(List<DataRecord> samples) throws IoError, RemoteException, NotFound, ServerException {
         DataRecord plate = samples.get(0).getParentsOfType("Plate", user).get(0);
-        Integer plateSizeIndex = Integer.parseInt(plate.getValue("PlateWellCnt", user).toString());
+        int plateSizeIndex = Integer.parseInt(plate.getValue("PlateWellCnt", user).toString());
         String plateSize = dataMgmtServer.getPickListManager(user).getPickListConfig("Plate Sizes").getEntryList().get(plateSizeIndex);
         return Integer.parseInt(plateSize.split("-")[0]);
     }
@@ -110,7 +108,8 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                 if (indexBarcodeRec.getStringVal("IndexId", user).equals(indexConfig.getStringVal("IndexId", user))
                         && indexBarcodeRec.getStringVal("IndexTag", user).equals(indexConfig.getStringVal("IndexTag", user))) {
                     found = true;
-                    Double dnaInputAmount = Double.parseDouble(indexBarcodeRec.getStringVal("InitialInput", user));
+                    Object inputAmount = indexBarcodeRec.getStringVal("InitialInput", user);
+                    Double dnaInputAmount = inputAmount != null ? Double.parseDouble(inputAmount.toString()) : 50.00;
                     String wellPosition = indexConfig.getStringVal("WellId", user);
                     String adapterSourceRow = autohelper.getAdapterRowPosition(wellPosition);
                     String adapterSourceCol = autohelper.getAdapterColPosition(wellPosition);
@@ -165,16 +164,15 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
      *
      * @param indexAssignmentConfig
      * @param adapterVolumeUsed
-     * @return Updated AutoIndexAssignmentConfig DataRecord
      * @throws NotFound
      * @throws RemoteException
      * @throws IoError
      * @throws InvalidValue
      * @throws ServerException
      */
-    public DataRecord setUpdatedIndexAssignmentConfigVol(DataRecord indexAssignmentConfig, Double adapterVolumeUsed) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
+    public void setUpdatedIndexAssignmentConfigVol(DataRecord indexAssignmentConfig, Double adapterVolumeUsed) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
         Double previousVol = indexAssignmentConfig.getDoubleVal("AdapterVolume", user);
-        Double newVolume = previousVol - adapterVolumeUsed;
+        double newVolume = previousVol - adapterVolumeUsed;
         indexAssignmentConfig.setDataField("AdapterVolume", newVolume, user);
 
         if (newVolume <= 10) {
@@ -183,6 +181,5 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
             clientCallback.displayWarning(String.format("The Volume for adapter '%s'on Adapter Plate with ID '%s' is below 10ul.\nThis adapter will be marked as depleted and will be ignored for future assignments.",
                     indexAssignmentConfig.getStringVal("IndexId", user), indexAssignmentConfig.getStringVal("AdapterPlateId", user)));
         }
-        return indexAssignmentConfig;
     }
 }
