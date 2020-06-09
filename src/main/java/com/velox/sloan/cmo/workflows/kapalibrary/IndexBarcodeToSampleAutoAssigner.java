@@ -204,7 +204,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
             return 0;
         }
         int nextIndexToUse = lastUsedIndexPosition + 1; //start with one index position after last index used.
-        for (int i = nextIndexToUse; i <= indexAssignmentConfigs.size(); i++)
+        for (int i = nextIndexToUse; i < indexAssignmentConfigs.size(); i++)
             if (indexAssignmentConfigs.get(i).getStringVal("WellId", user).toUpperCase().contains("A")) {
                 return i;
             }
