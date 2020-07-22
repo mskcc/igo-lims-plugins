@@ -26,7 +26,7 @@ public class UniqueRecipeAndSpeciesValidator extends DefaultGenericPlugin {
 
     @Override
     protected boolean shouldRun() throws Throwable {
-        return activeTask.getTask().getTaskName().toLowerCase().equals("create experiment") && activeTask.getTask().getTaskOptions().containsKey("VALIDATE UNIQUE SAMPLE RECIPE");
+        return activeTask.getTask().getTaskName().toLowerCase().equals("create experiment") && activeTask.getTask().getTaskOptions().containsKey("VALIDATE UNIQUE SAMPLE SPECIES AND RECIPE");
     }
 
     public PluginResult run() throws ServerException {
