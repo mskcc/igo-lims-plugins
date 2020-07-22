@@ -17,9 +17,9 @@ import java.util.Set;
  * cancel the workflow or continue running the workflow.
  * Created by sharmaa1 on 8/5/19.
  */
-public class UniqueRecipeValidator extends DefaultGenericPlugin {
+public class UniqueRecipeAndSpeciesValidator extends DefaultGenericPlugin {
 
-    public UniqueRecipeValidator() {
+    public UniqueRecipeAndSpeciesValidator() {
         setTaskEntry(true);
         setOrder(PluginOrder.LAST.getOrder());
     }
