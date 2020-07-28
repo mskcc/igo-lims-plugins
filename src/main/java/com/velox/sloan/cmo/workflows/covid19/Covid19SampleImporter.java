@@ -81,15 +81,15 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
 
         } catch (ServerException e){
             String message = String.format("Server Exeception while importing new COVID-19 Samples into LIMS\n%s", e.getMessage());
-            logError(message);
+            logError(message, e);
             return new PluginResult(false);
         } catch (IOException e) {
             String message = String.format("IOException while importing new COVID-19 Samples into LIMS\n%s", e.getMessage());
-            logError(message);
+            logError(message, e);
             return new PluginResult(false);
         } catch (IoError | NotFound | AlreadyExists | InvalidValue e) {
             String message = String.format("Data Record Access exception while importing new COVID-19 Samples into LIMS\n%s", e.getMessage());
-            logError(message);
+            logError(message, e);
             return new PluginResult(false);
         }
         return new PluginResult(true);
@@ -175,7 +175,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
                 }
             }
         } catch (Exception e) {
-            logError(e.getMessage());
+            logError(e.getMessage(), e);
             return null;
         }
         return lastSampleNumber + 1;
@@ -195,7 +195,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
         try{
             samplesInRequest = dataRecordManager.queryDataRecords("Sample", "RequestId = '" + COVID_REQUEST_ID + "' AND ExemplarSampleType = 'other'", user);
         } catch (Exception e){
-            logError(String.format("Couldn't query sample: %s", COVID_REQUEST_ID));
+            logError(String.format("Couldn't query sample: %s", COVID_REQUEST_ID), e);
         }
 
         for (DataRecord sample: samplesInRequest){
