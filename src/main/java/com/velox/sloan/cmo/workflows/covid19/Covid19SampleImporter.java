@@ -1,16 +1,17 @@
 package com.velox.sloan.cmo.workflows.covid19;
 
-import com.velox.api.datarecord.DataRecord;
-import com.velox.api.datarecord.IoError;
-import com.velox.api.datarecord.NotFound;
+import com.velox.api.datarecord.*;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.IOException;
 import java.rmi.RemoteException;
 import java.util.*;
+
+import static com.velox.sloan.cmo.workflows.utils.DataAccessUtils.*;
 
 /**
  * This plugin is solely designed to create new Request and new Samples under a project 10858 for COVID Testing.
@@ -78,8 +79,16 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
 
-        } catch (Exception e){
-            String message = String.format("Error while importing new COVID-19 Samples into LIMS\n%s", e.getMessage());
+        } catch (ServerException e){
+            String message = String.format("Server Exeception while importing new COVID-19 Samples into LIMS\n%s", e.getMessage());
+            logError(message);
+            return new PluginResult(false);
+        } catch (IOException e) {
+            String message = String.format("IOException while importing new COVID-19 Samples into LIMS\n%s", e.getMessage());
+            logError(message);
+            return new PluginResult(false);
+        } catch (IoError | NotFound | AlreadyExists | InvalidValue e) {
+            String message = String.format("Data Record Access exception while importing new COVID-19 Samples into LIMS\n%s", e.getMessage());
             logError(message);
             return new PluginResult(false);
         }
@@ -181,15 +190,26 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws ServerException
      */
-    private boolean hasDuplicateAccessionNumber(List<Map<String, Object>> parsedSampleData) throws IoError, RemoteException, NotFound, ServerException {
-        List<DataRecord> samplesInRequest = dataRecordManager.queryDataRecords("Sample", "RequestId = '" + COVID_REQUEST_ID + "' AND ExemplarSampleType = 'other'", user);
+    private boolean hasDuplicateAccessionNumber(List<Map<String, Object>> parsedSampleData) {
+        List<DataRecord> samplesInRequest = new ArrayList<>();
+        try{
+            samplesInRequest = dataRecordManager.queryDataRecords("Sample", "RequestId = '" + COVID_REQUEST_ID + "' AND ExemplarSampleType = 'other'", user);
+        } catch (Exception e){
+            logError(String.format("Couldn't query sample: %s", COVID_REQUEST_ID));
+        }
+
         for (DataRecord sample: samplesInRequest){
-            if (sample.getValue("OtherSampleId", user) != null){
-                String sampleId = sample.getStringVal("SampleId", user);
-                String sampleName = sample.getStringVal("OtherSampleId", user);
+            String sampleName = getRecordStringValue(sample, "OtherSampleId", user);
+            if (sampleName != ""){
+                String sampleId = getRecordStringValue(sample, "SampleId", user);
                 for (Map<String, Object> data : parsedSampleData){
                     if(data.get("OtherSampleId").toString().equalsIgnoreCase(sampleName)){
-                        clientCallback.displayWarning(String.format("Duplicate Accession No '%s' in uploaded file. Sample %s already has this Accession No.", sampleName, sampleId));
+                        String warning = String.format("Duplicate Accession No '%s' in uploaded file. Sample %s already has this Accession No.", sampleName, sampleId);
+                        try {
+                            clientCallback.displayWarning(warning);
+                        } catch (ServerException e){
+                            logError(warning, e);
+                        }
                     }
                 }
             }
