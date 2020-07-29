@@ -80,15 +80,15 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
             }
 
         } catch (ServerException e){
-            String message = String.format("Server Exeception while importing new COVID-19 Samples into LIMS\n%s", e.getMessage());
+            String message = String.format("Server Exception while importing new COVID-19 Samples into LIMS with message: %s", e.getMessage());
             logError(message, e);
             return new PluginResult(false);
         } catch (IOException e) {
-            String message = String.format("IOException while importing new COVID-19 Samples into LIMS\n%s", e.getMessage());
+            String message = String.format("IOException while importing new COVID-19 Samples into LIMS with message: %s", e.getMessage());
             logError(message, e);
             return new PluginResult(false);
         } catch (IoError | NotFound | AlreadyExists | InvalidValue e) {
-            String message = String.format("Data Record Access exception while importing new COVID-19 Samples into LIMS\n%s", e.getMessage());
+            String message = String.format("Data Record Access exception while importing new COVID-19 Samples into LIMS with message: %s", e.getMessage());
             logError(message, e);
             return new PluginResult(false);
         }
