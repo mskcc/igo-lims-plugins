@@ -15,7 +15,6 @@ repositories {
 
 
 dependencies {
-    compile ('org.apache.poi:poi-ooxml:3.17')
     compile 'com.velox.internalproducts:accessionservice:LIMS10.6.1'
     compile 'com.velox.internalproducts:sapio-commons:15.1.0-LIMS10.6.1'
     compile 'com.velox.internalproducts:sapiogeneric:15.1.0-LIMS10.6.1'
@@ -23,7 +22,7 @@ dependencies {
     compile 'com.velox.sloan.cmo:sloancmo:2.21.1-LIMS10.6.1_b84'
     compile 'com.velox.internalproducts:veloxapi:10.6.1-b777'
 
-    compile group: 'org.apache.poi', name: 'poi', version: '3.17'
+    compile ('org.apache.poi:poi-ooxml:3.17')
     compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.7'
     compile group: 'org.apache.httpcomponents', name: 'httpcore', version: '4.3.2'
     compile 'org.apache.httpcomponents:httpclient:4.5.11'
