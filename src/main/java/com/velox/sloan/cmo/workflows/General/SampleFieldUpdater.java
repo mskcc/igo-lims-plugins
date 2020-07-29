@@ -215,9 +215,9 @@ public class SampleFieldUpdater extends DefaultGenericPlugin {
      * @throws InvalidValue
      * @throws NotFound
      */
-    private void updateSampleFields(DataRecord descSamp, Object valueToOverWrite, String fieldNameToUpdate) throws IoError, RemoteException, InvalidValue, NotFound, ServerException, org.omg.CORBA.DynAnyPackage.InvalidValue {
+    private void updateSampleFields(DataRecord descSamp, Object valueToOverWrite, String fieldNameToUpdate) throws IoError, RemoteException, InvalidValue, NotFound, ServerException {
         if ("OtherSampleId".equals(fieldNameToUpdate) && !isValidOtherSampleId(valueToOverWrite, descSamp.getStringVal("ExemplarSampleType", user))) {
-            throw new org.omg.CORBA.DynAnyPackage.InvalidValue(String.format("Invalid OtherSampleId '%s", String.valueOf(valueToOverWrite)));
+            throw new InvalidValue(String.format("Invalid OtherSampleId '%s", String.valueOf(valueToOverWrite)));
         }
         List<String> childDataTypesExceptSample = getDescendentDataTypeNames(descSamp);
         descSamp.setDataField(fieldNameToUpdate, valueToOverWrite, user);
@@ -245,10 +245,9 @@ public class SampleFieldUpdater extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws NotFound
      * @throws InvalidValue
-     * @throws org.omg.CORBA.DynAnyPackage.InvalidValue
      */
 
-    private void updateFieldsOnDescendants(List<DataRecord> samples, String fieldNameToUpdate) throws IoError, RemoteException, ServerException, NotFound, InvalidValue, org.omg.CORBA.DynAnyPackage.InvalidValue {
+    private void updateFieldsOnDescendants(List<DataRecord> samples, String fieldNameToUpdate) throws IoError, RemoteException, ServerException, NotFound, InvalidValue {
         for (DataRecord sample : samples) {
             Object valueToOverwrie = sample.getStringVal(fieldNameToUpdate, user);
             String oldValue = getPrevousAssignedValueForOtherSampleId(sample, String.valueOf(valueToOverwrie), fieldNameToUpdate);
@@ -282,11 +281,10 @@ public class SampleFieldUpdater extends DefaultGenericPlugin {
      * @throws InvalidValue
      * @throws NotFound
      * @throws ServerException
-     * @throws org.omg.CORBA.DynAnyPackage.InvalidValue
      */
-    private void updatePooledSampleFields(DataRecord descSamp, Object valueToOverWrite, String fieldNameToUpdate, String oldValueForSampleName) throws IoError, RemoteException, InvalidValue, NotFound, ServerException, org.omg.CORBA.DynAnyPackage.InvalidValue {
+    private void updatePooledSampleFields(DataRecord descSamp, Object valueToOverWrite, String fieldNameToUpdate, String oldValueForSampleName) throws IoError, RemoteException, InvalidValue, NotFound, ServerException {
         if ("OtherSampleId".equals(fieldNameToUpdate) && !isValidOtherSampleId(valueToOverWrite, descSamp.getStringVal("ExemplarSampleType", user))) {
-            throw new org.omg.CORBA.DynAnyPackage.InvalidValue(String.format("Invalid OtherSampleId '%s", String.valueOf(valueToOverWrite)));
+            throw new InvalidValue(String.format("Invalid OtherSampleId '%s", String.valueOf(valueToOverWrite)));
         }
         List<String> childDataTypesExceptSample = getDescendentDataTypeNames(descSamp);
         String pooledSampleId = descSamp.getStringVal("OtherSampleId", user);
