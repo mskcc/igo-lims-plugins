@@ -1,6 +1,9 @@
 package com.velox.sloan.cmo.workflows.covid19;
 
 import com.velox.api.datarecord.DataRecord;
+import com.velox.api.datarecord.InvalidValue;
+import com.velox.api.datarecord.IoError;
+import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.api.workflow.ActiveTask;
@@ -8,6 +11,7 @@ import com.velox.api.workflow.ActiveWorkflow;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.Arrays;
@@ -36,7 +40,9 @@ public class UpdateAssayNames extends DefaultGenericPlugin {
         try {
             return activeTask.getTask().getTaskOptions().containsKey(UPDATE_COVID19_ASSAY_NAMES) &&
                     activeTask.getStatus() == ActiveTask.COMPLETE;
-        } catch (Throwable e) {
+        } catch (RemoteException e) {
+            String message = String.format("Error while setting toolbar button. Remote Exception:\n%s", ExceptionUtils.getStackTrace(e));
+            logError(message);
             return false;
         }
     }
@@ -56,8 +62,25 @@ public class UpdateAssayNames extends DefaultGenericPlugin {
                 int quadPosition = utils.getPlateQuadrant(wellPositon);
                 rec.setDataField("QpcrAssayName", ASSAY_NAMES.get(quadPosition), user);
             }
-        } catch (Exception e) {
-            logError(e.getMessage());
+        } catch (RemoteException e) {
+            String message = String.format("Error while updating Assay names. Remote Exception:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(message);
+            logError(message);
+            return new PluginResult(false);
+        } catch (IoError e) {
+            String message = String.format("Error while updating Assay names. IO Exception:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(message);
+            logError(message);
+            return new PluginResult(false);
+        } catch (NotFound e) {
+            String message = String.format("Error while updating Assay names. Not Found Exception:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(message);
+            logError(message);
+            return new PluginResult(false);
+        } catch (InvalidValue e) {
+            String message = String.format("Error while updating Assay names. Invalid Value Exception:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(message);
+            logError(message);
             return new PluginResult(false);
         }
         return new PluginResult(true);

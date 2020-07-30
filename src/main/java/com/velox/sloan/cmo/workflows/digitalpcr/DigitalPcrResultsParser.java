@@ -8,6 +8,7 @@ import com.velox.api.util.ServerException;
 import com.velox.sapio.commons.exemplar.plugin.PluginOrder;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.io.IOException;
 import java.rmi.RemoteException;
@@ -87,9 +88,20 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 }
                 addResultsAsChildRecords(analyzedData, attachedSampleRecords);
             }
-        } catch (Exception e) {
-            clientCallback.displayError(String.format("Error while parsing the ddPCR Results file:\n%s", e));
-            logError(Arrays.toString(e.getStackTrace()));
+        }catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception Error while parsing DDPCR results file:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IOException e) {
+            String errMsg = String.format("IOException Error while parsing DDPCR results file:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (NotFound e) {
+            String errMsg = String.format("NotFound Exception Error while parsing DDPCR results file:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
             return new PluginResult(false);
         }
         return new PluginResult(true);

@@ -5,6 +5,7 @@ import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -33,7 +34,7 @@ public class SampleFieldUpdater extends DefaultGenericPlugin {
         return dataTypeName.equals("Sample");
     }
 
-    public PluginResult run() throws ServerException, IoError, RemoteException {
+    public PluginResult run() throws ServerException {
         try {
             List<DataRecord> records = dataRecordList;
             String dataFieldToUpdate = clientCallback.showInputDialog("Please enter the DataFieldName to update for the samples in this table: eg: 'OtherSampleId'");
@@ -53,7 +54,25 @@ public class SampleFieldUpdater extends DefaultGenericPlugin {
                 logInfo("Sample table in view has no records.");
                 return new PluginResult(false);
             }
-        } catch (Exception e) {
+        } catch (NotFound notFound) {
+            String errMsg = String.format("NotFound Exception while updating Sample Fields.\n%s", ExceptionUtils.getStackTrace(notFound));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IoError ioError) {
+            String errMsg = String.format("IoError Exception while updating Sample Fields.\n%s", ExceptionUtils.getStackTrace(ioError));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception while updating Sample Fields.\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (InvalidValue invalidValue) {
+            String errMsg = String.format("Invalid Value Exception while updating Sample Fields.\n%s", ExceptionUtils.getStackTrace(invalidValue));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
             return new PluginResult(false);
         }
         return new PluginResult(true);

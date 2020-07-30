@@ -7,7 +7,9 @@ import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
+import java.io.IOException;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -56,13 +58,26 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
             }
 
             // if there's an error
-        } catch (Exception e) {
-            // display the error to the user
-            clientCallback.displayError(e.toString());
-            // log the error
-            logError(e.toString());
-            error = e.getMessage();
-            return new PluginResult();
+        } catch (NotFound e) {
+            String errMsg = String.format("NotFound Exception while saving data:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception while saving data:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (InvalidValue e) {
+            String errMsg = String.format("InvalidValue Exception while saving data:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IoError e) {
+            String errMsg = String.format("IoError Exception while saving data:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
         }
         // if there's no error
         return new PluginResult(error == null, error == null ? new ArrayList<Object>() : Arrays.asList(error));

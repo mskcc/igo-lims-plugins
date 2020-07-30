@@ -9,6 +9,7 @@ import com.velox.api.util.ServerException;
 import com.velox.sapio.commons.exemplar.plugin.PluginOrder;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -47,8 +48,8 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
 
             replacePoolIdWithSampleId(attachedSampleRecords);
         } catch (Exception e) {
-            clientCallback.displayError(String.format("Error while sample assignment to plates. CAUSE:\n%s", e));
-            logError(e);
+            clientCallback.displayError(String.format("Error while sample assignment to plates. CAUSE:\n%s", ExceptionUtils.getStackTrace(e)));
+            logError(ExceptionUtils.getStackTrace(e));
             return new PluginResult(false);
 
         }

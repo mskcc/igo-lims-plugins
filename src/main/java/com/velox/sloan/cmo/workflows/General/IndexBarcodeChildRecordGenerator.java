@@ -7,6 +7,7 @@ import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.workflows.micronics.NewMicronicTubeTareWeightImporter;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.ArrayList;
@@ -32,7 +33,7 @@ public class IndexBarcodeChildRecordGenerator extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException, IoError, RemoteException, NotFound {
+    public PluginResult run() throws ServerException{
         String dataFile = clientCallback.showFileDialog("Upload csv file with Index Barcode Information", null);
         try {
             byte[] byteData = clientCallback.readBytes(dataFile);
@@ -77,10 +78,21 @@ public class IndexBarcodeChildRecordGenerator extends DefaultGenericPlugin {
             }
             dataRecordManager.storeAndCommit("Added child records to samples %s " + getSampleIds(dataInFile).toString(), null, user);
 
-        } catch (Exception e) {
-            clientCallback.displayError(String.format("Error while while creating Index Barcode records.\n" +
-                    "Cause: \n%s", e));
-            logError(e);
+        }catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception while creating Index Barcode records.\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IoError ioError) {
+            String errMsg = String.format("IoError Exception while creating Index Barcode records.\n%s", ExceptionUtils.getStackTrace(ioError));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (NotFound notFound) {
+            String errMsg = String.format("NotFound Exception while creating Index Barcode records.\n%s", ExceptionUtils.getStackTrace(notFound));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
         }
         return new PluginResult(true);
     }
