@@ -9,6 +9,7 @@ import com.velox.api.workflow.ActiveTask;
 import com.velox.api.workflow.ActiveWorkflow;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFRow;
@@ -56,7 +57,8 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
         try {
             return activeTask.getTask().getTaskOptions().containsKey("GENERATE DDPCR REPORT");
         } catch (RemoteException e) {
-            logError(Arrays.toString(e.getStackTrace()));
+            String errMsg = String.format("Remote Exception Error while setting toolbar button:\n%s", ExceptionUtils.getStackTrace(e));
+            logError(errMsg);
         }
         return false;
     }
@@ -91,9 +93,25 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
             generateExcelDataWorkbook(headerForReport, valuesForReport, workbook);
             String fileName = generateFileNameFromRequestIds(attachedSamples);
             exportReport(workbook, fileName);
-        } catch (Exception e) {
-            clientCallback.displayError(String.format(":( Error while generating DDPCR Report:\n%s", e));
-            logError(Arrays.toString(e.getStackTrace()));
+        } catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception Error while generating DDPCR Report:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IOException e) {
+            String errMsg = String.format("IO Exception Error while generating DDPCR Report:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IoError e) {
+            String errMsg = String.format("IoError Exception while generating DDPCR Report:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (NotFound e) {
+            String errMsg = String.format("NotFound Exception Error while generating DDPCR Report:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
             return new PluginResult(false);
         }
         return new PluginResult(true);

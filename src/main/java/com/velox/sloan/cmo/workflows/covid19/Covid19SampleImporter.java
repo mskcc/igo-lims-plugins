@@ -6,6 +6,7 @@ import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.io.IOException;
 import java.rmi.RemoteException;
@@ -195,7 +196,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
         try{
             samplesInRequest = dataRecordManager.queryDataRecords("Sample", "RequestId = '" + COVID_REQUEST_ID + "' AND ExemplarSampleType = 'other'", user);
         } catch (Exception e){
-            logError(String.format("Couldn't query sample: %s", COVID_REQUEST_ID), e);
+            logError(String.format("Couldn't query sample: %s", COVID_REQUEST_ID, ExceptionUtils.getStackTrace(e)));
         }
 
         for (DataRecord sample: samplesInRequest){
@@ -207,8 +208,9 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
                         String warning = String.format("Duplicate Accession No '%s' in uploaded file. Sample %s already has this Accession No.", sampleName, sampleId);
                         try {
                             clientCallback.displayWarning(warning);
+                            logError(warning);
                         } catch (ServerException e){
-                            logError(warning, e);
+                            logError(String.format("Server Exception error:\n%s",ExceptionUtils.getStackTrace(e)));
                         }
                     }
                 }

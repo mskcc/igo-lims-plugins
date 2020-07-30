@@ -10,7 +10,10 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -19,7 +22,10 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.rmi.RemoteException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 /**
  * This plugin is designed to read QPCR raw data, analyze and transform it to create reports, export reports and
@@ -32,13 +38,14 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
     private final String IMPORT_QPCR_RESULTS = "IMPORT QPCR RESULTS";
     private IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
     private Covid19Helper helper = new Covid19Helper();
+
     public QPCRResultsImporter() {
         setTaskEntry(true);
         setTaskToolbar(true);
         setLine1Text("Upload qPCR");
         setLine2Text(" CSV File");
         setDescription("Use this button to import qPCR results from a .csv file.");
-        setOrder(PluginOrder.EARLY.getOrder()+1);
+        setOrder(PluginOrder.EARLY.getOrder() + 1);
     }
 
     @Override
@@ -51,7 +58,8 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
         try {
             return activeTask.getTask().getTaskOptions().containsKey(IMPORT_QPCR_RESULTS) &&
                     activeTask.getStatus() == ActiveTask.COMPLETE;
-        }catch (Throwable e){
+        } catch (RemoteException e) {
+            logError(String.format("Error setting toolbar plugin button. Remote Exception:\n%s", ExceptionUtils.getStackTrace(e)));
             return false;
         }
     }
@@ -69,10 +77,10 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
             //remove already attached records from task if already created. This is done to allow for the task to run again and not create duplicate rows of data;
-            if (activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user).size()>0){
+            if (activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user).size() > 0) {
                 List<Long> recordIds = new ArrayList<>();
                 List<DataRecord> protocolRecords = activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user);
-                for (DataRecord rec: protocolRecords){
+                for (DataRecord rec : protocolRecords) {
                     recordIds.add(rec.getRecordId());
                 }
                 activeTask.removeTaskAttachments(recordIds);
@@ -92,30 +100,39 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
             List<Map<String, Object>> analyzedData = helper.analyzeParsedQpcrData(parsedData);
 
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
-            if(attachedSamples.size()==0){
+            if (attachedSamples.size() == 0) {
                 clientCallback.displayWarning("Samples not found attached to the task. RNA Sample/Plate information may not be available in the report.");
             }
             appendSampleInfoToReport(analyzedData, attachedSamples);
             saveQpcrData(analyzedData);
             exportReport(analyzedData);
             logInfo(String.format("Saved %d %s DataRecords created from uploaded file %s", analyzedData.size(), activeTask.getInputDataTypeName(), csvFilePath));
-        } catch (Exception e) {
-            String errMsg = String.format("Error reading qPCR Sample Information %s", Arrays.toString(e.getStackTrace()));
+
+        } catch (RemoteException e) {
+            String errMsg = String.format("Error reading qPCR Sample Information. Remote Exception:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
-            return new PluginResult(false);
+        } catch (IOException e) {
+            String errMsg = String.format("IO Exception Error while reading qPCR Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+        } catch (NotFound e) {
+            String errMsg = String.format("Not Found Exception Error while reading qPCR Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
         }
         return new PluginResult(true);
     }
 
     /**
      * Method to get data from user uploaded file
+     *
      * @param fileData
      * @return
      */
     private List<String> getQpcrResults(List<String> fileData, String fileName) throws ServerException {
-        List<String>data = helper.getQpcrResults(fileData);
-        if(data.size()<2){
+        List<String> data = helper.getQpcrResults(fileData);
+        if (data.size() < 2) {
             clientCallback.displayError(String.format("uploaded file '%s' does not contain data", fileName));
             logError(String.format("uploaded file '%s' does not contain data", fileName));
             return null;
@@ -142,6 +159,7 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
 
     /**
      * Method to check sample data in the uploaded file has corresponding sample in the attached samples.
+     *
      * @param analyzedData
      * @param attachedSamples
      * @throws NotFound
@@ -149,18 +167,18 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
      * @throws ServerException
      */
     private void checkForExtraSamplesInQpcrData(List<Map<String, Object>> analyzedData, List<DataRecord> attachedSamples) throws NotFound, RemoteException, ServerException {
-        for (Map<String, Object> data : analyzedData){
+        for (Map<String, Object> data : analyzedData) {
             String sampleName = data.get("OtherSampleId").toString();
             boolean sampleFound = false;
-            for (DataRecord sample: attachedSamples){
+            for (DataRecord sample : attachedSamples) {
                 Object otherSampleId = sample.getValue("OtherSampleId", user);
                 Object isControl = sample.getValue("IsControl", user);
-                if(otherSampleId!=null && isControl !=null && !(boolean)isControl && otherSampleId.toString().equalsIgnoreCase(sampleName)){
-                    sampleFound=true;
+                if (otherSampleId != null && isControl != null && !(boolean) isControl && otherSampleId.toString().equalsIgnoreCase(sampleName)) {
+                    sampleFound = true;
                     break;
                 }
             }
-            if(!sampleFound){
+            if (!sampleFound) {
                 clientCallback.displayWarning(String.format("Sample with Sample Name %s in uploaded file not found attached to the task.", sampleName));
             }
         }
@@ -168,6 +186,7 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
 
     /**
      * Method to append sample level information (RNA Plate ID and Well ID) to analyzed data.
+     *
      * @param analyzedData
      * @param attachedSamples
      * @throws NotFound
@@ -175,17 +194,17 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
      */
     private void appendSampleInfoToReport(List<Map<String, Object>> analyzedData, List<DataRecord> attachedSamples) throws NotFound, RemoteException, ServerException {
         checkForExtraSamplesInQpcrData(analyzedData, attachedSamples);
-        for (DataRecord sample : attachedSamples){
+        for (DataRecord sample : attachedSamples) {
             Object otherSampleId = sample.getValue("OtherSampleId", user);
             Object plateId = sample.getValue("RelatedRecord23", user);
             Object rowPosition = sample.getValue("RowPosition", user);
             Object colPositon = sample.getStringVal("ColPosition", user);
-            for(Map<String, Object> ad : analyzedData){
-                if(otherSampleId != null && ad.get("OtherSampleId") == otherSampleId){
-                    if(plateId!=null){
+            for (Map<String, Object> ad : analyzedData) {
+                if (otherSampleId != null && ad.get("OtherSampleId") == otherSampleId) {
+                    if (plateId != null) {
                         ad.put("RNAPlateId", plateId);
                     }
-                    if(rowPosition!= null && colPositon!= null){
+                    if (rowPosition != null && colPositon != null) {
                         String wellId = rowPosition.toString() + colPositon.toString();
                         ad.put("RNAPlateWellId", wellId);
                     }
@@ -195,18 +214,19 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
     }
 
     /**
-     *  Method to generate report for Positive Samples.
+     * Method to generate report for Positive Samples.
+     *
      * @param analyzedData
      * @throws ServerException
      * @throws IOException
      */
-    private List<List<String>> getPositiveSamplesReport(List<Map<String,Object>> analyzedData){
+    private List<List<String>> getPositiveSamplesReport(List<Map<String, Object>> analyzedData) {
         List<List<String>> reportData = new ArrayList<>();
         List<String> header = Arrays.asList("Sample Name", "Cq N1", "Cq N2", "Cq RP", "Translated Cq N1", "Translated Cq N2", "Translated Cq RP", "Sum Translated Cq Values", "Assay Results");
         reportData.add(header);
-        for (Map<String, Object> data : analyzedData){
+        for (Map<String, Object> data : analyzedData) {
             Object assayResult = data.get("AssayResult");
-            if( assayResult != null && assayResult.toString().equalsIgnoreCase("detected")) {
+            if (assayResult != null && assayResult.toString().equalsIgnoreCase("detected")) {
                 List<String> rowValues = new ArrayList<>();
                 String sampleName = helper.getValueFromMap(data, "OtherSampleId");
                 //String cqMean = helper.getValueFromMap(data, "CqMean");
@@ -235,7 +255,8 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
     }
 
     /**
-     *  Method to generate report for Inconclusive Samples.
+     * Method to generate report for Inconclusive Samples.
+     *
      * @param analyzedData
      * @throws IOException
      * @throws ServerException
@@ -280,6 +301,7 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
 
     /**
      * Method to generate Complete QPCR report.
+     *
      * @param analyzedData
      * @throws IOException
      * @throws ServerException
@@ -366,15 +388,15 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
 
     /**
      * Method to create new DataRecords using parsed data and attach them to the workflow task running the plugin.
+     *
      * @param parsedData
      * @throws ServerException
      * @throws RemoteException
      */
     private void saveQpcrData(List<Map<String, Object>> parsedData) throws ServerException, RemoteException {
-        if(parsedData.size()==0){
+        if (parsedData.size() == 0) {
             clientCallback.displayError("Cannot parse any QPCR data from the file. Plase make sure that the data is in correct format.");
-        }
-        else{
+        } else {
             List<DataRecord> qpcrData = dataRecordManager.addDataRecords("Covid19TestProtocol5", parsedData, user);
             activeTask.addAttachedDataRecords(qpcrData);
         }
@@ -382,29 +404,29 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
 
     /**
      * Method to add worksheets with report data to workbook.
+     *
      * @param data
      * @param worksheetName
      * @param workbook
      */
-    private void addWorkbookSheet(List<List<String>> data, String worksheetName, XSSFWorkbook workbook){
+    private void addWorkbookSheet(List<List<String>> data, String worksheetName, XSSFWorkbook workbook) {
         XSSFSheet sheet = workbook.createSheet(worksheetName);
         boolean header = true;
         boolean isHeaderRow = true;
         int rowId = 0;
-        for (List<String> list : data ){
+        for (List<String> list : data) {
             XSSFRow row = sheet.createRow(rowId);
             int cellId = 0;
-            for (String value : list){
-                if(header){
+            for (String value : list) {
+                if (header) {
                     Cell cell = row.createCell(cellId);
                     cell.setCellValue(value);
                     cell.setCellStyle(getHeaderStyle(workbook));
                     sheet.autoSizeColumn(cellId);
-                }
-                else {
+                } else {
                     setDataCellStyle(workbook, row.createCell(cellId)).setCellValue(value);
                 }
-                if(value.equalsIgnoreCase("Sample Name")){
+                if (value.equalsIgnoreCase("Sample Name")) {
                     isHeaderRow = false;
                 }
                 cellId++;
@@ -416,11 +438,12 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
 
     /**
      * Method to export excel report.
+     *
      * @param analyzedData
      * @throws ServerException
      * @throws IOException
      */
-    private void exportReport(List<Map<String, Object>> analyzedData) throws ServerException, IOException {
+    private void exportReport(List<Map<String, Object>> analyzedData) throws ServerException {
         try {
             XSSFWorkbook workbook = new XSSFWorkbook();
             List<List<String>> completeReport = getQPCRCompleteReport(analyzedData);
@@ -438,17 +461,21 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
             ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
             try {
                 workbook.write(byteStream);
-            } catch (Exception e) {
-                String errMsg = String.format("Error reading qPCR Sample Information %s", Arrays.toString(e.getStackTrace()));
-                clientCallback.displayError(errMsg);
-                logError(errMsg);
             } finally {
                 byteStream.close();
             }
             byte[] bytes = byteStream.toByteArray();
             clientCallback.writeBytes(bytes, outFileName, true);
-        } catch (Exception e) {
-            String message = String.format("Error occured while exporting report:\n%s", ExceptionUtils.getMessage(e));
+        } catch (IOException e) {
+            String message = String.format("IO Exception Error occured while exporting report:\n%s", ExceptionUtils.getMessage(e));
+            clientCallback.displayError(message);
+            logError(message);
+        } catch (NotFound notFound) {
+            String message = String.format("Not Found Error occured while exporting report:\n%s", ExceptionUtils.getMessage(notFound));
+            clientCallback.displayError(message);
+            logError(message);
+        } catch (ServerException e) {
+            String message = String.format("Server Exception Error occured while exporting report:\n%s", ExceptionUtils.getMessage(e));
             clientCallback.displayError(message);
             logError(message);
         }

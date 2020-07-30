@@ -8,8 +8,11 @@ import com.velox.sapio.commons.exemplar.plugin.PluginOrder;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Row;
 
+import java.io.IOException;
 import java.rmi.RemoteException;
 import java.util.*;
 
@@ -72,9 +75,25 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
             List<Map<String, Object>> dataFieldValuesMap = getDataFieldValueMaps(fileData, headerValuesMap);
             String targetDataTypeName = activeTask.getTask().getTaskOptions().get(TASK_OPTION).split("\\|")[0].trim();
             setValuesOnDataRecord(attachedSamples, dataFieldValuesMap, targetDataTypeName);
-        } catch (Exception e) {
-            clientCallback.displayError(String.format("Error while parsing the ddPCR Sample to plate assignment sheet:\n%s", e));
-            logError(Arrays.toString(e.getStackTrace()));
+        } catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception Error while parsing the ddPCR Sample to plate assignment sheet:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (InvalidFormatException e) {
+            String errMsg = String.format("InvalidFormat Exception Error while parsing the ddPCR Sample to plate assignment sheet:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IOException e) {
+            String errMsg = String.format("IO Exception Error while parsing the ddPCR Sample to plate assignment sheet:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (NotFound e) {
+            String errMsg = String.format("NotFound Exception Error while parsing the ddPCR Sample to plate assignment sheet:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
             return new PluginResult(false);
         }
         return new PluginResult(true);

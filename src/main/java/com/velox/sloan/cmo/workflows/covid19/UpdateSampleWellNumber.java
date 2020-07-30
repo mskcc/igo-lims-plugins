@@ -13,6 +13,7 @@ import com.velox.sloan.cmo.tag.fileexport.GenerateBioMekFileTag;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.Tags;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -45,8 +46,18 @@ public class UpdateSampleWellNumber extends DefaultGenericPlugin {
                 clientCallback.displayError(String.format("Could not find any attached protocol records for %s", activeTask.getInputDataTypeName()));
             }
             setSampleSerialOrderWellNumber(attachedProtocolRecords);
-        }catch (Exception e){
-            String errMsg = String.format("Could not update 'SampleSerialOrder' field on %s:\n%s",activeTask.getInputDataTypeName(), Arrays.toString(e.getStackTrace()));
+        }catch (NotFound notFound) {
+            String errMsg = String.format("Not Found: Could not update 'SampleSerialOrder' field on %s:\n%s",activeTask.getInputDataTypeName(), ExceptionUtils.getStackTrace(notFound));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IoError ioError) {
+            String errMsg = String.format("IO Error: Could not update 'SampleSerialOrder' field on %s:\n%s",activeTask.getInputDataTypeName(), ExceptionUtils.getStackTrace(ioError));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (InvalidValue invalidValue) {
+            String errMsg = String.format("Invalid Value: Could not update 'SampleSerialOrder' field on %s:\n%s",activeTask.getInputDataTypeName(), ExceptionUtils.getStackTrace(invalidValue));
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
@@ -60,10 +71,14 @@ public class UpdateSampleWellNumber extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws RemoteException
      */
-    private String getDestinatinWellFieldName() throws ServerException, RemoteException {
-        String inputDataTypeName = activeTask.getInputDataTypeName();
-        List<DataFieldDefinition> dataFieldDefinitions = dataMgmtServer.getDataFieldDefManager(user).getDataFieldDefinitions(inputDataTypeName).getDataFieldDefinitionList();
+    private String getDestinatinWellFieldName() throws ServerException {
+        String inputDataTypeName = null;
         String destinationWellFieldName = null;
+        try {
+            inputDataTypeName = activeTask.getInputDataTypeName();
+
+        List<DataFieldDefinition> dataFieldDefinitions = dataMgmtServer.getDataFieldDefManager(user).getDataFieldDefinitions(inputDataTypeName).getDataFieldDefinitionList();
+
         for (DataFieldDefinition dfd : dataFieldDefinitions){
             String tag = dfd.tag;
             if (tag.matches(Tags.ALIQUOT_DESTINATION_WELL_POSITION)){
@@ -72,6 +87,15 @@ public class UpdateSampleWellNumber extends DefaultGenericPlugin {
         }
         if (StringUtils.isBlank(destinationWellFieldName)){
             clientCallback.displayError(String.format("Could not find field with TAG %s on the attached DataType %s.", GenerateBioMekFileTag.DESTINATION_WELL, inputDataTypeName));
+        }
+        } catch (RemoteException e) {
+            String errMsg = String.format("Error while getting Destination Well fieldname:\n%s",inputDataTypeName, ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+        } catch (ServerException e) {
+            String errMsg = String.format("Server Exception Error while getting Destination Well fieldname:\n%s",inputDataTypeName, ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
         }
         return destinationWellFieldName;
     }
