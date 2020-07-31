@@ -19,6 +19,7 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -95,11 +96,26 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
 
-        } catch (Exception e) {
-            clientCallback.displayError(String.format("Error while sample assignment to plates. CAUSE:\n%s", e));
-            logError(e);
+        }catch (NotFound e) {
+            String errMsg = String.format("NotFound Exception while sample assignment to plates:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
             return new PluginResult(false);
-
+        } catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception while sample assignment to plates:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (InvalidValue e) {
+            String errMsg = String.format("InvalidValue Exception while sample assignment to plates:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IoError e) {
+            String errMsg = String.format("IoError Exception while sample assignment to plates:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
         }
         return new PluginResult(true);
 

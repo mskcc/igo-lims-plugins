@@ -7,6 +7,8 @@ import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
+import com.velox.sloan.cmo.recmodels.SampleCMOInfoRecordsModel;
+import com.velox.sloan.cmo.recmodels.SampleModel;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -59,12 +61,12 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
             if (dataTypeName.equalsIgnoreCase("DdPcrAssayResults")) {
                 mapHumanPercentageFromDdpcrResultsToDnaQcReport(theSavedRecords);
             }
-
-            if (dataTypeName.equalsIgnoreCase("Sample")) {
+            //validate fields for special characters on Sample Datatype
+            if (dataTypeName.equalsIgnoreCase(SampleModel.DATA_TYPE_NAME)) {
                 validateSampleFields(theSavedRecords, dataTypeName);
             }
-
-            if (dataTypeName.equalsIgnoreCase("SampleCMOInfoRecords")) {
+            // validate fields for special characters on SampleCMOInfoRecords DataType
+            if (dataTypeName.equalsIgnoreCase(SampleCMOInfoRecordsModel.DATA_TYPE_NAME)) {
                 validateCmoInfoDataTypeFields(theSavedRecords, dataTypeName);
             }
 

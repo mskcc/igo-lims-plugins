@@ -90,11 +90,6 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
-        } catch (NotFound e) {
-            String errMsg = String.format("NotFound Exception Error while parsing the ddPCR Sample to plate assignment sheet:\n%s", ExceptionUtils.getStackTrace(e));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
         }
         return new PluginResult(true);
     }
@@ -161,9 +156,14 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
      * @return Map of Fields and Values
      * @throws RemoteException
      */
-    private Map<String, Object> getDataFieldsValueMapFromRowData(Row row, Map<String, Integer> headerValueMap) throws RemoteException {
+    private Map<String, Object> getDataFieldsValueMapFromRowData(Row row, Map<String, Integer> headerValueMap) {
         Map<String, Object> dataFieldValueMap = new HashMap<>();
-        List<String> dataTypeFieldNames = Arrays.asList(activeTask.getTask().getTaskOptions().get(TASK_OPTION).split("\\|"));
+        List<String> dataTypeFieldNames = new ArrayList<>();
+        try {
+            dataTypeFieldNames = Arrays.asList(activeTask.getTask().getTaskOptions().get(TASK_OPTION).split("\\|"));
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException -> Error reading task option values for active task:\n%s", ExceptionUtils.getStackTrace(e)));
+        }
         logInfo("Tag values: " + dataTypeFieldNames.toString());
         String plateIdFieldName = dataTypeFieldNames.get(1).trim();
         String destinationWellFieldName = dataTypeFieldNames.get(2).trim();
@@ -190,7 +190,7 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
      * @return List of Maps with DataField values.
      * @throws RemoteException
      */
-    private List<Map<String, Object>> getDataFieldValueMaps(List<Row> fileData, Map<String, Integer> headerValueMap) throws RemoteException {
+    private List<Map<String, Object>> getDataFieldValueMaps(List<Row> fileData, Map<String, Integer> headerValueMap){
         List<Map<String, Object>> dataFieldValuesMaps = new ArrayList<>();
         for (Row row : fileData) {
             Map<String, Object> dataFieldValueMap = getDataFieldsValueMapFromRowData(row, headerValueMap);
@@ -199,10 +199,15 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
         return dataFieldValuesMaps;
     }
 
-    private List<Long> getRecotdIds(List<DataRecord> records) throws NotFound, RemoteException {
+    /**
+     * Method to get RecordId values.
+     * @param records
+     * @return
+     */
+    private List<Long> getRecotdIds(List<DataRecord> records) {
         List<Long> recordIds = new ArrayList<>();
         for (DataRecord rec : records) {
-            recordIds.add(rec.getLongVal("RecordId", user));
+            recordIds.add(rec.getRecordId());
         }
         return recordIds;
     }
@@ -217,23 +222,32 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws ServerException
      */
-    private void setValuesOnDataRecord(List<DataRecord> attachedSamples, List<Map<String, Object>> dataFieldValuesMaps, String targetDataTypeName) throws NotFound, RemoteException, ServerException {
+    private void setValuesOnDataRecord(List<DataRecord> attachedSamples, List<Map<String, Object>> dataFieldValuesMaps, String targetDataTypeName){
         logInfo("Adding records to " + targetDataTypeName);
-        List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords(targetDataTypeName, user);
-        activeTask.removeTaskAttachments(getRecotdIds(attachedProtocolRecords));
-        activeWorkflow.getNext(activeTask).removeTaskAttachments(getRecotdIds(attachedProtocolRecords));
-        dataRecordManager.deleteDataRecords(attachedProtocolRecords, null, false, user);
-        List<DataRecord> newDataRecords = new ArrayList<>();
-        for (DataRecord sample : attachedSamples) {
-            String sampleId = sample.getStringVal("SampleId", user);
-            String otherSampleId = sample.getStringVal("OtherSampleId", user);
-            for (Map<String, Object> map : dataFieldValuesMaps) {
-                if (map.get("SampleId").toString().equals(sampleId) && map.get("OtherSampleId").toString().equals(otherSampleId)) {
-                    newDataRecords.add(sample.addChild(targetDataTypeName, map, user));
+        List<DataRecord> attachedProtocolRecords = new ArrayList<>();
+        try {
+            attachedProtocolRecords = activeTask.getAttachedDataRecords(targetDataTypeName, user);
+            activeTask.removeTaskAttachments(getRecotdIds(attachedProtocolRecords));
+            activeWorkflow.getNext(activeTask).removeTaskAttachments(getRecotdIds(attachedProtocolRecords));
+            dataRecordManager.deleteDataRecords(attachedProtocolRecords, null, false, user);
+            List<DataRecord> newDataRecords = new ArrayList<>();
+            for (DataRecord sample : attachedSamples) {
+                String sampleId = sample.getStringVal("SampleId", user);
+                String otherSampleId = sample.getStringVal("OtherSampleId", user);
+                for (Map<String, Object> map : dataFieldValuesMaps) {
+                    if (map.get("SampleId").toString().equals(sampleId) && map.get("OtherSampleId").toString().equals(otherSampleId)) {
+                        newDataRecords.add(sample.addChild(targetDataTypeName, map, user));
+                    }
                 }
             }
+            activeTask.addAttachedDataRecords(newDataRecords);
+            activeWorkflow.getNext(activeTask).addAttachedDataRecords(newDataRecords);
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException -> Error setting DdPcr result values for active task:\n%s", ExceptionUtils.getStackTrace(e)));
+        } catch (NotFound notFound) {
+            logError(String.format("NotFound Exception -> Error setting DdPcr result values for active task:\n%s", ExceptionUtils.getStackTrace(notFound)));
+        } catch (ServerException e) {
+            logError(String.format("ServerException -> Error setting DdPcr result values for active task:\n%s", ExceptionUtils.getStackTrace(e)));
         }
-        activeTask.addAttachedDataRecords(newDataRecords);
-        activeWorkflow.getNext(activeTask).addAttachedDataRecords(newDataRecords);
     }
 }

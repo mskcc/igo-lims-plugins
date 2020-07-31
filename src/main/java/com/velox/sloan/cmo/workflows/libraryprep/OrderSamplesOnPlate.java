@@ -10,6 +10,9 @@ import java.util.List;
 
 public class OrderSamplesOnPlate extends DefaultGenericPlugin {
 
+    /**
+     * This a test plugin.
+     */
     public OrderSamplesOnPlate() {
         setActionMenu(true);
         setLine1Text("Here We Go!");

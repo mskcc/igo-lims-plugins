@@ -98,21 +98,6 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
-        } catch (IOException e) {
-            String errMsg = String.format("IO Exception Error while generating DDPCR Report:\n%s", ExceptionUtils.getStackTrace(e));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
-        } catch (IoError e) {
-            String errMsg = String.format("IoError Exception while generating DDPCR Report:\n%s", ExceptionUtils.getStackTrace(e));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
-        } catch (NotFound e) {
-            String errMsg = String.format("NotFound Exception Error while generating DDPCR Report:\n%s", ExceptionUtils.getStackTrace(e));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
         }
         return new PluginResult(true);
     }
@@ -126,13 +111,21 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private Object getMicronicTubeIdFromParentSample(DataRecord ddPcrReportRecord) throws IoError, RemoteException, NotFound {
-        List<DataRecord> parentSampleRecords = ddPcrReportRecord.getParentsOfType("Sample", user);
-        if (!parentSampleRecords.isEmpty()) {
-            Object micronicTubeBarcode = parentSampleRecords.get(0).getValue("MicronicTubeBarcode", user);
-            if (micronicTubeBarcode != null) {
-                return micronicTubeBarcode;
+    private Object getMicronicTubeIdFromParentSample(DataRecord ddPcrReportRecord){
+        try {
+            List<DataRecord> parentSampleRecords = ddPcrReportRecord.getParentsOfType("Sample", user);
+            if (!parentSampleRecords.isEmpty()) {
+                Object micronicTubeBarcode = parentSampleRecords.get(0).getValue("MicronicTubeBarcode", user);
+                if (micronicTubeBarcode != null) {
+                    return micronicTubeBarcode;
+                }
             }
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException -> Error getting MicronitTubeBarcode from parent sample on active task:\n%s", ExceptionUtils.getStackTrace(e)));
+        } catch (IoError ioError) {
+            logError(String.format("IoError Exception -> Error getting MicronitTubeBarcode from parent sample on active task:\n%s", ExceptionUtils.getStackTrace(ioError)));
+        } catch (NotFound notFound) {
+            logError(String.format("NotFound Exception -> Error getting MicronitTubeBarcode from parent sample on active task:\n%s", ExceptionUtils.getStackTrace(notFound)));
         }
         return "";
     }
@@ -146,21 +139,27 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws IoError
      */
-    private List<Map<String, Object>> setFieldsForReport(List<DataRecord> ddPcrResults) throws NotFound, RemoteException, IoError {
+    private List<Map<String, Object>> setFieldsForReport(List<DataRecord> ddPcrResults){
         List<Map<String, Object>> reportFieldValueMaps = new ArrayList<>();
         for (DataRecord record : ddPcrResults) {
             Map<String, Object> reportFieldValues = new HashMap<>();
-            reportFieldValues.put("SampleId", record.getValue("SampleId", user));
-            reportFieldValues.put("OtherSampleId", record.getValue("OtherSampleId", user));
-            reportFieldValues.put("Assay", record.getValue("Assay", user));
-            reportFieldValues.put("TotalInput", record.getValue("TotalInput", user));
-            reportFieldValues.put("DropletCountTest", record.getValue("DropletCountMutation", user));
-            reportFieldValues.put("DropletCountRef", record.getValue("DropletCountWildType", user));
-            reportFieldValues.put("Ratio", record.getValue("Ratio", user));
-            reportFieldValues.put("AcceptedDroplets", record.getValue("AcceptedDroplets", user));
-            reportFieldValues.put("HumanPercentage", record.getValue("HumanPercentage", user));
-            reportFieldValues.put("MicronicTubeBarcode", getMicronicTubeIdFromParentSample(record));
-            reportFieldValueMaps.add(reportFieldValues);
+            try {
+                reportFieldValues.put("SampleId", record.getValue("SampleId", user));
+                reportFieldValues.put("OtherSampleId", record.getValue("OtherSampleId", user));
+                reportFieldValues.put("Assay", record.getValue("Assay", user));
+                reportFieldValues.put("TotalInput", record.getValue("TotalInput", user));
+                reportFieldValues.put("DropletCountTest", record.getValue("DropletCountMutation", user));
+                reportFieldValues.put("DropletCountRef", record.getValue("DropletCountWildType", user));
+                reportFieldValues.put("Ratio", record.getValue("Ratio", user));
+                reportFieldValues.put("AcceptedDroplets", record.getValue("AcceptedDroplets", user));
+                reportFieldValues.put("HumanPercentage", record.getValue("HumanPercentage", user));
+                reportFieldValues.put("MicronicTubeBarcode", getMicronicTubeIdFromParentSample(record));
+                reportFieldValueMaps.add(reportFieldValues);
+            } catch (RemoteException e) {
+                logError(String.format("RemoteException -> Error setting field values for report:\n%s", ExceptionUtils.getStackTrace(e)));
+            } catch (NotFound notFound) {
+                logError(String.format("NotFound Exception -> Error setting field values for report:\n%s", ExceptionUtils.getStackTrace(notFound)));
+            }
         }
         sortMapBySampleId(reportFieldValueMaps);
         return reportFieldValueMaps;
@@ -312,7 +311,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private String generateFileNameFromRequestIds(List<DataRecord> attachedRecords) throws IoError, RemoteException, NotFound {
+    private String generateFileNameFromRequestIds(List<DataRecord> attachedRecords) {
         Set<String> requestIds = new HashSet<>();
         for (DataRecord sample : attachedRecords) {
             String requestId = getParentRequestId(sample);
@@ -331,23 +330,31 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      * @throws IoError
      * @throws RemoteException
      */
-    private String getParentRequestId(DataRecord sample) throws IoError, RemoteException, NotFound {
+    private String getParentRequestId(DataRecord sample){
         DataRecord record = null;
         Stack<DataRecord> samplePile = new Stack<>();
         samplePile.push(sample);
-        do {
-            DataRecord startSample = samplePile.pop();
-            List<DataRecord> parentRecords = startSample.getParentsOfType("Sample", user);
-            if (!parentRecords.isEmpty() && parentRecords.get(0).getParentsOfType("Request", user).size() > 0) {
-                record = parentRecords.get(0);
-            }
-            if (!parentRecords.isEmpty() && record == null) {
-                samplePile.push(parentRecords.get(0));
-            }
-        } while (!samplePile.empty());
+        try {
+            do {
+                DataRecord startSample = samplePile.pop();
+                List<DataRecord> parentRecords = startSample.getParentsOfType("Sample", user);
+                if (!parentRecords.isEmpty() && parentRecords.get(0).getParentsOfType("Request", user).size() > 0) {
+                    record = parentRecords.get(0);
+                }
+                if (!parentRecords.isEmpty() && record == null) {
+                    samplePile.push(parentRecords.get(0));
+                }
+            } while (!samplePile.empty());
 
-        if ((record != null) && (record.getValue("RequestId", user) != null)) {
-            return (String) record.getValue("RequestId", user);
+            if ((record != null) && (record.getValue("RequestId", user) != null)) {
+                return (String) record.getValue("RequestId", user);
+            }
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException -> Error getting Parent RequestId for Sample with recordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+        } catch (IoError ioError) {
+            logError(String.format("IoError Exception -> Error getting Parent RequestId for Sample with recordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(ioError)));
+        } catch (NotFound notFound) {
+            logError(String.format("NotFound Exception -> Error getting Parent RequestId for Sample with recordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
         }
         return "";
     }
@@ -360,7 +367,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      * @throws IOException
      * @throws ServerException
      */
-    private void exportReport(XSSFWorkbook workbook, String outFileName) throws IOException, ServerException {
+    private void exportReport(XSSFWorkbook workbook, String outFileName) {
         if (StringUtils.isBlank(outFileName)) {
             outFileName = "Project_";
         }
@@ -368,11 +375,21 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
         ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
         try {
             workbook.write(byteStream);
-        } finally {
             byteStream.close();
+            byte[] bytes = byteStream.toByteArray();
+            clientCallback.writeBytes(bytes, outFileName + "_ddPCR_Report.xlsx");
+        } catch (ServerException e) {
+            logError(String.format("RemoteException -> Error while exporting DdPcr report:\n%s",ExceptionUtils.getStackTrace(e)));
+        } catch (IOException e) {
+            logError(String.format("IOException -> Error while exporting DdPcr report:\n%s", ExceptionUtils.getStackTrace(e)));
+        } finally {
+            try {
+                byteStream.close();
+            } catch (IOException e) {
+                logError(String.format("IOException -> Error while closing the ByteArrayOutputStream:\n%s", ExceptionUtils.getStackTrace(e)));
+            }
         }
-        byte[] bytes = byteStream.toByteArray();
-        clientCallback.writeBytes(bytes, outFileName + "_ddPCR_Report.xlsx");
+
     }
 }
 

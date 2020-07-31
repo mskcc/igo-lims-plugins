@@ -1,12 +1,14 @@
 package com.velox.sloan.cmo.workflows.micronics;
 
 import com.velox.api.datarecord.DataRecord;
+import com.velox.api.datarecord.InvalidValue;
 import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.ArrayList;
@@ -52,9 +54,20 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
             } else {
                 return new PluginResult(false);
             }
-        } catch (Exception e) {
-            clientCallback.displayError(String.format("cannot read information from file:%s", e));
-            logError(String.format("cannot read information from file:"), e);
+        } catch (NotFound e) {
+            String errMsg = String.format("NotFound Exception while reading MicronicTube information from file:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception while reading MicronicTube information from file:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        }catch (IoError e) {
+            String errMsg = String.format("IoError Exception while reading MicronicTube information from file:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
             return new PluginResult(false);
         }
         return new PluginResult(true);

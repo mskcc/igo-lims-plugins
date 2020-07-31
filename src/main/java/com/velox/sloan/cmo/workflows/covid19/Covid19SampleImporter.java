@@ -27,7 +27,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
     private final List<String> REQUIRED_FILE_HEADERS = Arrays.asList("Accession Number", "Well ID");
     private final String COVID_REQUEST_ID = "10858";
 
-    public Covid19SampleImporter() throws ServerException {
+    public Covid19SampleImporter(){
        setActionMenu(true);
        setLine1Text("Import COVID19 Samples");
        setDescription("Plugin to import new COVID-19 Samples into LIMS.");

@@ -1,12 +1,11 @@
 package com.velox.sloan.cmo.workflows.labmedicine;
 
-import com.velox.api.datarecord.DataRecord;
-import com.velox.api.datarecord.IoError;
-import com.velox.api.datarecord.NotFound;
+import com.velox.api.datarecord.*;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -68,9 +67,40 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
                 dataRecordManager.storeAndCommit(String.format("Added %d ThoracicBankTransfer samples", thoracicBankSampleRecords.size()), user);
                 clientCallback.displayInfo(String.format("Added %d new ThoracicBankTransfer sample records.", thoracicBankSampleRecords.size()));
             }
-        } catch (Exception e) {
-            clientCallback.displayError(String.format("Error reading Thoracic Sample Information", e));
-            logError(String.format("Error reading Thoracic Sample Information"), e);
+        } catch (NotFound e) {
+            String errMsg = String.format("NotFound Exception while reading Thoracic Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception while reading Thoracic Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (InvalidValue e) {
+            String errMsg = String.format("InvalidValue Exception while reading Thoracic Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IoError e) {
+            String errMsg = String.format("IoError Exception while reading Thoracic Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (AlreadyExists alreadyExists) {
+            String errMsg = String.format("AlreadyExists Exception while reading Thoracic Sample Information:\n%s", ExceptionUtils.getStackTrace(alreadyExists));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (InvalidFormatException e) {
+            String errMsg = String.format("InvalidFormat Exception while reading Thoracic Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IOException e) {
+            String errMsg = String.format("IOException while reading Thoracic Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
             return new PluginResult(false);
         }
         return new PluginResult(true);

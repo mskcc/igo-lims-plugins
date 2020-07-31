@@ -11,6 +11,7 @@ import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
+import java.io.IOException;
 import java.rmi.RemoteException;
 import java.util.*;
 
@@ -63,9 +64,25 @@ public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
                 logInfo(String.format("Added '%d' new Index Assignment Configurations records.", newIndexAssignmentConfigurations.size()));
                 return new PluginResult(true);
             }
-        } catch (Exception e) {
-            clientCallback.displayError(String.format("Error while Index Assignment:\n%s", ExceptionUtils.getStackTrace(e)));
-            logError(ExceptionUtils.getStackTrace(e));
+        } catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception Error while importing Adapter Plate/Set:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IoError | IOException ioError) {
+            String errMsg = String.format("IoError Exception Error while importing Adapter Plate/Set:\n%s", ExceptionUtils.getStackTrace(ioError));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (InvalidValue invalidValue) {
+            String errMsg = String.format("InvalidValue Exception Error while importing Adapter Plate/Set:\n%s", ExceptionUtils.getStackTrace(invalidValue));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (NotFound notFound) {
+            String errMsg = String.format("NotFound Exception Error while importing Adapter Plate/Set:\n%s", ExceptionUtils.getStackTrace(notFound));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
             return new PluginResult(false);
         }
         return new PluginResult(true);

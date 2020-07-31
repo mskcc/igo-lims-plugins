@@ -411,19 +411,34 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
      * @throws AlreadyExists
      * @throws ServerException
      */
-    private DataRecord createControlSampleRecord(DataRecord sample, String newSampleId, String newOtherSampleId) throws RemoteException, InvalidValue, IoError, NotFound, AlreadyExists, ServerException {
-        Map<String, Object> sampleFields = sample.getFields(user);
-        Map<String, Object> valuesForControlRec = new HashMap<>();
-        valuesForControlRec.put("SampleId", newSampleId);
-        valuesForControlRec.put("OtherSampleId", newOtherSampleId);
-        valuesForControlRec.put("AltId", newSampleId);
-        valuesForControlRec.put("Recipe", sampleFields.get("Recipe"));
-        valuesForControlRec.put("ExemplarSampleType", "DNA Library");
-        valuesForControlRec.put("Species", sampleFields.get("Species"));
-        valuesForControlRec.put("RequestId", sampleFields.get("RequestId"));
-        valuesForControlRec.put("IsControl", true);
-        DataRecord controlSample = dataRecordManager.addDataRecord("Sample", user);
-        controlSample.setFields(valuesForControlRec, user);
+    private DataRecord createControlSampleRecord(DataRecord sample, String newSampleId, String newOtherSampleId) {
+        DataRecord controlSample = null;
+        try {
+            Map<String, Object> sampleFields = sample.getFields(user);
+            Map<String, Object> valuesForControlRec = new HashMap<>();
+            valuesForControlRec.put("SampleId", newSampleId);
+            valuesForControlRec.put("OtherSampleId", newOtherSampleId);
+            valuesForControlRec.put("AltId", newSampleId);
+            valuesForControlRec.put("Recipe", sampleFields.get("Recipe"));
+            valuesForControlRec.put("ExemplarSampleType", "DNA Library");
+            valuesForControlRec.put("Species", sampleFields.get("Species"));
+            valuesForControlRec.put("RequestId", sampleFields.get("RequestId"));
+            valuesForControlRec.put("IsControl", true);
+            controlSample = dataRecordManager.addDataRecord("Sample", user);
+            controlSample.setFields(valuesForControlRec, user);
+        } catch (NotFound notFound) {
+            notFound.printStackTrace();
+        } catch (IoError ioError) {
+            ioError.printStackTrace();
+        } catch (ServerException e) {
+            e.printStackTrace();
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        } catch (InvalidValue invalidValue) {
+            invalidValue.printStackTrace();
+        } catch (AlreadyExists alreadyExists) {
+            alreadyExists.printStackTrace();
+        }
         return controlSample;
     }
 

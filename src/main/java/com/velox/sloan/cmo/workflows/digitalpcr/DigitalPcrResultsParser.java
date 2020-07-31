@@ -98,11 +98,6 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
-        } catch (NotFound e) {
-            String errMsg = String.format("NotFound Exception Error while parsing DDPCR results file:\n%s", ExceptionUtils.getStackTrace(e));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
         }
         return new PluginResult(true);
     }
@@ -144,11 +139,17 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws IOException
      */
-    private List<String> readDataFromFiles(List<String> fileNames) throws ServerException, IOException {
+    private List<String> readDataFromFiles(List<String> fileNames) {
         List<String> combinedFileData = new ArrayList<>();
         for (String file : fileNames) {
-            List<String> data = igoUtils.readDataFromCsvFile(clientCallback.readBytes(file));
-            combinedFileData.addAll(data);
+            try {
+                List<String> data = igoUtils.readDataFromCsvFile(clientCallback.readBytes(file));
+                combinedFileData.addAll(data);
+            } catch (ServerException e) {
+                logError(String.format("ServerException -> Error while reading data from uploaded file '%s':\n%s", file, ExceptionUtils.getStackTrace(e)));
+            } catch (IOException e) {
+                logError(String.format("IOException -> Error while reading data from uploaded file '%s':\n%s", file, ExceptionUtils.getStackTrace(e)));
+            }
         }
         return combinedFileData;
     }
@@ -242,23 +243,29 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws RemoteException
      */
-    private Double getTotalInputForSample(String sampleName, String assayName, List<DataRecord> protocolRecords) throws NotFound, RemoteException {
+    private Double getTotalInputForSample(String sampleName, String assayName, List<DataRecord> protocolRecords) {
         for (DataRecord record : protocolRecords) {
-            Object sampleNameOnProtocol = record.getValue("OtherSampleId", user);
-            Object assayOnProtocol = record.getValue("Ch1Target", user);
-            Object igoSampleIdOnProtocol = record.getStringVal("SampleId", user);
-            if (sampleNameOnProtocol != null && assayOnProtocol != null && sampleName.equalsIgnoreCase(sampleNameOnProtocol.toString())
-                    && assayName.equalsIgnoreCase(assayOnProtocol.toString())) {
-                Object totalInput = record.getValue("Aliq1TargetMass", user);
-                if (totalInput != null) {
-                    return (Double) totalInput;
+            try {
+                Object sampleNameOnProtocol = record.getValue("OtherSampleId", user);
+                Object assayOnProtocol = record.getValue("Ch1Target", user);
+                Object igoSampleIdOnProtocol = record.getStringVal("SampleId", user);
+                if (sampleNameOnProtocol != null && assayOnProtocol != null && sampleName.equalsIgnoreCase(sampleNameOnProtocol.toString())
+                        && assayName.equalsIgnoreCase(assayOnProtocol.toString())) {
+                    Object totalInput = record.getValue("Aliq1TargetMass", user);
+                    if (totalInput != null) {
+                        return (Double) totalInput;
+                    }
+                } else if (sampleNameOnProtocol != null && assayOnProtocol != null && sampleName.equalsIgnoreCase(igoSampleIdOnProtocol.toString())
+                        && assayName.equalsIgnoreCase(assayOnProtocol.toString())) {
+                    Object totalInput = record.getValue("Aliq1TargetMass", user);
+                    if (totalInput != null) {
+                        return (Double) totalInput;
+                    }
                 }
-            } else if (sampleNameOnProtocol != null && assayOnProtocol != null && sampleName.equalsIgnoreCase(igoSampleIdOnProtocol.toString())
-                    && assayName.equalsIgnoreCase(assayOnProtocol.toString())) {
-                Object totalInput = record.getValue("Aliq1TargetMass", user);
-                if (totalInput != null) {
-                    return (Double) totalInput;
-                }
+            } catch (RemoteException e) {
+                logError(String.format("RemoteException -> Error while reading data from InputDataType with OtherSampleId '%s':\n%s", sampleName, ExceptionUtils.getStackTrace(e)));
+            } catch (NotFound notFound) {
+                logError(String.format("NotFound Exception -> Error while reading data from InputDataType with OtherSampleId '%s':\n%s", sampleName, ExceptionUtils.getStackTrace(notFound)));
             }
         }
         return 0.0;
@@ -306,7 +313,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws RemoteException
      */
-    private List<Map<String, Object>> runDataAnalysisForAssays(Map<String, List<Map<String, Object>>> groupedData, List<DataRecord> protocolRecords) throws NotFound, RemoteException {
+    private List<Map<String, Object>> runDataAnalysisForAssays(Map<String, List<Map<String, Object>>> groupedData, List<DataRecord> protocolRecords){
         logInfo("Analyzing ddPCR Results.");
         List<Map<String, Object>> analyzedDataValues = new ArrayList<>();
         for (String key : groupedData.keySet()) {
@@ -350,20 +357,28 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws IoError
      */
-    private void addResultsAsChildRecords(List<Map<String, Object>> analyzedDataValues, List<DataRecord> attachedSamples) throws NotFound, RemoteException, ServerException{
+    private void addResultsAsChildRecords(List<Map<String, Object>> analyzedDataValues, List<DataRecord> attachedSamples) throws RemoteException {
         List<DataRecord> recordsToAttachToTask = new ArrayList<>();
         logInfo(Integer.toString(analyzedDataValues.size()));
         for (Map<String, Object> data : analyzedDataValues) {
             logInfo(data.toString());
             String analyzedDataSampleId = data.get("OtherSampleId").toString();
             for (DataRecord sample : attachedSamples) {
-                Object sampleId = sample.getValue("SampleId", user);
-                Object otherSampleId = sample.getValue("OtherSampleId", user);
-                if (analyzedDataSampleId.equals(otherSampleId) && data.get("SampleId") == null) {
-                    data.put("SampleId", sampleId);
-                    logInfo(data.toString());
-                    DataRecord recordToAttach = sample.addChild(activeTask.getInputDataTypeName(), data, user);
-                    recordsToAttachToTask.add(recordToAttach);
+                try {
+                    Object sampleId = sample.getValue("SampleId", user);
+                    Object otherSampleId = sample.getValue("OtherSampleId", user);
+                    if (analyzedDataSampleId.equals(otherSampleId) && data.get("SampleId") == null) {
+                        data.put("SampleId", sampleId);
+                        logInfo(data.toString());
+                        DataRecord recordToAttach = sample.addChild(activeTask.getInputDataTypeName(), data, user);
+                        recordsToAttachToTask.add(recordToAttach);
+                    }
+                } catch (RemoteException e) {
+                    logError(String.format("RemoteException -> Error while setting child records on sample with recordid  '%d':\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+                } catch (NotFound notFound) {
+                    logError(String.format("NotFound Exception -> Error while setting child records on sample with recordid  '%d':\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
+                } catch (ServerException e) {
+                    logError(String.format("ServerException -> Error while setting child records on sample with recordid  '%d':\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
                 }
             }
         }

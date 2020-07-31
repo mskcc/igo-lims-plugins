@@ -6,6 +6,8 @@ import org.apache.poi.ss.usermodel.*;
 
 import java.io.*;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * This class will contain all the common methods which are often used repeatedly across different plugins.
@@ -14,6 +16,9 @@ import java.util.*;
  */
 public class IgoLimsPluginUtils {
 
+
+    private final Pattern SPECIAL_CHARACTER_REGEX = Pattern.compile("^[a-zA-Z0-9_-]*$");
+    private final Pattern SPECIAL_CHARACTER_REGEX_FOR_POOLS = Pattern.compile("^[a-zA-Z0-9,_-]*$");
     /**
      * Method to check if a file has .csv extension
      *
@@ -288,7 +293,7 @@ public class IgoLimsPluginUtils {
         int rowValue = wellPosition.charAt(0);
         int colValue = Integer.parseInt(wellPosition.substring(1));
         if (isOddValue(rowValue) && isOddValue(colValue)) {
-           return 1;
+            return 1;
         }
         if (!isOddValue(rowValue) && isOddValue(colValue)) {
             return 2;
@@ -300,5 +305,21 @@ public class IgoLimsPluginUtils {
             return 4;
         }
         return -1;
+    }
+
+    /**
+     * Method to check string for special characteres except comma and underscore.
+     *
+     * @param value
+     * @return
+     */
+    public boolean hasValidCharacters(String value, Boolean isPooledSample) {
+        Matcher matcher;
+        if (isPooledSample) {
+            matcher = SPECIAL_CHARACTER_REGEX_FOR_POOLS.matcher(value);
+        } else {
+            matcher = SPECIAL_CHARACTER_REGEX.matcher(value);
+        }
+        return matcher.matches();
     }
 }
