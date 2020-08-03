@@ -12,6 +12,7 @@ import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sapioutils.shared.utilities.CsvHelper;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.Tags;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 
 import java.io.IOException;
@@ -55,9 +56,10 @@ public class GenerateStrSampleSheet extends DefaultGenericPlugin {
         try {
             return activeTask.getTask().getTaskOptions().containsKey(STR_SAMPLESHEET_PUGIN_TAG) &&
                     activeTask.getStatus() == ActiveTask.COMPLETE;
-        }catch (Throwable e){
-            return false;
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException -> Error while setting Task Toolbar button for plugin GenerateStrSampleSheet.\n%s", ExceptionUtils.getStackTrace(e)));
         }
+        return false;
     }
 
     @Override
@@ -73,9 +75,15 @@ public class GenerateStrSampleSheet extends DefaultGenericPlugin {
             String plateId = activeTask.getAttachedDataRecords("Sample", user).get(0).getStringVal("RelatedRecord23", user);
             List<List<String>> sampleSheetData = getStrSampleSheetData(attachedProtocolRecords, plateId);
             generateStrSampleSheet(sampleSheetData, plateId);
-        } catch (Exception e) {
-            clientCallback.displayError(String.format("Error occured while running STR Sample sheet generation plugin:\n%s", Arrays.toString(e.getStackTrace())));
-            logError(String.format("Error occured while running STR Sample sheet generation plugin:\n%s", Arrays.toString(e.getStackTrace())));
+        } catch (IOException e) {
+            String errMsg = String.format("IOException -> Error occured while running STR Sample sheet generation plugin:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (NotFound notFound) {
+            String errMsg = String.format("NotFound Exception -> Error occured while running STR Sample sheet generation plugin:\n%s", ExceptionUtils.getStackTrace(notFound));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
             return new PluginResult(false);
         }
         return new PluginResult(true);
@@ -86,8 +94,15 @@ public class GenerateStrSampleSheet extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws ServerException
      */
-    private void updateFieldNames() throws RemoteException, ServerException {
-        List<DataFieldDefinition> dataFieldDefinitions = dataMgmtServer.getDataFieldDefManager(user).getDataFieldDefinitions(activeTask.getInputDataTypeName()).getDataFieldDefinitionList();
+    private void updateFieldNames() throws ServerException{
+        List<DataFieldDefinition> dataFieldDefinitions = null;
+        try {
+            dataFieldDefinitions = dataMgmtServer.getDataFieldDefManager(user).getDataFieldDefinitions(activeTask.getInputDataTypeName()).getDataFieldDefinitionList();
+        } catch (RemoteException e) {
+            String errMsg = String.format("RemoteException -> Error occured while getting DataFieldDefinitions:\n%s", ExceptionUtils.getStackTrace(e));
+            logError(errMsg);
+        }
+        assert dataFieldDefinitions != null;
         for (DataFieldDefinition dfd : dataFieldDefinitions) {
             String tag = dfd.tag;
             if (tag.matches(Tags.STR_SAMPLESHEET_WELL_ID)) {
@@ -109,23 +124,28 @@ public class GenerateStrSampleSheet extends DefaultGenericPlugin {
                 strSizeStandardFieldName = dfd.dataFieldName;
             }
         }
-        if (StringUtils.isBlank(strWellIdFieldName)){
-            clientCallback.displayError(String.format("Missing tag '<!-- STR SAMPLESHEET WELL ID-->' %s", activeTask.getInputDataTypeName()));
-        }
-        if (StringUtils.isBlank(strApplicationTypeFieldName)){
-            clientCallback.displayError(String.format("Missing tag '<!-- STR SAMPLESHEET APPLICATION TYPE-->' on %s",activeTask.getInputDataTypeName()));
-        }
-        if (StringUtils.isBlank(strDyeSetFieldName)){
-            clientCallback.displayError(String.format("Missing tag '<!-- STR SAMPLESHEET DYE SET-->' on %s", activeTask.getInputDataTypeName()));
-        }
-        if (StringUtils.isBlank(strRunModuleFieldName)){
-            clientCallback.displayError(String.format("Missing tag '<!-- STR SAMPLESHEET RUN MODULE-->' on %s", activeTask.getInputDataTypeName()));
-        }
-        if (StringUtils.isBlank(strSampleTypeFieldName)){
-            clientCallback.displayError(String.format("Missing tag '<!-- STR SAMPLESHEET SAMPLE TYPE-->' on %s", activeTask.getInputDataTypeName()));
-        }
-        if (StringUtils.isBlank(strSizeStandardFieldName)){
-            clientCallback.displayError(String.format("Missing tag '<!-- STR SAMPLESHEET SIZE STANDARD-->' on %s", activeTask.getInputDataTypeName()));
+        try {
+            if (StringUtils.isBlank(strWellIdFieldName)) {
+                clientCallback.displayError(String.format("Missing tag '<!-- STR SAMPLESHEET WELL ID-->' %s", activeTask.getInputDataTypeName()));
+            }
+            if (StringUtils.isBlank(strApplicationTypeFieldName)) {
+                clientCallback.displayError(String.format("Missing tag '<!-- STR SAMPLESHEET APPLICATION TYPE-->' on %s", activeTask.getInputDataTypeName()));
+            }
+            if (StringUtils.isBlank(strDyeSetFieldName)) {
+                clientCallback.displayError(String.format("Missing tag '<!-- STR SAMPLESHEET DYE SET-->' on %s", activeTask.getInputDataTypeName()));
+            }
+            if (StringUtils.isBlank(strRunModuleFieldName)) {
+                clientCallback.displayError(String.format("Missing tag '<!-- STR SAMPLESHEET RUN MODULE-->' on %s", activeTask.getInputDataTypeName()));
+            }
+            if (StringUtils.isBlank(strSampleTypeFieldName)) {
+                clientCallback.displayError(String.format("Missing tag '<!-- STR SAMPLESHEET SAMPLE TYPE-->' on %s", activeTask.getInputDataTypeName()));
+            }
+            if (StringUtils.isBlank(strSizeStandardFieldName)) {
+                clientCallback.displayError(String.format("Missing tag '<!-- STR SAMPLESHEET SIZE STANDARD-->' on %s", activeTask.getInputDataTypeName()));
+            }
+        }catch (RemoteException e) {
+            String errMsg = String.format("RemoteException -> Error occured while getting Input DataType name:\n%s", ExceptionUtils.getStackTrace(e));
+            logError(errMsg);
         }
     }
 
@@ -138,7 +158,7 @@ public class GenerateStrSampleSheet extends DefaultGenericPlugin {
      * @throws IOException
      * @throws NotFound
      */
-    private List<List<String>> getStrSampleSheetData(List<DataRecord> protocolRecords, String plateId) throws IOException, NotFound {
+    private List<List<String>> getStrSampleSheetData(List<DataRecord> protocolRecords, String plateId) {
         List <List<String>> csvData = new ArrayList<>();
         List<String> headerRow1 = Arrays.asList("#Version", "1");
         List<String> headerRow2 = Arrays.asList("#Plate Name", "#Plate Application Type", "#Barcode",	"#Owner", "#SangerAnalysisSoftware");
@@ -150,14 +170,20 @@ public class GenerateStrSampleSheet extends DefaultGenericPlugin {
         csvData.add(headerRow4);
         for(DataRecord rec : protocolRecords){
             List<String> row = new ArrayList<>();
-            row.add(rec.getStringVal(strWellIdFieldName, user));
-            row.add(rec.getStringVal("OtherSampleId", user));
-            row.add(rec.getStringVal(strApplicationTypeFieldName, user));
-            row.add(rec.getStringVal(strSampleTypeFieldName, user));
-            row.add(rec.getStringVal(strSizeStandardFieldName, user));
-            row.add(rec.getStringVal(strDyeSetFieldName, user));
-            row.add(rec.getStringVal(strRunModuleFieldName, user));
-            csvData.add(row);
+            try {
+                row.add(rec.getStringVal(strWellIdFieldName, user));
+                row.add(rec.getStringVal("OtherSampleId", user));
+                row.add(rec.getStringVal(strApplicationTypeFieldName, user));
+                row.add(rec.getStringVal(strSampleTypeFieldName, user));
+                row.add(rec.getStringVal(strSizeStandardFieldName, user));
+                row.add(rec.getStringVal(strDyeSetFieldName, user));
+                row.add(rec.getStringVal(strRunModuleFieldName, user));
+                csvData.add(row);
+            } catch (RemoteException e) {
+                logError(String.format("RemoteException -> Error occured while getting STR Samplesheet data for '%s' with recordid %d:\n%s", rec.getDataTypeName(), rec.getRecordId(), ExceptionUtils.getStackTrace(e)));
+            } catch (NotFound notFound) {
+                logError(String.format("NotFound Exception -> Error occured while getting STR Samplesheet data for '%s' with recordid %d:\n%s", rec.getDataTypeName(), rec.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
+            }
         }
         return csvData;
     }
@@ -169,9 +195,15 @@ public class GenerateStrSampleSheet extends DefaultGenericPlugin {
      * @throws IOException
      * @throws ServerException
      */
-    private void generateStrSampleSheet(List<List<String>>csvData, String plateId) throws IOException, ServerException {
+    private void generateStrSampleSheet(List<List<String>>csvData, String plateId) {
         String fileName = StringUtils.join(plateId,".csv");
-        byte[] sampleSheetBytes = CsvHelper.writeCSV(csvData, null);
-        clientCallback.writeBytes(sampleSheetBytes, fileName);
+        try {
+            byte[] sampleSheetBytes = CsvHelper.writeCSV(csvData, null);
+            clientCallback.writeBytes(sampleSheetBytes, fileName);
+        } catch (ServerException e) {
+            logError(String.format("ServerException -> Error occured while generating STR Samplesheet:\n%s", ExceptionUtils.getStackTrace(e)));
+        } catch (IOException e) {
+            logError(String.format("IOException -> Error occured while generating STR Samplesheet:\n%s", ExceptionUtils.getStackTrace(e)));
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.velox.sloan.cmo.workflows.kapalibrary;
 
 import com.velox.api.datarecord.DataRecord;
+import com.velox.api.datarecord.InvalidValue;
 import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
@@ -10,6 +11,7 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sapioutils.shared.managers.TaskUtilManager;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.ArrayList;
@@ -57,9 +59,20 @@ public class SampleControlMaker extends DefaultGenericPlugin {
         try {
             List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
             addControls(attachedSampleRecords);
-        } catch (Exception e) {
-            clientCallback.displayError(String.format("Error while creating new Controls. CAUSE:\n%s", e));
-            logError(String.format("Error while creating new Controls. CAUSE:\n%s", e));
+        }catch (NotFound e) {
+            String errMsg = String.format("NotFound Exception while creating new Controls:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception while creating new Controls:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IoError e) {
+            String errMsg = String.format("IoError Exception while creating new Controls:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
             return new PluginResult(false);
         }
         return new PluginResult(true);

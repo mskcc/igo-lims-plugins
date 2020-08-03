@@ -393,12 +393,18 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws RemoteException
      */
-    private void saveQpcrData(List<Map<String, Object>> parsedData) throws ServerException, RemoteException {
-        if (parsedData.size() == 0) {
-            clientCallback.displayError("Cannot parse any QPCR data from the file. Plase make sure that the data is in correct format.");
-        } else {
-            List<DataRecord> qpcrData = dataRecordManager.addDataRecords("Covid19TestProtocol5", parsedData, user);
-            activeTask.addAttachedDataRecords(qpcrData);
+    private void saveQpcrData(List<Map<String, Object>> parsedData) {
+        try {
+            if (parsedData.size() == 0) {
+                clientCallback.displayError("Cannot parse any QPCR data from the file. Plase make sure that the data is in correct format.");
+            } else {
+                List<DataRecord> qpcrData = dataRecordManager.addDataRecords("Covid19TestProtocol5", parsedData, user);
+                activeTask.addAttachedDataRecords(qpcrData);
+            }
+        } catch (ServerException e) {
+            logError(String.format("ServerException -> Error while saving QPCR data for Covid 19 samples:\n%s", ExceptionUtils.getStackTrace(e)));
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException -> Error while saving QPCR data for Covid 19 samples:\n%s", ExceptionUtils.getStackTrace(e)));
         }
     }
 

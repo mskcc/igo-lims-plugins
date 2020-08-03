@@ -62,9 +62,25 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
             Double maxPlateVolume = autohelper.getMaxVolumeLimit(plateSize);
             setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords, minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType);
             checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
-        } catch (Exception e) {
-            clientCallback.displayError(String.format("Error while updating Index assignment values after manual Index assignment to samples:\n%s", ExceptionUtils.getStackTrace(e)));
-            logError(ExceptionUtils.getStackTrace(e));
+        } catch (NotFound e) {
+            String errMsg = String.format("NotFound Exception while manual index assignment:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception while manual index assignment:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (InvalidValue e) {
+            String errMsg = String.format("InvalidValue Exception while manual index assignment:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IoError e) {
+            String errMsg = String.format("IoError Exception while manual index assignment:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
             return new PluginResult(false);
         }
         return new PluginResult(true);

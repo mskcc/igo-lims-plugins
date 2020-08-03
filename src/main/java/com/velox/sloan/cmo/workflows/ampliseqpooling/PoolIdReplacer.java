@@ -8,6 +8,7 @@ import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapio.commons.exemplar.plugin.PluginOrder;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
+import com.velox.sloan.cmo.recmodels.SampleModel;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
@@ -65,28 +66,45 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws IoError
      */
-    private List<DataRecord> getExistingSampleAliquots(DataRecord sample) throws NotFound, RemoteException, IoError {
-        String sampleId = sample.getStringVal("SampleId", user);
-        if (sampleId.split("_").length > 2) {
-            String[] splitSampleId = sampleId.split("_");
-            String baseSampleId = splitSampleId[0] + splitSampleId[1];
-            return dataRecordManager.queryDataRecords("Sample", "SampleId = '" + baseSampleId + "%'", user);
+    private List<DataRecord> getExistingSampleAliquots(DataRecord sample) {
+        String sampleId = "";
+        List<DataRecord> existingSampleAliquots = new ArrayList<>();
+        try {
+            sampleId = sample.getStringVal("SampleId", user);
+            if (sampleId.split("_").length > 2) {
+                String[] splitSampleId = sampleId.split("_");
+                String baseSampleId = splitSampleId[0] + splitSampleId[1];
+                return dataRecordManager.queryDataRecords("Sample", "SampleId = '" + baseSampleId + "%'", user);
+            }
+            existingSampleAliquots = dataRecordManager.queryDataRecords("Sample", "SampleId = '" + sampleId + "%'", user);
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException -> Error while getting Existing Aliquots for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+        } catch (IoError ioError) {
+            logError(String.format("IoError Exception -> Error while getting Existing Aliquots for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(ioError)));
+        } catch (NotFound notFound) {
+            logError(String.format("NotFound Exception -> Error while getting Existing Aliquots for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
         }
-        return dataRecordManager.queryDataRecords("Sample", "SampleId = '" + sampleId + "%'", user);
+        return existingSampleAliquots;
     }
 
     /**
-     * Gets sample Ids for the list of given samples
+     * Gets ascending order sorted sample Ids for the list of given samples
      *
      * @param samples
      * @return list of SampleId strings
      * @throws NotFound
      * @throws RemoteException
      */
-    private List<String> getSampleIds(List<DataRecord> samples) throws NotFound, RemoteException {
+    private List<String> getSortedSampleIds(List<DataRecord> samples){
         List<String> sampleIds = new ArrayList<>();
         for (DataRecord sample : samples) {
-            sampleIds.add(sample.getStringVal("SampleId", user));
+            try {
+                sampleIds.add(sample.getStringVal("SampleId", user));
+            } catch (NotFound notFound) {
+                logError(String.format("NotFound Exception -> Error while Reading SampleId for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
+            } catch (RemoteException e) {
+                logError(String.format("RemoteException -> Error while Reading SampleId for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+            }
         }
         return sampleIds.stream().sorted(new AlphaNumericComparator()).collect(Collectors.toList());
     }
@@ -102,19 +120,41 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private String getNextSampleId(DataRecord sample) throws IoError, RemoteException, NotFound {
-        List<DataRecord> parentSamples = sample.getParentsOfType("Sample", user);
+    private String getNextSampleId(DataRecord sample) {
+        List<DataRecord> parentSamples = new ArrayList<>();
+        try {
+            parentSamples = sample.getParentsOfType("Sample", user);
+        } catch (IoError ioError) {
+            logError(String.format("IoError Exception -> Error while getting parent samples for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(ioError)));
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException Exception -> Error while getting parent samples for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+        }
         List<DataRecord> existingSampleAliquots = getExistingSampleAliquots(parentSamples.get(0));
-        List<String> existingSampleIds = getSampleIds(existingSampleAliquots);
-        String nextSampleId = getSampleIds(parentSamples).get(parentSamples.size() - 1) + "_1";
+        List<String> existingSampleIds = getSortedSampleIds(existingSampleAliquots);
+        String nextSampleId = getSortedSampleIds(parentSamples).get(parentSamples.size() - 1) + "_1";
         while (existingSampleIds.contains(nextSampleId)) {
             nextSampleId += "_1";
         }
         return nextSampleId;
     }
 
-    private String getSampleTypeToAssign(DataRecord sample) throws IoError, RemoteException, NotFound {
-        return sample.getParentsOfType("Sample", user).get(0).getStringVal("ExemplarSampleType", user);
+    /**
+     * Method to get ExemplarSampleType from parent samples.
+     * @param sample
+     * @return
+     */
+    private String getSampleTypeToAssign(DataRecord sample) {
+        String sampleType = "";
+        try {
+            sample.getParentsOfType(SampleModel.DATA_TYPE_NAME, user).get(0).getStringVal(SampleModel.EXEMPLAR_SAMPLE_TYPE, user);
+        } catch (NotFound notFound) {
+            logError(String.format("NotFound Exception -> Error while getting ExemplarSampleType value for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException Exception -> Error while getting ExemplarSampleType value for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+        } catch (IoError ioError) {
+            logError(String.format("IoError Exception -> Error while getting ExemplarSampleType value for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(ioError)));
+        }
+        return sampleType;
     }
 
     /**
@@ -128,20 +168,30 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
      * @throws IoError
      * @throws InvalidValue
      */
-    private void replacePoolIdWithSampleId(List<DataRecord> samples) throws NotFound, RemoteException, IoError, ServerException {
+    private void replacePoolIdWithSampleId(List<DataRecord> samples){
         for (DataRecord sample : samples) {
-            if (sample.getStringVal("SampleId", user).contains("Pool-")) {
-                Map<String, Object> newValues = new HashMap<>();
-                newValues.put("SampleId", getNextSampleId(sample));
-                newValues.put("ExemplarSampleType", getSampleTypeToAssign(sample));
-                sample.setFields(newValues, user);
-                if (sample.getChildrenOfType("SeqRequirementPooled", user).length > 0) {
-                    List<DataRecord> seqRequirementPooledChild = Arrays.asList(sample.getChildrenOfType("SeqRequirementPooled", user));
-                    logInfo("Found SeqRequirementPooled for Sample " + seqRequirementPooledChild.get(0).getStringVal("SampleId", user) +
-                            ". It is an ampliseq DNA pool, therefore associated  SeqRequirementPooled records will be deleted. Because the PoolId is overwritten, the " +
-                            "associated SeqRequirementPooled are not relevant.");
-                    dataRecordManager.deleteDataRecords(seqRequirementPooledChild, null, false, user);
+            try {
+                if (sample.getStringVal("SampleId", user).contains("Pool-")) {
+                    Map<String, Object> newValues = new HashMap<>();
+                    newValues.put("SampleId", getNextSampleId(sample));
+                    newValues.put("ExemplarSampleType", getSampleTypeToAssign(sample));
+                    sample.setFields(newValues, user);
+                    if (sample.getChildrenOfType("SeqRequirementPooled", user).length > 0) {
+                        List<DataRecord> seqRequirementPooledChild = Arrays.asList(sample.getChildrenOfType("SeqRequirementPooled", user));
+                        logInfo("Found SeqRequirementPooled for Sample " + seqRequirementPooledChild.get(0).getStringVal("SampleId", user) +
+                                ". It is an ampliseq DNA pool, therefore associated  SeqRequirementPooled records will be deleted. Because the PoolId is overwritten, the " +
+                                "associated SeqRequirementPooled are not relevant.");
+                        dataRecordManager.deleteDataRecords(seqRequirementPooledChild, null, false, user);
+                    }
                 }
+            } catch (RemoteException e) {
+                logError(String.format("RemoteException Exception -> Error while replacing Pool SamplId value for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+            } catch (IoError ioError) {
+                logError(String.format("IoError Exception -> Error while replacing Pool SamplId value for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(ioError)));
+            } catch (NotFound notFound) {
+                logError(String.format("NotFound Exception -> Error while replacing Pool SamplId value for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
+            } catch (ServerException e) {
+                logError(String.format("ServerException Exception -> Error while replacing Pool SamplId value for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
             }
         }
     }

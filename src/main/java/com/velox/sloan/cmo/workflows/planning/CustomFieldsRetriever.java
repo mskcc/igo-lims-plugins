@@ -10,6 +10,7 @@ import com.velox.sapio.commons.exemplar.plugin.PluginOrder;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.recmodels.QCDatumModel;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -51,9 +52,25 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
             }
             setPlanningStepValues(attachedSamples, attachedPlanningProtocols);
 
-        } catch (Exception e) {
-            clientCallback.displayError(String.format("Error while retrieving custom fields for samples:\n %s", e));
-            logError(String.format("Error while retrieving custom fields for samples:\n%s"), e);
+        } catch (NotFound e) {
+            String errMsg = String.format("NotFound Exception while retrieving custom fields for samples:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception while retrieving custom fields for samples:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        }catch (IoError e) {
+            String errMsg = String.format("IoError Exception while retrieving custom fields for samples:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (InvalidValue invalidValue) {
+            String errMsg = String.format("InvalidValue Exception while retrieving custom fields for samples:\n%s", ExceptionUtils.getStackTrace(invalidValue));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
             return new PluginResult(false);
         }
         return new PluginResult(true);

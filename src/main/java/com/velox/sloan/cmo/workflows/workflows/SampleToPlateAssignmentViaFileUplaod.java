@@ -12,6 +12,7 @@ import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AliquotingTags;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -24,7 +25,6 @@ import java.util.*;
  * @author sharmaa1
  */
 public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
-    private enum acceptableHeaderValuesEnum {SAMPLE_ID, SAMPLE_NAME, SOURCE_MASS_TO_USE, SOURCE_VOLUME_TO_USE, TARGET_MASS, TARGET_VOLUME, TARGET_CONCENTRATION, DESTINATION_PLATE_ID, DESTINATION_WELL}
     private final List<String> acceptableHeaderList = Arrays.asList("SAMPLE_ID", "SAMPLE_NAME", "SOURCE_MASS_TO_USE", "SOURCE_VOLUME_TO_USE", "TARGET_MASS", "TARGET_VOLUME", "TARGET_CONCENTRATION", "DESTINATION_PLATE_ID", "DESTINATION_WELL");
     private final List<String> requiredHeaderValues = Arrays.asList("SAMPLE_ID", "SAMPLE_NAME", "DESTINATION_PLATE_ID", "DESTINATION_WELL");
     private String destinationPlateIdFieldName = "";
@@ -36,7 +36,6 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
     private String targetConcFieldName = "";
     private Map<String, String> fileHeaderToDataTypeFieldNameValueMap = new HashMap<>();
     private IgoLimsPluginUtils util = new IgoLimsPluginUtils();
-
     public SampleToPlateAssignmentViaFileUplaod() {
         setTaskEntry(true);
         setOrder(PluginOrder.LAST.getOrder());
@@ -117,8 +116,13 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws RemoteException
      */
-    private void setRelevantDataTypeFieldNames() throws ServerException, RemoteException {
-        List<DataFieldDefinition> dataFieldDefinitions = dataMgmtServer.getDataFieldDefManager(user).getDataFieldDefinitions(activeTask.getInputDataTypeName()).getDataFieldDefinitionList();
+    private void setRelevantDataTypeFieldNames() throws ServerException {
+        List<DataFieldDefinition> dataFieldDefinitions = null;
+        try {
+            dataFieldDefinitions = dataMgmtServer.getDataFieldDefManager(user).getDataFieldDefinitions(activeTask.getInputDataTypeName()).getDataFieldDefinitionList();
+        } catch (RemoteException e) {
+            logError(String.format("ServerException -> Error while getting DataFieldDefinitions:\n%s", ExceptionUtils.getStackTrace(e)));
+        }
         for (DataFieldDefinition dfd : dataFieldDefinitions) {
             String tag = dfd.tag;
             if (tag.matches(AliquotingTags.ALIQUOT_DESTINATION_PLATE_ID)) {
@@ -195,7 +199,7 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
      * @return Object
      * @throws ServerException
      */
-    private Object getFieldValueFromRowValues(String row, Map<String, Integer> headerValueMap, String headerName) throws ServerException {
+    private Object getFieldValueFromRowValues(String row, Map<String, Integer> headerValueMap, String headerName) {
         List<String> values = Arrays.asList(row.split(","));
         Integer headerPosition = headerValueMap.get(headerName);
         return values.get(headerPosition);
@@ -214,7 +218,7 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
      * @throws IoError
      * @throws NotFound
      */
-    private Map<String, Object> getUpdatedFieldValues(String row, DataRecord rec, Map<String, Integer> headerValueMap) throws ServerException, RemoteException, InvalidValue, IoError, NotFound {
+    private Map<String, Object> getUpdatedFieldValues(String row, DataRecord rec, Map<String, Integer> headerValueMap) throws ServerException {
         List<String> rowValues = Arrays.asList(row.split(",|\n"));
         List<String> fileHeaders = new ArrayList<>(headerValueMap.keySet());
         Integer headerSize = headerValueMap.size();
@@ -222,7 +226,7 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
         for (String entry : fileHeaders) {
             logInfo(Boolean.toString(acceptableHeaderList.contains(entry) && !StringUtils.isBlank(fileHeaderToDataTypeFieldNameValueMap.get(entry)) && isValidColumnNameForHeader(entry)));
             if (acceptableHeaderList.contains(entry) && !StringUtils.isBlank(fileHeaderToDataTypeFieldNameValueMap.get(entry)) && isValidColumnNameForHeader(entry)) {
-                if (headerValueMap.get(entry) < rowValues.size()){
+                if (headerValueMap.get(entry) < rowValues.size()) {
                     Object value = rowValues.get(headerValueMap.get(entry));
                     logInfo(String.valueOf(value));
                     updatedValues.put(fileHeaderToDataTypeFieldNameValueMap.get(entry), value);
@@ -244,16 +248,28 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
      * @throws IoError
      * @throws InvalidValue
      */
-    private void getUpdatedFieldValueList(List<String> fileData, Map<String, Integer> headerValueMap, List<DataRecord> protocolRecords) throws NotFound, RemoteException, ServerException, IoError, InvalidValue {
+    private void getUpdatedFieldValueList(List<String> fileData, Map<String, Integer> headerValueMap, List<DataRecord> protocolRecords) {
         for (int i = 1; i < fileData.size(); i++) {
             String row = fileData.get(i);
             Object sampleId = getFieldValueFromRowValues(row, headerValueMap, String.valueOf(acceptableHeaderValuesEnum.SAMPLE_ID));
             for (DataRecord proc : protocolRecords) {
-                if (String.valueOf(sampleId).equals(proc.getStringVal("SampleId", user))) {
-//                    clientCallback.displayInfo(sampleId + "     " + i);
-                    proc.setFields(getUpdatedFieldValues(row, proc, headerValueMap), user);
+                try {
+                    if (String.valueOf(sampleId).equals(proc.getStringVal("SampleId", user))) {
+                        proc.setFields(getUpdatedFieldValues(row, proc, headerValueMap), user);
+                    }
+                } catch (RemoteException e) {
+                    logError(String.format("RemoteException -> Error while updating plate assignment values:\n%s", ExceptionUtils.getStackTrace(e)));
+                } catch (NotFound notFound) {
+                    logError(String.format("NotFound Exception -> Error while updating plate assignment values:\n%s", ExceptionUtils.getStackTrace(notFound)));
+                } catch (ServerException e) {
+                    logError(String.format("ServerException -> Error while updating plate assignment values:\n%s", ExceptionUtils.getStackTrace(e)));
                 }
             }
         }
     }
+
+    /**
+     * Enumeration values for dataFields.
+     */
+    private enum acceptableHeaderValuesEnum {SAMPLE_ID, SAMPLE_NAME, SOURCE_MASS_TO_USE, SOURCE_VOLUME_TO_USE, TARGET_MASS, TARGET_VOLUME, TARGET_CONCENTRATION, DESTINATION_PLATE_ID, DESTINATION_WELL}
 }

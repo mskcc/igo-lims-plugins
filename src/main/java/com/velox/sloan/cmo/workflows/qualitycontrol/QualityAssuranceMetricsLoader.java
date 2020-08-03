@@ -12,6 +12,7 @@ import com.velox.api.workflow.ActiveTask;
 import com.velox.api.workflow.ActiveWorkflow;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -77,7 +78,10 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
                     return new PluginResult(false);
                 }
             }
-        }catch (Exception e){
+        }catch (RemoteException re){
+            String errMsg = String.format("RemoteException to generate popup table prompt to get 'QualityAssuranceMeasure' values from user:\n%s", ExceptionUtils.getStackTrace(re));
+            logError(errMsg);
+            clientCallback.displayError(errMsg);
             return new PluginResult(false);
         }
         return new PluginResult(true);
@@ -106,7 +110,7 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws RemoteException
      */
-    private List<Map<String, Object>> getQaDataFromUser(Integer numToAdd) throws ServerException, RemoteException {
+    private List<Map<String, Object>> getQaDataFromUser(Integer numToAdd){
         TemporaryDataType tempPlate = new TemporaryDataType("QualityAssuranceMeasure", "Quality Assurance Measurement");
         List<VeloxFieldDefinition<?>> fieldDefList = new ArrayList<VeloxFieldDefinition<?>>();
         VeloxPickListFieldDefinition validationType = VeloxFieldDefinition.pickListFieldBuilder().displayName("Quality Assurance Validation Type").dataFieldName("QAValidationType").visible(true).pickListName("Quality Assurance Measurement Type").build();
@@ -132,15 +136,22 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
         fieldDefList.add(isVerified);
         fieldDefList.add(comments);
         tempPlate.setVeloxFieldDefinitionList(fieldDefList);
-        setTempDataTypeLayout(tempPlate, fieldDefList);
-        List<Map<String, Object>> defaultValuesList = new ArrayList<>();
-        for (int i = 1; i <= numToAdd; i++) {
-            Map<String, Object> values = new HashMap<>();
-            values.put("QAValidationType", "");
-            defaultValuesList.add(values);
+        List<Map<String, Object>> userInputData = new ArrayList<>();
+        try {
+            setTempDataTypeLayout(tempPlate, fieldDefList);
+            List<Map<String, Object>> defaultValuesList = new ArrayList<>();
+            for (int i = 1; i <= numToAdd; i++) {
+                Map<String, Object> values = new HashMap<>();
+                values.put("QAValidationType", "");
+                defaultValuesList.add(values);
+            }
+            userInputData = clientCallback.showTableEntryDialog("Enter QA information",
+                    "Enter QA Information in the table below.", tempPlate, defaultValuesList);
+        }catch (ServerException se){
+            logError(String.format("ServerException while creating popup table prompt to get 'QualityAssuranceMeasure' values from user:\n%s", ExceptionUtils.getStackTrace(se)));
         }
-        return clientCallback.showTableEntryDialog("Enter QA information",
-                "Enter QA Information in the table below.", tempPlate, defaultValuesList);
+        return userInputData;
+
     }
 
     /**
@@ -149,7 +160,7 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
      * @param temporaryDataTypeFieldDefinitions
      * @throws ServerException
      */
-    private void setTempDataTypeLayout(TemporaryDataType temporaryDataType, List<VeloxFieldDefinition<?>> temporaryDataTypeFieldDefinitions) throws ServerException {
+    private void setTempDataTypeLayout(TemporaryDataType temporaryDataType, List<VeloxFieldDefinition<?>> temporaryDataTypeFieldDefinitions){
         String formName = "Quality Assurance form";
         // Create form
         DataFormComponent form = new DataFormComponent(formName, formName);

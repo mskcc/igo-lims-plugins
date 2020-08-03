@@ -58,11 +58,25 @@ public class ActiveAdapterPlateMarker extends DefaultGenericPlugin {
             if (isActiveAdapterCountCorrect(indexAssignmentConfigs)) {
                 dataRecordManager.commitChanges(String.format("Setting '%s' records with Adapter Plate ID '%s' as active", INDEX_ASSIGNMENT_CONFIG_DATATYPE, plateBarcode), false, user);
             }
-
-
-        } catch (Exception e) {
-            clientCallback.displayError(String.format("Error while activating Adapter Plate/Set for use:\n%s", ExceptionUtils.getStackTrace(e)));
-            logError(ExceptionUtils.getStackTrace(e));
+        } catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception Error while activating Adapter Plate/Set for use:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IoError ioError) {
+            String errMsg = String.format("IoError Exception Error while activating Adapter Plate/Set for use:\n%s", ExceptionUtils.getStackTrace(ioError));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (InvalidValue invalidValue) {
+            String errMsg = String.format("InvalidValue Exception Error while activating Adapter Plate/Set for use:\n%s", ExceptionUtils.getStackTrace(invalidValue));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (NotFound notFound) {
+            String errMsg = String.format("NotFound Exception Error while activating Adapter Plate/Set for use:\n%s", ExceptionUtils.getStackTrace(notFound));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
             return new PluginResult(false);
         }
         return new PluginResult(true);

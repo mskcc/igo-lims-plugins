@@ -39,25 +39,17 @@ public class UpdateSampleWellNumber extends DefaultGenericPlugin {
         return activeTask.getTask().getTaskOptions().containsKey(UPDATE_WELL_NUMBERS);
     }
 
-    public PluginResult run() throws ServerException, RemoteException {
+    public PluginResult run() throws ServerException{
+        String inputDataTypeName="";
         try {
-            List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user);
+            inputDataTypeName = activeTask.getInputDataTypeName();
+            List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords(inputDataTypeName, user);
             if (attachedProtocolRecords.size()==0){
-                clientCallback.displayError(String.format("Could not find any attached protocol records for %s", activeTask.getInputDataTypeName()));
+                clientCallback.displayError(String.format("Could not find any attached protocol records for %s", inputDataTypeName));
             }
             setSampleSerialOrderWellNumber(attachedProtocolRecords);
-        }catch (NotFound notFound) {
-            String errMsg = String.format("Not Found: Could not update 'SampleSerialOrder' field on %s:\n%s",activeTask.getInputDataTypeName(), ExceptionUtils.getStackTrace(notFound));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
-        } catch (IoError ioError) {
-            String errMsg = String.format("IO Error: Could not update 'SampleSerialOrder' field on %s:\n%s",activeTask.getInputDataTypeName(), ExceptionUtils.getStackTrace(ioError));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
-        } catch (InvalidValue invalidValue) {
-            String errMsg = String.format("Invalid Value: Could not update 'SampleSerialOrder' field on %s:\n%s",activeTask.getInputDataTypeName(), ExceptionUtils.getStackTrace(invalidValue));
+        }catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception -> Could not update 'SampleSerialOrder' field on %s:\n%s",inputDataTypeName, ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
@@ -107,7 +99,7 @@ public class UpdateSampleWellNumber extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws ServerException
      */
-    private Map<String, Integer> create384WellSerialOrder() throws RemoteException, ServerException, NotFound { Map<String, Integer> wellIdToNumberMap = new HashMap<>();
+    private Map<String, Integer> create384WellSerialOrder() { Map<String, Integer> wellIdToNumberMap = new HashMap<>();
        String wellIds = "ABCDEFGHIJKLMNOP";
        int maxColumnNumber = 24;
        int count=1;
@@ -132,19 +124,30 @@ public class UpdateSampleWellNumber extends DefaultGenericPlugin {
      * @throws IoError
      * @throws InvalidValue
      */
-   private void setSampleSerialOrderWellNumber(List<DataRecord> attachedProtocolRecords) throws RemoteException, ServerException, NotFound, IoError, InvalidValue {
+   private void setSampleSerialOrderWellNumber(List<DataRecord> attachedProtocolRecords){
         Map<String,Integer> wellIdToNumberOrder = create384WellSerialOrder();
-        String inputDataTypeName = activeTask.getInputDataTypeName();
-        String destinationWellFieldName = getDestinatinWellFieldName();
-        for (DataRecord rec: attachedProtocolRecords){
-            if (rec.getValue(destinationWellFieldName, user)==null){
-                String sampleId = rec.getStringVal("SampleId", user);
-                clientCallback.displayError(String.format("%s field values is NULL in attached %s DataRecords for %s. Please make sure that all samples have Destinatin Well ID's", destinationWellFieldName, inputDataTypeName, sampleId));
+        try {
+            String inputDataTypeName = activeTask.getInputDataTypeName();
+            String destinationWellFieldName = getDestinatinWellFieldName();
+            for (DataRecord rec : attachedProtocolRecords) {
+                if (rec.getValue(destinationWellFieldName, user) == null) {
+                    String sampleId = rec.getStringVal("SampleId", user);
+                    clientCallback.displayError(String.format("%s field values is NULL in attached %s DataRecords for %s. Please make sure that all samples have Destinatin Well ID's", destinationWellFieldName, inputDataTypeName, sampleId));
+                } else {
+                    String wellId = rec.getStringVal(destinationWellFieldName, user);
+                    rec.setDataField("SampleSerialOrder", wellIdToNumberOrder.get(wellId), user);
+                }
             }
-            else{
-                String wellId = rec.getStringVal(destinationWellFieldName, user);
-                rec.setDataField("SampleSerialOrder", wellIdToNumberOrder.get(wellId), user);
-            }
+        } catch (InvalidValue invalidValue) {
+            logError(String.format("InvalidValue Exception -> Error while setting Serial Order for Plate wells for Covid 19 samples:\n%s", ExceptionUtils.getStackTrace(invalidValue)));
+        } catch (IoError ioError) {
+            logError(String.format("IoError Exception -> Error while setting Serial Order for Plate wells for Covid 19 samples:\n%s", ExceptionUtils.getStackTrace(ioError)));
+        } catch (ServerException e) {
+            logError(String.format("ServerException -> Error while setting Serial Order for Plate wells for Covid 19 samples:\n%s", ExceptionUtils.getStackTrace(e)));
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException -> Error while setting Serial Order for Plate wells for Covid 19 samples:\n%s", ExceptionUtils.getStackTrace(e)));
+        } catch (NotFound notFound) {
+            logError(String.format("NotFound Exception -> Error while setting Serial Order for Plate wells for Covid 19 samples:\n%s", ExceptionUtils.getStackTrace(notFound)));
         }
    }
 }

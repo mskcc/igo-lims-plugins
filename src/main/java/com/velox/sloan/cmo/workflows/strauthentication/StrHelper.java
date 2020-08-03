@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.velox.api.util.ServerException;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -78,7 +79,7 @@ public class StrHelper {
                 String json = gson.toJson(sampleData.get(entry));
                 jsonData.add(json);
             } catch (Exception e) {
-                System.out.println(String.format("Error parsing data to json values %s",Arrays.toString(e.getStackTrace())));
+                System.out.println(String.format("Error parsing data to json values %s", ExceptionUtils.getStackTrace(e)));
             }
         }
         return jsonData;
