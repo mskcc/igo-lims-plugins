@@ -1,8 +1,15 @@
 package com.velox.sloan.cmo.workflows.IgoLimsPluginUtils;
 
+import com.velox.api.datarecord.DataRecord;
+import com.velox.api.util.ServerException;
+import com.velox.sapioutils.shared.managers.ManagerBase;
+import com.velox.sloan.cmo.recmodels.RequestModel;
+import com.velox.sloan.cmo.recmodels.SampleModel;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
+import sun.misc.Request;
 
 import java.io.*;
 import java.util.*;
@@ -14,11 +21,13 @@ import java.util.regex.Pattern;
  *
  * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
-public class IgoLimsPluginUtils {
+public class IgoLimsPluginUtils extends ManagerBase {
 
 
     private final Pattern SPECIAL_CHARACTER_REGEX = Pattern.compile("^[a-zA-Z0-9_-]*$");
     private final Pattern SPECIAL_CHARACTER_REGEX_FOR_POOLS = Pattern.compile("^[a-zA-Z0-9,_-]*$");
+
+    private final List<String> LIBRARY_SAMPLE_TYPES = Arrays.asList("cdna library", "dna library", "cfdna library", "pooled library");
     /**
      * Method to check if a file has .csv extension
      *
@@ -29,12 +38,17 @@ public class IgoLimsPluginUtils {
         return fileName.toLowerCase().endsWith(".csv");
     }
 
+    /**
+     * Method to process byte data to Strings.
+     * @param fileContent
+     * @return
+     * @throws IOException
+     */
     public List<String> readDataFromCsvFile(byte[] fileContent) throws IOException {
         List<String> rowDataValues = new ArrayList<>();
         InputStream dataStream = new ByteArrayInputStream(fileContent);
         try (BufferedReader fileReader = new BufferedReader(new InputStreamReader(dataStream))) {
             String temp;
-            // || !temp.replace(",", "").equals(null) || !temp.replace(",", "").equals("")
             while ((temp = fileReader.readLine()) != null) { //to check that there are no empty lines at end of file
                 String rowData;
                 rowData = temp;
@@ -62,6 +76,29 @@ public class IgoLimsPluginUtils {
             e.printStackTrace();
         }
         return bytesArray;
+    }
+
+    /**
+     * Method to read data when users upload multiple CSV files.
+     *
+     * @param fileNames
+     * @return Combined data from multiples CSV files
+     * @throws ServerException
+     * @throws IOException
+     */
+    public List<String> readDataFromFiles(List<String> fileNames) throws ServerException {
+        List<String> combinedFileData = new ArrayList<>();
+        for (String file : fileNames) {
+            try {
+                List<String> data = readDataFromCsvFile(clientCallback.readBytes(file));
+                combinedFileData.addAll(data);
+            } catch (ServerException e) {
+                logError(String.format("ServerException -> Error while reading data from uploaded file '%s':\n%s", file, ExceptionUtils.getStackTrace(e)));
+            } catch (IOException e) {
+                logError(String.format("IOException -> Error while reading data from uploaded file '%s':\n%s", file, ExceptionUtils.getStackTrace(e)));
+            }
+        }
+        return combinedFileData;
     }
 
     /**
@@ -321,5 +358,66 @@ public class IgoLimsPluginUtils {
             matcher = SPECIAL_CHARACTER_REGEX.matcher(value);
         }
         return matcher.matches();
+    }
+
+    /**
+     * Method to get first parent Sample directly under the same Request in hierarchy.
+     * @param sample
+     * @return
+     * @throws ServerException
+     */
+   public DataRecord getParentSampleUnderRequest(DataRecord sample) throws ServerException {
+        try{
+            if(sample.getParentsOfType(RequestModel.DATA_TYPE_NAME, user).size()>0){
+                return sample;
+            }
+            Object requestId = sample.getValue(SampleModel.REQUEST_ID, user);
+            List<DataRecord> parentSamples = sample.getParentsOfType(SampleModel.DATA_TYPE_NAME, user);
+            Stack<DataRecord> sampleStack = new Stack<>();
+            sampleStack.addAll(parentSamples);
+            do {
+                DataRecord stackSample = sampleStack.pop();
+                if(stackSample.getParentsOfType(RequestModel.DATA_TYPE_NAME, user).size()>0){
+                    return stackSample;
+                }
+                List<DataRecord> stackSampleParentSamples = stackSample.getParentsOfType(RequestModel.DATA_TYPE_NAME, user);
+                for (DataRecord sa : stackSampleParentSamples) {
+                    Object saReqId = sa.getValue(SampleModel.REQUEST_ID, user);
+                    if (requestId!= null && saReqId != null && requestId.toString().equalsIgnoreCase(saReqId.toString())){
+                        sampleStack.push(sa);
+                    }
+                }
+            }while (!sampleStack.isEmpty());
+        }catch (Exception e){
+            String errMsg = String.format("Error while getting first parent under request for Sample with record ID %d.\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+        }
+        return null;
+   }
+
+    /**
+     * Method to check if Sample is user submitted Library.
+     * @param sample
+     * @return
+     * @throws ServerException
+     */
+    public boolean isUserLibrary(DataRecord sample) throws ServerException {
+       long recordId = sample.getRecordId();
+       try{
+            DataRecord parentSample = getParentSampleUnderRequest(sample);
+            if (parentSample!= null){
+                Object sampleType = parentSample.getValue(SampleModel.EXEMPLAR_SAMPLE_TYPE, user);
+                if (sampleType == null){
+                    throw new IllegalArgumentException(String.format("Sample Type is missing on sample with recordid %d", recordId));
+                }
+                return sampleType != null && LIBRARY_SAMPLE_TYPES.contains(sampleType.toString().toLowerCase());
+            }
+        }catch (Exception e){
+            String errMsg = String.format("Error while validating if Sample with recordid '%d' is 'User Library'.\n%s", recordId, ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+        }
+        return false;
     }
 }
