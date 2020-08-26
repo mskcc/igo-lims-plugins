@@ -1,5 +1,6 @@
 package com.velox.sloan.cmo.workflows.IgoLimsPluginUtils;
 
+import com.velox.api.util.ServerException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Row;
 import org.junit.Before;
@@ -107,13 +108,13 @@ public class IgoLimsPluginUtilsTests {
     }
 
     @Test
-    public void csvFileContainsRequiredHeaders_shouldReturnTrueWhenAllValuesAreContained() {
+    public void csvFileContainsRequiredHeaders_shouldReturnTrueWhenAllValuesAreContained(){
         List<String> headerValues = Arrays.asList("RACKID", "TUBE", "SAMPLES", "STATUS");
         assertTrue(commonMethods.csvFileContainsRequiredHeaders(dataFromFile, headerValues));
     }
 
     @Test
-    public void csvFileContainsRequiredHeaders_shouldReturnFalseWhenAllValuesAreNotContained() {
+    public void csvFileContainsRequiredHeaders_shouldReturnFalseWhenAllValuesAreNotContained() throws ServerException {
         List<String> headerValues = Arrays.asList("RACKID", "TUBE", "SAMPLES", "STATUS", "ALPHA", "BETA");// ALPHA, BETA are not contained in the headers
         assertFalse(commonMethods.csvFileContainsRequiredHeaders(dataFromFile, headerValues));
     }

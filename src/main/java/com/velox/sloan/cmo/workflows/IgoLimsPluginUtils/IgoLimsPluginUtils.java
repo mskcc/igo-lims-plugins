@@ -1,17 +1,26 @@
 package com.velox.sloan.cmo.workflows.IgoLimsPluginUtils;
 
 import com.velox.api.datarecord.DataRecord;
+import com.velox.api.datarecord.NotFound;
+import com.velox.api.datatype.TemporaryDataType;
+import com.velox.api.datatype.datatypelayout.DataFormComponent;
+import com.velox.api.datatype.datatypelayout.DataTypeLayout;
+import com.velox.api.datatype.datatypelayout.DataTypeTabDefinition;
+import com.velox.api.datatype.fielddefinition.FieldDefinitionPosition;
+import com.velox.api.datatype.fielddefinition.VeloxFieldDefinition;
+import com.velox.api.plugin.PluginLogger;
+import com.velox.api.user.User;
+import com.velox.api.util.ClientCallbackOperations;
 import com.velox.api.util.ServerException;
-import com.velox.sapioutils.shared.managers.ManagerBase;
 import com.velox.sloan.cmo.recmodels.RequestModel;
 import com.velox.sloan.cmo.recmodels.SampleModel;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
-import sun.misc.Request;
 
 import java.io.*;
+import java.rmi.RemoteException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,7 +30,7 @@ import java.util.regex.Pattern;
  *
  * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
-public class IgoLimsPluginUtils extends ManagerBase {
+public class IgoLimsPluginUtils{
 
 
     private final Pattern SPECIAL_CHARACTER_REGEX = Pattern.compile("^[a-zA-Z0-9_-]*$");
@@ -86,16 +95,16 @@ public class IgoLimsPluginUtils extends ManagerBase {
      * @throws ServerException
      * @throws IOException
      */
-    public List<String> readDataFromFiles(List<String> fileNames) throws ServerException {
+    public List<String> readDataFromFiles(List<String> fileNames, ClientCallbackOperations clientCallback) throws ServerException {
         List<String> combinedFileData = new ArrayList<>();
         for (String file : fileNames) {
             try {
                 List<String> data = readDataFromCsvFile(clientCallback.readBytes(file));
                 combinedFileData.addAll(data);
             } catch (ServerException e) {
-                logError(String.format("ServerException -> Error while reading data from uploaded file '%s':\n%s", file, ExceptionUtils.getStackTrace(e)));
+                clientCallback.displayError(String.format("ServerException -> Error while reading data from uploaded file '%s':\n%s", file, ExceptionUtils.getStackTrace(e)));
             } catch (IOException e) {
-                logError(String.format("IOException -> Error while reading data from uploaded file '%s':\n%s", file, ExceptionUtils.getStackTrace(e)));
+                clientCallback.displayError(String.format("IOException -> Error while reading data from uploaded file '%s':\n%s", file, ExceptionUtils.getStackTrace(e)));
             }
         }
         return combinedFileData;
@@ -122,6 +131,7 @@ public class IgoLimsPluginUtils extends ManagerBase {
         return Arrays.asList(fileData.get(0).split(",")).equals(expectedHeaderValues);
     }
 
+
     /**
      * Method to check if csv file header contains the values that are required.
      *
@@ -129,7 +139,7 @@ public class IgoLimsPluginUtils extends ManagerBase {
      * @param expectedHeaderValues
      * @return true/false
      */
-    public boolean csvFileContainsRequiredHeaders(List<String> fileData, List<String> expectedHeaderValues) {
+    public boolean csvFileContainsRequiredHeaders(List<String> fileData, List<String> expectedHeaderValues){
         return Arrays.asList(fileData.get(0).split(",")).containsAll(expectedHeaderValues);
     }
 
@@ -366,7 +376,7 @@ public class IgoLimsPluginUtils extends ManagerBase {
      * @return
      * @throws ServerException
      */
-   public DataRecord getParentSampleUnderRequest(DataRecord sample) throws ServerException {
+   public DataRecord getParentSampleUnderRequest(DataRecord sample, User user, ClientCallbackOperations clientCallback) throws ServerException {
         try{
             if(sample.getParentsOfType(RequestModel.DATA_TYPE_NAME, user).size()>0){
                 return sample;
@@ -391,7 +401,6 @@ public class IgoLimsPluginUtils extends ManagerBase {
         }catch (Exception e){
             String errMsg = String.format("Error while getting first parent under request for Sample with record ID %d.\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
-            logError(errMsg);
         }
         return null;
    }
@@ -402,10 +411,10 @@ public class IgoLimsPluginUtils extends ManagerBase {
      * @return
      * @throws ServerException
      */
-    public boolean isUserLibrary(DataRecord sample) throws ServerException {
+    public boolean isUserLibrary(DataRecord sample, User user, ClientCallbackOperations clientCallback) throws ServerException {
        long recordId = sample.getRecordId();
        try{
-            DataRecord parentSample = getParentSampleUnderRequest(sample);
+            DataRecord parentSample = getParentSampleUnderRequest(sample, user, clientCallback);
             if (parentSample!= null){
                 Object sampleType = parentSample.getValue(SampleModel.EXEMPLAR_SAMPLE_TYPE, user);
                 if (sampleType == null){
@@ -416,8 +425,191 @@ public class IgoLimsPluginUtils extends ManagerBase {
         }catch (Exception e){
             String errMsg = String.format("Error while validating if Sample with recordid '%d' is 'User Library'.\n%s", recordId, ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
-            logError(errMsg);
         }
         return false;
+    }
+
+    /**
+     * Method to get Sample matching with passed SampleId from attached Samples.
+     */
+    public DataRecord getSampleWithMatchingId(String sampleId, List<DataRecord> attachedSamples, String fileName, ClientCallbackOperations clientCallback, PluginLogger logger, User user) throws ServerException {
+        DataRecord matchingSample = null;
+        try {
+            for (DataRecord sa : attachedSamples) {
+                Object sampId = sa.getValue(SampleModel.SAMPLE_ID, user);
+                if (sampId != null && sampleId.equals(sampId.toString())) {
+                    matchingSample = sa;
+                }
+            }
+        } catch (Exception e) {
+            String errMsg = String.format("Error while searching for Sample with ID '%s' in attached Samples.\n%s", sampleId, ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logger.logError(errMsg);
+        }
+        if (matchingSample == null) {
+            String errMsg = String.format("Could not find mapping for Sample with ID '%s' in attached Samples.\nPlease double check the Sample ID's in the uploaded file(s) %s.", sampleId, fileName);
+            clientCallback.displayWarning(errMsg);
+            logger.logWarning(errMsg);
+            return matchingSample;
+        }
+        return matchingSample;
+    }
+
+    /**
+     * Method to get Sample Quantity value.
+     *
+     * @param sample
+     * @return
+     * @throws ServerException
+     */
+    public double getSampleQuantity(DataRecord sample, ClientCallbackOperations clientCallback, PluginLogger logger, User user) throws ServerException {
+        double sampleQuantity = 0.0;
+        try {
+            Object concentration = sample.getValue(SampleModel.CONCENTRATION, user);
+            Object volume = sample.getValue(SampleModel.VOLUME, user);
+            if (concentration == null){
+                String errMsg = String.format("Error while reading 'Concentration' from Sample.\n%s", sample.getStringVal(SampleModel.SAMPLE_ID, user));
+                clientCallback.displayError(errMsg);
+            }
+            else if (volume == null){
+                String errMsg = String.format("Error while reading 'Volume' from Sample.\n%s", sample.getStringVal(SampleModel.SAMPLE_ID, user));
+                clientCallback.displayError(errMsg);
+            }
+            else {
+                return (double) concentration * (double) volume;
+            }
+        }catch (RemoteException e) {
+            String errMsg = String.format("Error while reading 'quantity' from Sample with recordId '%d'.\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logger.logError(errMsg);
+        } catch (NotFound notFound) {
+            String errMsg = String.format("NotFound while reading 'quantity' from Sample with recordId '%d'.\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound));
+            clientCallback.displayError(errMsg);
+            logger.logError(errMsg);
+        }
+        return sampleQuantity;
+    }
+
+
+    /**
+     * Method to validate if the QC file is bioanalyzer file or tapestation file. Both files have unique headers in the
+     * first few lines.
+     * @param data
+     * @return
+     */
+    public boolean isBioanalyzerFile(List<String> data, List<String>bioanalyzerIdentifiers, ClientCallbackOperations clientCallback, PluginLogger logger) throws ServerException {
+        int countFound = 0;
+        try{
+            int numberOfLinesToScan = 20;
+            for (int i=0; i < numberOfLinesToScan; i++){
+                List<String> lineValues = Arrays.asList(data.get(i).split(","));
+                String firstVal = lineValues.get(0);
+                if(!StringUtils.isBlank(firstVal) && bioanalyzerIdentifiers.contains(firstVal)){
+                    countFound++;
+                }
+            }
+        }catch(Exception e){
+            String errMsg = String.format("%s -> Error while validating QC type for the uploaded files.\n%s", ExceptionUtils.getRootCauseMessage(e), ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logger.logError(errMsg);
+        }
+        if(countFound == bioanalyzerIdentifiers.size() || countFound > 5){
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Method to check/validate headers in bioanalyzer file
+     * @param data
+     * @param bioanalyzerHeaders
+     * @param fileName
+     * @param logger
+     * @return
+     */
+    public boolean hasValidBioanalyzerHeader(List<String> data, String fileName, List<String>bioanalyzerHeaders, PluginLogger logger){
+            for (String line: data) {
+                List<String> lineValues = Arrays.asList(line.split(","));
+                String firstVal = lineValues.size() > 0 ? lineValues.get(0) : null;
+                if (firstVal!=null && bioanalyzerHeaders.contains(firstVal)){
+                    logger.logInfo(String.format("Header line from file %s %s", line, fileName));
+                    for(String val: lineValues){
+                        if (!bioanalyzerHeaders.contains(val)){
+                            return false;
+                        }
+                    }
+                }
+            }
+        return true;
+    }
+
+    /**
+     * Method to check/validate headers in bioanalyzer file
+     * @param data
+     * @param fileName
+     * @param headerIdentifierValue
+     * @param logger
+     * @return
+     */
+    public Map<String, Integer> getBioanalyzerFileHeaderMap(List<String> data, String fileName, String headerIdentifierValue, PluginLogger logger){
+        Map<String, Integer>headerValueMap = new HashMap<>();
+        for (String line: data) {
+            List<String> lineValues = Arrays.asList(line.split(","));
+            logger.logInfo("line values: " + lineValues.toString());
+            String firstVal = lineValues.size() > 0 ? lineValues.get(0) : null;
+            logger.logInfo("first value in line: " + firstVal);
+            logger.logInfo("header identifier val: " + headerIdentifierValue);
+            if (firstVal!=null && firstVal.equalsIgnoreCase(headerIdentifierValue)){
+                logger.logInfo(String.format("Header line from file %s: %s", fileName, line));
+                for (int i=0; i< lineValues.size(); i++){
+                    headerValueMap.put(lineValues.get(i), i);
+                }
+                return headerValueMap;
+            }
+        }
+        return headerValueMap;
+    }
+
+    /**
+     * Method to set the layout on the TemporaryDataType. Without the layout the table structure is not visible in the pop up dialog.
+     * @param temporaryDataType
+     * @param temporaryDataTypeFieldDefinitions
+     * @throws ServerException
+     */
+    public void setTempDataTypeLayout(TemporaryDataType temporaryDataType, List<VeloxFieldDefinition<?>> temporaryDataTypeFieldDefinitions, String formNameToUse, PluginLogger logger){
+        try {
+            String formName = formNameToUse;
+            // Create form
+            DataFormComponent form = new DataFormComponent(formName, formName);
+            form.setCollapsed(false);
+            form.setColumn(0);
+            form.setColumnSpan(4);
+            form.setOrder(0);
+            form.setHeight(10);
+            // Add fields to the form
+            for (int i = 0; i < temporaryDataTypeFieldDefinitions.size(); i++) {
+                logger.logInfo(temporaryDataTypeFieldDefinitions.get(i).getColumnName());
+                VeloxFieldDefinition<?> fieldDef = temporaryDataTypeFieldDefinitions.get(i);
+                FieldDefinitionPosition pos = new FieldDefinitionPosition(fieldDef.getDataFieldName());
+                pos.setFormColumn(0);
+                pos.setFormColumnSpan(4);
+                pos.setOrder(i);
+                pos.setFormName(formName);
+                form.setFieldDefinitionPosition(pos);
+                logger.logInfo(form.getFieldDefinitionPositionList().toString());
+            }
+            // Create a tab with the form on it
+            DataTypeTabDefinition tabDef = new DataTypeTabDefinition("Tab1", "Tab 1");
+            tabDef.setDataTypeLayoutComponent(form);
+            tabDef.setTabOrder(0);
+            // Create a layout with the tab on it
+            DataTypeLayout layout = new DataTypeLayout(temporaryDataType.getDisplayName(), temporaryDataType.getDataTypeName(), "Default layout");
+            layout.setDataTypeTabDefinition(tabDef);
+            // Add the layout to the TDT
+            temporaryDataType.setDataTypeLayout(layout);
+        }catch (Exception e){
+            String errMsg = String.format("%s error occured while creating DataType layout for Table dialog.\n%s", ExceptionUtils.getRootCauseMessage(e), ExceptionUtils.getStackTrace(e));
+            logger.logError(errMsg);
+        }
     }
 }

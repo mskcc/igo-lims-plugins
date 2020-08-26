@@ -47,7 +47,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 clientCallback.displayError("User did not upload results file.");
                 return new PluginResult(false);
             }
-            List<String> dataInFiles = igoUtils.readDataFromFiles(filesWithDigitalPcrRawData);
+            List<String> dataInFiles = igoUtils.readDataFromFiles(filesWithDigitalPcrRawData, clientCallback);
             if (!isValidFile(filesWithDigitalPcrRawData, dataInFiles)) {
                 return new PluginResult(false);
             }

@@ -1,18 +1,20 @@
 package com.velox.sloan.cmo.workflows.qualitycontrol.sequencingqc;
 
-public class TapeStationData {
+class QualityControlData {
     private String sampleDescription;
     private int fromBp;
     private int toBp;
-    private double averageSize;
     private double concentration;
+    private double fractionVal;
+    private String observation;
 
-    TapeStationData(String sampleDescription, int fromBp, int toBp, double averageSize, double concentration){
+    QualityControlData(String sampleDescription, int fromBp, int toBp, double concentration, double fractionVal, String observation){
         this.sampleDescription = sampleDescription;
         this.fromBp = fromBp;
         this.toBp = toBp;
-        this.averageSize = averageSize;
         this.concentration = concentration;
+        this.fractionVal = fractionVal;
+        this.observation = observation;
     }
 
     private String getSampleDescription() {
@@ -31,20 +33,12 @@ public class TapeStationData {
         this.fromBp = fromBp;
     }
 
-    private int getToBp() {
+    public int getToBp() {
         return toBp;
     }
 
     private void setToBp(int toBp) {
         this.toBp = toBp;
-    }
-
-    private double getAverageSize() {
-        return averageSize;
-    }
-
-    private void setAverageSize(double averageSize) {
-        this.averageSize = averageSize;
     }
 
     double getConcentration() {
@@ -53,5 +47,29 @@ public class TapeStationData {
 
     private void setConcentration(double concentration) {
         this.concentration = concentration;
+    }
+
+    public double getTotalFraction() {
+        return fractionVal;
+    }
+
+    public void setTotalFraction(double totalFraction) {
+        this.fractionVal = totalFraction;
+    }
+
+    public double getFractionVal() {
+        return fractionVal;
+    }
+
+    public void setFractionVal(double fractionVal) {
+        this.fractionVal = fractionVal;
+    }
+
+    public String getObservation() {
+        return observation;
+    }
+
+    public void setObservation(String observation) {
+        this.observation = observation;
     }
 }

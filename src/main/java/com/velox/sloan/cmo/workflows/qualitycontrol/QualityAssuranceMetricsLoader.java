@@ -6,12 +6,14 @@ import com.velox.api.datatype.datatypelayout.DataFormComponent;
 import com.velox.api.datatype.datatypelayout.DataTypeLayout;
 import com.velox.api.datatype.datatypelayout.DataTypeTabDefinition;
 import com.velox.api.datatype.fielddefinition.*;
+import com.velox.api.plugin.PluginLogger;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.api.workflow.ActiveTask;
 import com.velox.api.workflow.ActiveWorkflow;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
+import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
@@ -27,7 +29,7 @@ import java.util.*;
 public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
 
     private final String QA_METRICS_UPLOAD_TAG = "LOAD QA METRICS";
-
+    IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
     public QualityAssuranceMetricsLoader() {
         setTaskEntry(true);
         setTaskToolbar(true);
@@ -63,7 +65,7 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
             //validate the entry to make sure it is an Integer value.
             if (isValidInteger(numOfQaMetricsToLoad)){
                 //prompt the user to add Quality Asurance Measurements
-                List<Map<String,Object>> dataFieldValues = getQaDataFromUser(Integer.parseInt(numOfQaMetricsToLoad));
+                List<Map<String,Object>> dataFieldValues = getQaDataFromUser(Integer.parseInt(numOfQaMetricsToLoad), pluginLogger);
                 if (dataFieldValues.size()>0) {
                     logInfo("Adding QA values to table");
                     logInfo(dataFieldValues.toString());
@@ -110,7 +112,7 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws RemoteException
      */
-    private List<Map<String, Object>> getQaDataFromUser(Integer numToAdd){
+    private List<Map<String, Object>> getQaDataFromUser(Integer numToAdd, PluginLogger logger){
         TemporaryDataType tempPlate = new TemporaryDataType("QualityAssuranceMeasure", "Quality Assurance Measurement");
         List<VeloxFieldDefinition<?>> fieldDefList = new ArrayList<VeloxFieldDefinition<?>>();
         VeloxPickListFieldDefinition validationType = VeloxFieldDefinition.pickListFieldBuilder().displayName("Quality Assurance Validation Type").dataFieldName("QAValidationType").visible(true).pickListName("Quality Assurance Measurement Type").build();
@@ -138,7 +140,7 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
         tempPlate.setVeloxFieldDefinitionList(fieldDefList);
         List<Map<String, Object>> userInputData = new ArrayList<>();
         try {
-            setTempDataTypeLayout(tempPlate, fieldDefList);
+            utils.setTempDataTypeLayout(tempPlate, fieldDefList, "Quality Assurance info", logger);
             List<Map<String, Object>> defaultValuesList = new ArrayList<>();
             for (int i = 1; i <= numToAdd; i++) {
                 Map<String, Object> values = new HashMap<>();
@@ -152,43 +154,5 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
         }
         return userInputData;
 
-    }
-
-    /**
-     * Method to set the layout on the TemporaryDataType. Without the layout the table structure is not visible in the pop up dialog.
-     * @param temporaryDataType
-     * @param temporaryDataTypeFieldDefinitions
-     * @throws ServerException
-     */
-    private void setTempDataTypeLayout(TemporaryDataType temporaryDataType, List<VeloxFieldDefinition<?>> temporaryDataTypeFieldDefinitions){
-        String formName = "Quality Assurance form";
-        // Create form
-        DataFormComponent form = new DataFormComponent(formName, formName);
-        form.setCollapsed(false);
-        form.setColumn(0);
-        form.setColumnSpan(4);
-        form.setOrder(0);
-        form.setHeight(10);
-        // Add fields to the form
-        for (int i = 0; i < temporaryDataTypeFieldDefinitions.size(); i++) {
-            logInfo(temporaryDataTypeFieldDefinitions.get(i).getColumnName());
-            VeloxFieldDefinition<?> fieldDef = temporaryDataTypeFieldDefinitions.get(i);
-            FieldDefinitionPosition pos = new FieldDefinitionPosition(fieldDef.getDataFieldName());
-            pos.setFormColumn(0);
-            pos.setFormColumnSpan(4);
-            pos.setOrder(i);
-            pos.setFormName(formName);
-            form.setFieldDefinitionPosition(pos);
-            logInfo(form.getFieldDefinitionPositionList().toString());
-        }
-        // Create a tab with the form on it
-        DataTypeTabDefinition tabDef = new DataTypeTabDefinition("Tab1", "Tab 1");
-        tabDef.setDataTypeLayoutComponent(form);
-        tabDef.setTabOrder(0);
-        // Create a layout with the tab on it
-        DataTypeLayout layout = new DataTypeLayout("Quality Assurance Measures", "Quality Assurance Measures", "Default layout for Quality Assurance Measures.");
-        layout.setDataTypeTabDefinition(tabDef);
-        // Add the layout to the TDT
-        temporaryDataType.setDataTypeLayout(layout);
     }
 }

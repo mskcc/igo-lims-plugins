@@ -1,4 +1,4 @@
-package com.velox.sloan.cmo.workflows.general;
+package com.velox.sloan.cmo.workflows.General;
 
 import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.InvalidValue;
@@ -28,7 +28,7 @@ import java.util.*;
 // declaration of class
 public class IgoOnSavePlugin extends DefaultGenericPlugin {
     private final List<String> CMOINFO_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS = Arrays.asList("CorrectedCMOID", "CorrectedInvestPatientId", "UserSampleID",
-            "OtherSampleId", "CmoPatientId", "Preservation", "TumorOrNormal", "CollectionYear", "Gender", "SpecimenType");
+            "OtherSampleId", "CmoPatientId", "Preservation", "TumorOrNormal", "TumorType", "CollectionYear", "Gender", "SpecimenType", "TissueSource");
     private final List<String> SAMPLE_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS = Arrays.asList("OtherSampleId", "UserSampleID", "Preservation", "Species",
             "TumorOrNormal", "Species", "PatientId", "CmoPatientId");
     private List<String> trackableDataTypes = Arrays.asList("Request");
