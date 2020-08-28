@@ -1,7 +1,6 @@
 package com.velox.sloan.cmo.workflows.qualitycontrol.sequencingqc;
 
 import com.velox.api.datarecord.DataRecord;
-import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginLogger;
 import com.velox.api.user.User;
 import com.velox.api.util.ClientCallbackOperations;
@@ -10,7 +9,6 @@ import com.velox.sapio.commons.exemplar.context.ManagerBase;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
-import java.rmi.RemoteException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -51,7 +49,7 @@ class TapeStationResultParser extends ManagerBase {
         String PERCENT_FRACTION = "% of Total";
         try {
             for (int i = 1; i < tapeStationFileData.size(); i++) {
-                String row = tapeStationFileData.get(i);
+                String row = utils.removeThousandSeparator(tapeStationFileData.get(i));
                 List<String> rowDataValues = Arrays.asList(row.split(","));
                 logger.logInfo(String.format("Tapestation data from file %s.\n%s", fileName, rowDataValues.toString()));
                 String sampleId = rowDataValues.get(headerMapValues.get(SAMPLE_DESCRIPTION));
@@ -90,23 +88,51 @@ class TapeStationResultParser extends ManagerBase {
             String errMsg = String.format("Error while sorting the QualityControlData by '%s' value.\n%s", FROM_BP, ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logger.logError(errMsg);
-            return null;
+            return new ArrayList<>();
         }
     }
 
 
     /**
-     * Method to get sum of concentration values
+     * Method to get sum of concentration values for fragments upto 1kbp in size. For tapestation, the adapter percentage
+     * is calculated in relation to the total library fragments upto 1kbp. Fragments larger than 1kbp are ignored when
+     * calculating adapter percentage. This is as per SEQ Team explanation.
      *
      * @param QualityControlDataVals
      * @return
      * @throws ServerException
      */
-    private double getConcentrationSum(List<QualityControlData> QualityControlDataVals) throws ServerException {
+    private double getConcentrationSumForUpto1kb(List<QualityControlData> QualityControlDataVals) throws ServerException {
         double sum = 0.0;
         try {
             for (QualityControlData data : QualityControlDataVals) {
-                sum += data.getConcentration();
+                if(data.getToBp()<= LIB_TO_1KBP){
+                    sum += data.getConcentration();
+                }
+            }
+        } catch (Exception e) {
+            String errMsg = String.format("Error while getting sum of concentration from QualityControlData.\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logger.logError(errMsg);
+        }
+        return sum;
+    }
+
+    /**
+     * Method to get sum of concentration values for fragments larger than adapter fragments size region. When calculating
+     * fragments greater than 1kbp, the fragments in adaper size range are ignored. This is as per SEQ Team explanation.
+     *
+     * @param QualityControlDataVals
+     * @return
+     * @throws ServerException
+     */
+    private double getConcentrationSumForGreaterThan1kb(List<QualityControlData> QualityControlDataVals) throws ServerException {
+        double sum = 0.0;
+        try {
+            for (QualityControlData data : QualityControlDataVals) {
+                if(data.getToBp()> ADAPTER_TO_BP){
+                    sum += data.getConcentration();
+                }
             }
         } catch (Exception e) {
             String errMsg = String.format("Error while getting sum of concentration from QualityControlData.\n%s", ExceptionUtils.getStackTrace(e));
@@ -127,21 +153,49 @@ class TapeStationResultParser extends ManagerBase {
     private double calculateAdapterPercentage(List<QualityControlData> QualityControlDataVals, double sumConcentration) throws ServerException {
         double adapterPercentage = 0.0;
         try {
+            double adapterConcSum = 0.0;
             for (QualityControlData data : QualityControlDataVals) {
                 int fromBpVal = data.getFromBp();
                 int toBpVal = data.getToBp();
                 double ADAPTER_FROM_BP = 0.0;
                 if (fromBpVal >= ADAPTER_FROM_BP && toBpVal <= ADAPTER_TO_BP) {
-                    double adapterConc = data.getConcentration();
-                    return (adapterConc / sumConcentration) * 100.0;
+                    adapterConcSum += data.getConcentration();
                 }
             }
+            adapterPercentage = (adapterConcSum/sumConcentration)*100.0;
         } catch (Exception e) {
             String errMsg = String.format("Error while calculating 'Adapter Percentage' from QualityControlData.\n%s02756_B_2_1_1_1\n", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logger.logError(errMsg);
         }
         return adapterPercentage;
+    }
+
+    /**
+     * Method to get percentage of fragments upto 1kbp in size.
+     *
+     * @param QualityControlDataVals
+     * @param sumConc
+     * @return
+     * @throws ServerException
+     */
+    private double calculatePercentageFragmentsUpto1kb(List<QualityControlData> QualityControlDataVals, double sumConc) throws ServerException {
+        double percentageFragmentsUpto1kb = 0.0;
+        try {
+            double concSumfragmentUpto1Kbp = 0.0;
+            for (QualityControlData data : QualityControlDataVals) {
+                int toBpVal = data.getToBp();
+                if (toBpVal > ADAPTER_TO_BP && toBpVal <= LIB_TO_1KBP) {
+                    concSumfragmentUpto1Kbp += data.getConcentration();
+                }
+            }
+            percentageFragmentsUpto1kb = (concSumfragmentUpto1Kbp/sumConc) * 100.0;
+        } catch (Exception e) {
+            String errMsg = String.format("Error while calculating 'Adapter Percentage' from QualityControlData.\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logger.logError(errMsg);
+        }
+        return percentageFragmentsUpto1kb;
     }
 
     /**
@@ -152,16 +206,17 @@ class TapeStationResultParser extends ManagerBase {
      * @return
      * @throws ServerException
      */
-    private double calculatePercentageFragmentsUpto1kb(List<QualityControlData> QualityControlDataVals, double sumConc) throws ServerException {
+    private double calculatePercentageFragmentsGreaterThan1kb(List<QualityControlData> QualityControlDataVals, double sumConc) throws ServerException {
         double percentageFragmentsUpto1kb = 0.0;
         try {
+            double concSumfragmentLargerThan1Kbp = 0.0;
             for (QualityControlData data : QualityControlDataVals) {
                 int toBpVal = data.getToBp();
-                if (toBpVal > ADAPTER_TO_BP && toBpVal <= LIB_TO_1KBP) {
-                    double conc = data.getConcentration();
-                    return (conc/sumConc) * 100;
+                if (toBpVal > LIB_TO_1KBP) {
+                    concSumfragmentLargerThan1Kbp += data.getConcentration();
                 }
             }
+            percentageFragmentsUpto1kb = (concSumfragmentLargerThan1Kbp/sumConc) * 100.0;
         } catch (Exception e) {
             String errMsg = String.format("Error while calculating 'Adapter Percentage' from QualityControlData.\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
@@ -177,14 +232,18 @@ class TapeStationResultParser extends ManagerBase {
         List<SampleQcResult> qcResults = new ArrayList<>();
         try{
             for (String key : groupedData.keySet()) {
-                List<QualityControlData> QualityControlData = getDataSortedByFromBpAsc(groupedData.get(key));
+                List<QualityControlData> qualityControlData = getDataSortedByFromBpAsc(groupedData.get(key));
                 DataRecord sample = utils.getSampleWithMatchingId(key, attachedSamples, fileName, clientCallback, logger, user);
                 if (sample != null) {
                     double quantity = utils.getSampleQuantity(sample, clientCallback, logger, user);
-                    double sumConc = getConcentrationSum(QualityControlData);
-                    double adapterPercentage = calculateAdapterPercentage(QualityControlData, sumConc);
-                    double percentFragmentsUpto1kb = calculatePercentageFragmentsUpto1kb(QualityControlData, sumConc);
-                    double percentFragmentLargerThan1Kb = Math.abs((adapterPercentage + percentFragmentsUpto1kb) - 100.0);
+                    double sumConcTo1Kb = getConcentrationSumForUpto1kb(qualityControlData);
+                    double adapterPercentage = calculateAdapterPercentage(qualityControlData, sumConcTo1Kb);
+                    double percentFragmentsUpto1kb = calculatePercentageFragmentsUpto1kb(qualityControlData, sumConcTo1Kb);
+//                    double percentFragmentLargerThan1Kb = 0.0;
+//                    if (qualityControlData.size()>2){
+                    double sumConcGreaterThan1Kb = getConcentrationSumForGreaterThan1kb(qualityControlData);
+                    double percentFragmentLargerThan1Kb = Math.abs(calculatePercentageFragmentsGreaterThan1kb(qualityControlData, sumConcGreaterThan1Kb));
+//                    }
                     boolean isUserLibrary = utils.isUserLibrary(sample, user, clientCallback);
                     SampleQcResult qcResult = new SampleQcResult(key, quantity, adapterPercentage, percentFragmentLargerThan1Kb, isUserLibrary);
                     logger.logInfo("Sample ID: " + key);

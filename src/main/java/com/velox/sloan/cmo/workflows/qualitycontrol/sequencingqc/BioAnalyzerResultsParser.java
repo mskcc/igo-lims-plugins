@@ -56,18 +56,20 @@ public class BioAnalyzerResultsParser {
             String sampleId = null;
             int rowFromBp = 0;
             logger.logInfo("Header value map: " + headerMapValues.toString());
-            for (int i = 0; i < fileData.size(); i++) {
-                String line = fileData.get(i);
+            for (String fileDatum : fileData) {
+                logger.logInfo("Line before comma removal from numeric values: " + fileDatum);
+                String line = utils.removeThousandSeparator(fileDatum); //If numeric values have 1000 separator, remove 1000 separator which is "comma" from such values.
+                logger.logInfo("Line after comma removal from numeric values: " + line);
                 List<String> lineValues = Arrays.asList(line.split(","));
-                if(line.contains(SAMPLE_BEGIN_IDENTIFIER)){
+                if (line.contains(SAMPLE_BEGIN_IDENTIFIER)) {
                     sampleId = lineValues.get(1);
                     continue;
                 }
                 String lineStartValue = lineValues.size() > 0 ? lineValues.get(0) : null;
-                if(lineValues.contains(SAMPLE_DATA_BEGIN_IDENTIFIER) || StringUtils.isBlank(lineStartValue) || IDENTIFIER_TO_SKIP_LINE.contains(lineStartValue)){
+                if (lineValues.contains(SAMPLE_DATA_BEGIN_IDENTIFIER) || StringUtils.isBlank(lineStartValue) || IDENTIFIER_TO_SKIP_LINE.contains(lineStartValue)) {
                     continue;
                 }
-                if (sampleId!=null) {
+                if (sampleId != null) {
                     logger.logInfo(String.format("Bioanalyzer data from file %s.\n%s", fileName, lineValues.toString()));
                     int startBp = rowFromBp;
                     int toBp = Integer.parseInt(lineValues.get(headerMapValues.get(SIZE_BP)).replace(",", "")); // replace any comma separators in numbers.
@@ -75,7 +77,6 @@ public class BioAnalyzerResultsParser {
                     double concentration = Double.parseDouble(lineValues.get(headerMapValues.get(CONCENTRATION)).replace(",", ""));
                     double fraction = Double.parseDouble(lineValues.get(headerMapValues.get(PERCENT_FRACTION)).replace(",", ""));
                     String observation = lineValues.get(headerMapValues.get(OBSERVATIONS));
-                    //String observation =  !StringUtils.isBlank(obs) ? obs: ""; //put empty value if observation value is null
                     QualityControlData QualityControlData = new QualityControlData(sampleId, startBp, toBp, concentration, fraction, observation);
                     groupedData.putIfAbsent(sampleId, new ArrayList<>());
                     groupedData.get(sampleId).add(QualityControlData);

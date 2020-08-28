@@ -623,4 +623,23 @@ public class IgoLimsPluginUtils{
     public List<Long> getRecordIds(List<DataRecord> records){
         return records.stream().map(DataRecord :: getRecordId).collect(Collectors.toList());
     }
+
+    /**
+     * Method to remove 1000 separator from CSV files. Such values in CSV files are enclosed with double quotes ("123,100")
+     * This method can be used to fined such values and remove comma (",") to split the lines more efficiently and
+     * extract column values.
+     *
+     * @param line
+     * @return
+     */
+    public String removeThousandSeparator(String line) {
+        Pattern pattern = Pattern.compile("\"([^\"]*)\"");
+        String updatedLine = line;
+        Matcher m = pattern.matcher(line);
+        while (m.find()) {
+            String val = m.group(1);
+            updatedLine = updatedLine.replace(val, val.replace(",", "")).replace("\"","");;
+        }
+        return updatedLine;
+    }
 }

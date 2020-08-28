@@ -263,7 +263,6 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
             for (SampleQcResult bioa : bioaResults) {
                 String bioId = bioa.getSampleDescription();
                 boolean matchFound = false;
-                logInfo("match found before loop: " + matchFound);
                 for (SampleQcResult tape : tapestationResults) {
                     String tapeId = tape.getSampleDescription();
                     if (bioId.equalsIgnoreCase(tapeId)) {
@@ -273,36 +272,31 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
                         List qcTypeSelected = clientCallback.showListDialog(message, QC_TYPES, false, user);
                         logInfo("qc type selected: " + qcTypeSelected.toString());
                         if (qcTypeSelected.size() == 0) {
-                            throw new InvalidValue("User did not select the value for QC Type values to keep for Sample %s. Cannot filter result without valid user input.", bioId);
+                            String msg = String.format("User did not select the value for QC Type values to keep for Sample %s. Cannot filter result without valid user input.", bioId);
+                            logError(msg);
+                            throw new InvalidValue(msg);
                         }
                         if (qcTypeSelected.get(0).equals(QC_TYPES.get(1))) {
                             dedupedResults.add(tape);
-                            logInfo("Added tape to deduped: " + dedupedResults.toString());
+                            logInfo(String.format("Added %s tapestation results to final QC Results: ", bioId ));
                             tapeToEliminate.add(tape);
-                            logInfo("Added tape to eliminate: " + tapeToEliminate.toString());
                         }
                         if (qcTypeSelected.get(0).equals(QC_TYPES.get(0))) {
                             dedupedResults.add(bioa);
                             tapeToEliminate.add(tape);
-                            logInfo("Added bioa to deduped: " + dedupedResults.toString());
+                            logInfo(String.format("Added %s BioA results to final QC Results: ", bioId ));
                         }
                     }
                 }
-                logInfo("match found after loop: " + matchFound);
                 if (!matchFound) {
                     dedupedResults.add(bioa);
-                    logInfo("Match not found, added to deduped: " + dedupedResults.toString());
+                    logInfo(String.format("No duplicate values found for Sample %s. Added to final QC Results: ", bioId ));
                 }
             }
         } catch (Exception e) {
             String errMsg = String.format("%s error occured while checking for duplicate values in QC data.\n%s", ExceptionUtils.getRootCauseMessage(e), ExceptionUtils.getStackTrace(e));
             logError(errMsg);
         }
-
-        logInfo("deduped results after cleaning : " + dedupedResults.toString());
-        logInfo("tapestation results after cleaning: " + tapestationResults.toString());
-        logInfo("Tapestation result size: " + tapestationResults.size());
-        logInfo("Tapestation to eliminate size: " + tapeToEliminate.size());
         if (tapestationResults.size() > tapeToEliminate.size()) {
             for (SampleQcResult tr : tapestationResults) {
                 String trId = tr.getSampleDescription();
@@ -319,7 +313,6 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
             }
             logInfo("tapestation results after eliminating selected: " + dedupedResults.toString());
         }
-        clientCallback.displayInfo("Deduped results" + dedupedResults.toString());
         return dedupedResults;
     }
 
@@ -335,7 +328,7 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
             String formName = "QC Recommendations info";
             TemporaryDataType tempDataType = new TemporaryDataType("QCRecommendations", "QC Recommendations");
             List<VeloxFieldDefinition<?>> fieldDefList = new ArrayList<VeloxFieldDefinition<?>>();
-            VeloxStringFieldDefinition sampleId = VeloxFieldDefinition.stringFieldBuilder().displayName("IGO ID").dataFieldName("SampleId").visible(true).editable(false).maxLength(100000000).numLines(1).build();
+            VeloxStringFieldDefinition sampleId = VeloxFieldDefinition.stringFieldBuilder().displayName("IGO ID").dataFieldName("SampleId").visible(true).editable(false).maxLength(100000000).numLines(1).sortDirection(VeloxFieldDefinition.SortDirection.Ascending).build();
             VeloxDoubleFieldDefinition adapterPercentage = VeloxFieldDefinition.doubleFieldBuilder().displayName("Adapters (%)").dataFieldName("AdapterPercentage").visible(true).editable(false).maxValue(100000000).minValue(0.0).precision((short) 3).build();
             VeloxDoubleFieldDefinition fragmentsUpto1kb = VeloxFieldDefinition.doubleFieldBuilder().displayName("Fragments Upto 1 kb (%)").dataFieldName("PercentUpto1kb").visible(true).editable(false).maxValue(100000000).minValue(0.0).precision((short) 3).build();
             VeloxDoubleFieldDefinition fragmentsLargerThan1kb = VeloxFieldDefinition.doubleFieldBuilder().displayName("Fragments Larger Than 1kb (%)").dataFieldName("PercentGreaterThan1kb").visible(true).editable(false).maxValue(100000000).minValue(0.0).precision((short) 3).build();
@@ -362,7 +355,12 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
                 defaultValues.add(values);
             }
             userInputData = clientCallback.showTableEntryDialog("IGO QC Recommendations", "Please review IGO QC Recommendations", tempDataType, defaultValues);
-        } catch (Exception se) {
+            if (userInputData == null){
+                String errMsg = "User canceled the QC recommendation review dialog. Qc Recommendation will not update.";
+                logError(errMsg);
+                clientCallback.displayError(errMsg);
+            }
+        } catch (ServerException se) {
             logError(String.format("ServerException while creating popup table prompt to show 'IGO QC Recommendation' and get input from user:\n%s", ExceptionUtils.getStackTrace(se)));
         }
         return userInputData;
@@ -400,19 +398,21 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
      */
     private void setQcReportValues(List<Map<String, Object>> userReviewedValues, List<DataRecord> attachedProtocolRecords) throws ServerException {
         try {
-            for (DataRecord rec : attachedProtocolRecords) {
-                Object recSampleId = rec.getValue(SampleModel.SAMPLE_ID, user);
-                boolean sampleMappingFound = false;
-                for (Map<String, Object> val : userReviewedValues) {
-                    Object sampleId = val.get("SampleId");
-                    if (sampleId != null && recSampleId != null && sampleId.toString().equalsIgnoreCase(recSampleId.toString())) {
-                        rec.setDataField("IgoQcRecommendation", val.get("igoRecommendation"), user);
-                        dataRecordManager.storeDataFieldChanges(null, user);
-                        sampleMappingFound = true;
+            if(userReviewedValues!=null) {
+                for (DataRecord rec : attachedProtocolRecords) {
+                    Object recSampleId = rec.getValue(SampleModel.SAMPLE_ID, user);
+                    boolean sampleMappingFound = false;
+                    for (Map<String, Object> val : userReviewedValues) {
+                        Object sampleId = val.get("SampleId");
+                        if (sampleId != null && recSampleId != null && sampleId.toString().equalsIgnoreCase(recSampleId.toString())) {
+                            rec.setDataField("IgoQcRecommendation", val.get("igoRecommendation"), user);
+                            dataRecordManager.storeDataFieldChanges(null, user);
+                            sampleMappingFound = true;
+                        }
                     }
-                }
-                if (!sampleMappingFound) {
-                    clientCallback.displayWarning(String.format("Cannot find mapping for Sample %s in QC data for 'IGO QC Recommendation' annotations.", recSampleId));
+                    if (!sampleMappingFound) {
+                        clientCallback.displayWarning(String.format("Cannot find mapping for Sample %s in QC data for 'IGO QC Recommendation' annotations.", recSampleId));
+                    }
                 }
             }
         } catch (RemoteException e) {

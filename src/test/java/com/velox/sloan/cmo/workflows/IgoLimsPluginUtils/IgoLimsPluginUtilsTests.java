@@ -261,6 +261,39 @@ public class IgoLimsPluginUtilsTests {
         }
     }
 
+    @Test
+    public void isUserLibrary() {
+    }
+
+    @Test
+    public void getSampleWithMatchingId() {
+    }
+
+    @Test
+    public void getSampleQuantity() {
+    }
+
+    @Test
+    public void isBioanalyzerFile() {
+    }
+
+    @Test
+    public void hasValidBioanalyzerHeader() {
+    }
+
+    @Test
+    public void getBioanalyzerFileHeaderMap() {
+    }
+
+    @Test
+    public void getRecordIds() {
+    }
+
+    @Test
+    public void removeThousandSeparator() {
+    }
+
+
     private byte[] readCsvFileToBytes(String fileName) {
         File file = new File(requireNonNull(IgoLimsPluginUtils
                 .class.getClassLoader().getResource(fileName)).getPath());
