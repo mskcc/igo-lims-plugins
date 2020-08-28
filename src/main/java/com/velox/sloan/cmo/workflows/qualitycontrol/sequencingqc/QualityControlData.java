@@ -72,4 +72,17 @@ class QualityControlData {
     public void setObservation(String observation) {
         this.observation = observation;
     }
+
+    @Override
+    public String toString() {
+        return "QualityControlData{" +
+                "sampleDescription='" + sampleDescription + '\'' +
+                ", fromBp=" + fromBp +
+                ", toBp=" + toBp +
+                ", concentration=" + concentration +
+                ", fractionVal=" + fractionVal +
+                ", observation='" + observation + '\'' +
+                '}';
+    }
+
 }

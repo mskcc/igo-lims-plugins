@@ -23,7 +23,6 @@ public class BioAnalyzerResultsParser {
     private ClientCallbackOperations clientCallback;
     private PluginLogger logger;
     private User user;
-    private final List<String> bioanalyzerFileIdentifiers = Arrays.asList("");
     private final List<String> IDENTIFIER_TO_SKIP_LINE = Arrays.asList("Data File Path", "Date Created", "Date Last Modified",
             "Version Created", "Assay Name", "Assay Path", "Assay Title", "Assay Version", "Number of Samples Run", "Peak Table",
             "Size [bp]", "Region Table", "Name", "Region 1");
@@ -102,10 +101,11 @@ public class BioAnalyzerResultsParser {
         double adapterPercentage = 0.0;
         try {
             for (QualityControlData data : QualityControlDataVals) {
+                logger.logInfo(data.toString());
                 int fromBpVal = data.getFromBp();
                 int toBpVal = data.getToBp();
                 String lowerMarker = data.getObservation();
-                if (StringUtils.isBlank(lowerMarker) && fromBpVal >= ADAPTER_FROM_BP && toBpVal <= ADAPTER_TO_BP) {
+                if (StringUtils.isBlank(lowerMarker) && toBpVal >= ADAPTER_FROM_BP && toBpVal <= ADAPTER_TO_BP) {
                     adapterPercentage += data.getFractionVal();
                 }
             }
@@ -128,11 +128,15 @@ public class BioAnalyzerResultsParser {
         double percentageFragmentsUpto1kb = 0.0;
         try {
             for (QualityControlData data : QualityControlDataVals) {
+                logger.logInfo("Bioanalyzer sample data row: " + data.toString());
                 int fromBpVal = data.getFromBp();
                 int toBp = data.getToBp();
                 String observation = data.getObservation();
-                if (StringUtils.isBlank(observation) && fromBpVal > ADAPTER_TO_BP && toBp <= TO_BP_1KB ) {
+                logger.logInfo(String.format("From BP: %d, To BP: %d", fromBpVal, toBp));
+                if (StringUtils.isBlank(observation) && toBp > ADAPTER_TO_BP && toBp <= TO_BP_1KB ) {
+                    logger.logInfo(String.format(" Adding row with From BP: %d, To BP: %d",  fromBpVal, toBp));
                     percentageFragmentsUpto1kb += data.getFractionVal();
+                    logger.logInfo(String.format("Percentage upto 1 kb: %f", percentageFragmentsUpto1kb));
                 }
             }
         } catch (Exception e) {

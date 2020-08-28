@@ -7,7 +7,6 @@ import com.velox.api.user.User;
 import com.velox.api.util.ClientCallbackOperations;
 import com.velox.api.util.ServerException;
 import com.velox.sapio.commons.exemplar.context.ManagerBase;
-import com.velox.sloan.cmo.recmodels.SampleModel;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
@@ -17,6 +16,7 @@ import java.util.stream.Collectors;
 
 class TapeStationResultParser extends ManagerBase {
     private final double ADAPTER_TO_BP = 180.0;
+    private final double LIB_TO_BP = 1000.0;
     private final String FROM_BP = "From [bp]";
     private IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
     private Map<String, Integer> headerMapValues;
@@ -157,7 +157,7 @@ class TapeStationResultParser extends ManagerBase {
         try {
             for (QualityControlData data : QualityControlDataVals) {
                 int toBpVal = data.getToBp();
-                if (toBpVal > ADAPTER_TO_BP) {
+                if (toBpVal > ADAPTER_TO_BP && toBpVal <= LIB_TO_BP) {
                     double conc = data.getConcentration();
                     return (conc/sumConc) * 100;
                 }

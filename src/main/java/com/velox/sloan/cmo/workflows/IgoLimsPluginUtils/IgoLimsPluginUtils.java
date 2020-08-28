@@ -24,6 +24,7 @@ import java.rmi.RemoteException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * This class will contain all the common methods which are often used repeatedly across different plugins.
@@ -500,7 +501,7 @@ public class IgoLimsPluginUtils{
     public boolean isBioanalyzerFile(List<String> data, List<String>bioanalyzerIdentifiers, ClientCallbackOperations clientCallback, PluginLogger logger) throws ServerException {
         int countFound = 0;
         try{
-            int numberOfLinesToScan = 20;
+            int numberOfLinesToScan = data.size()> 20 ? 20 : data.size();
             for (int i=0; i < numberOfLinesToScan; i++){
                 List<String> lineValues = Arrays.asList(data.get(i).split(","));
                 String firstVal = lineValues.get(0);
@@ -576,11 +577,10 @@ public class IgoLimsPluginUtils{
      * @param temporaryDataTypeFieldDefinitions
      * @throws ServerException
      */
-    public void setTempDataTypeLayout(TemporaryDataType temporaryDataType, List<VeloxFieldDefinition<?>> temporaryDataTypeFieldDefinitions, String formNameToUse, PluginLogger logger){
+    public TemporaryDataType setTempDataTypeLayout(TemporaryDataType temporaryDataType, List<VeloxFieldDefinition<?>> temporaryDataTypeFieldDefinitions, String formNameToUse, PluginLogger logger){
         try {
-            String formName = formNameToUse;
             // Create form
-            DataFormComponent form = new DataFormComponent(formName, formName);
+            DataFormComponent form = new DataFormComponent(formNameToUse, formNameToUse);
             form.setCollapsed(false);
             form.setColumn(0);
             form.setColumnSpan(4);
@@ -588,28 +588,39 @@ public class IgoLimsPluginUtils{
             form.setHeight(10);
             // Add fields to the form
             for (int i = 0; i < temporaryDataTypeFieldDefinitions.size(); i++) {
-                logger.logInfo(temporaryDataTypeFieldDefinitions.get(i).getColumnName());
+                logger.logInfo("adding tempdata layout");
+                logger.logInfo(temporaryDataTypeFieldDefinitions.get(i).getDisplayName());
                 VeloxFieldDefinition<?> fieldDef = temporaryDataTypeFieldDefinitions.get(i);
                 FieldDefinitionPosition pos = new FieldDefinitionPosition(fieldDef.getDataFieldName());
                 pos.setFormColumn(0);
                 pos.setFormColumnSpan(4);
                 pos.setOrder(i);
-                pos.setFormName(formName);
+                pos.setFormName(formNameToUse);
                 form.setFieldDefinitionPosition(pos);
-                logger.logInfo(form.getFieldDefinitionPositionList().toString());
             }
             // Create a tab with the form on it
             DataTypeTabDefinition tabDef = new DataTypeTabDefinition("Tab1", "Tab 1");
             tabDef.setDataTypeLayoutComponent(form);
             tabDef.setTabOrder(0);
             // Create a layout with the tab on it
-            DataTypeLayout layout = new DataTypeLayout(temporaryDataType.getDisplayName(), temporaryDataType.getDataTypeName(), "Default layout");
+            DataTypeLayout layout = new DataTypeLayout("Default", "Default", "Default layout");
             layout.setDataTypeTabDefinition(tabDef);
             // Add the layout to the TDT
             temporaryDataType.setDataTypeLayout(layout);
+            logger.logInfo("layout set");
         }catch (Exception e){
             String errMsg = String.format("%s error occured while creating DataType layout for Table dialog.\n%s", ExceptionUtils.getRootCauseMessage(e), ExceptionUtils.getStackTrace(e));
             logger.logError(errMsg);
         }
+        return temporaryDataType;
+    }
+
+    /**
+     * Method to get RecordIds from collection of DataRecords.
+     * @param records
+     * @return
+     */
+    public List<Long> getRecordIds(List<DataRecord> records){
+        return records.stream().map(DataRecord :: getRecordId).collect(Collectors.toList());
     }
 }

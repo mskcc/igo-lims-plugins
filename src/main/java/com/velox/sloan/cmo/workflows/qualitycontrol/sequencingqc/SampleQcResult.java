@@ -167,7 +167,6 @@ public class SampleQcResult {
      * @return
      */
     String getIgoRecommendationAnnotation(){
-        System.out.println(getQuantityCheck() + " : " + getAdapterCheck() + " : " + getFragmentSizeCheck());
         if (getQuantityCheck().equalsIgnoreCase(FAILED) || getAdapterCheck().equalsIgnoreCase(FAILED) || getFragmentSizeCheck().equalsIgnoreCase(FAILED)){
             return FAILED;
         }
@@ -211,7 +210,7 @@ public class SampleQcResult {
         map.put("PercentUpto1kb", this.percentfragmentsUpTo1kb);
         map.put("PercentGreaterThan1kb", this.percentFragmentsLargerThan1kb);
         map.put("IsUserLibrary", this.isUserLibrary);
-        map.put("IgoRecommentation", this.isUserLibrary);
+        map.put("igoRecommendation", this.igoRecommendation);
         return map;
     }
 }
