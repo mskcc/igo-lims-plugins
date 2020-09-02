@@ -1,6 +1,7 @@
 package com.velox.sloan.cmo.workflows.samplereceiving;
 
 import com.velox.api.datarecord.DataRecord;
+import com.velox.api.datarecord.InvalidValue;
 import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
@@ -478,22 +479,20 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
      * @throws NotFound
      */
     private void setSampleStatusForSamples(List<DataRecord> attachedSamples) {
-        List<Map<String, Object>> sampleStatusFields = new ArrayList<>();
         for (DataRecord sample : attachedSamples) {
             try {
-                Map<String, Object> sampleStatus = new HashMap<>();
-                String sampleId = sample.getStringVal("SampleId", user);
-                sampleStatus.put("SampleId", sampleId);
-                sampleStatus.put("ExemplarSampleStatus", "Processing Completed");
-                sampleStatusFields.add(sampleStatus);
-                dataRecordManager.setFieldsForRecords(attachedSamples, sampleStatusFields, user);
-                dataRecordManager.storeAndCommit("Exemplar Sample Status changed.", user);
+                sample.setDataField(SampleModel.EXEMPLAR_SAMPLE_STATUS, "Processing Completed", user);
+                dataRecordManager.storeAndCommit("Exemplar Sample Status changed.",null, user);
             } catch (RemoteException e) {
-                logError(String.format("ServerException -> Error while setting '%s' of sample with RecordId %d:\n%s", SampleModel.EXEMPLAR_SAMPLE_STATUS, sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+                logError(String.format("RemoteException -> Error while setting '%s' of sample with RecordId %d:\n%s", SampleModel.EXEMPLAR_SAMPLE_STATUS, sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
             } catch (NotFound notFound) {
-                logError(String.format("ServerException -> Error while setting '%s' of sample with RecordId %d:\n%s", SampleModel.EXEMPLAR_SAMPLE_STATUS, sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
+                logError(String.format("NotFound -> Error while setting '%s' of sample with RecordId %d:\n%s", SampleModel.EXEMPLAR_SAMPLE_STATUS, sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
             } catch (ServerException e) {
                 logError(String.format("ServerException -> Error while setting '%s' of sample with RecordId %d:\n%s", SampleModel.EXEMPLAR_SAMPLE_STATUS, sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+            } catch (InvalidValue invalidValue) {
+                logError(String.format("InvalidValue -> Error while setting '%s' of sample with RecordId %d:\n%s", SampleModel.EXEMPLAR_SAMPLE_STATUS, sample.getRecordId(), ExceptionUtils.getStackTrace(invalidValue)));
+            } catch (IoError ioError) {
+                logError(String.format("IoError -> Error while setting '%s' of sample with RecordId %d:\n%s", SampleModel.EXEMPLAR_SAMPLE_STATUS, sample.getRecordId(), ExceptionUtils.getStackTrace(ioError)));
             }
         }
     }
