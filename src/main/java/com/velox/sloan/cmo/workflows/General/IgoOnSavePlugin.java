@@ -11,7 +11,6 @@ import com.velox.sloan.cmo.recmodels.SeqRequirementModel;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.mockito.internal.matchers.Null;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -72,6 +71,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
             }
             // update 'RemainingReads' to be sequenced on SeqRequirements when a SeqAnalysisSampleQC record is saved.
             for (DataRecord rec: theSavedRecords){
+                logInfo(" Started updateing RemainingReads for SeqAnalysisSampleQC with Record Id: " + rec.getRecordId());
                 if (rec.getDataTypeName().equalsIgnoreCase(SeqAnalysisSampleQCModel.DATA_TYPE_NAME)){
                     updateRemainingReadsToSequence(rec);
                 }
@@ -170,6 +170,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
         long sumReadsExamined = 0;
         try{
             for (DataRecord rec : seqAnalysisSampleQcRecords){
+                logInfo("Seq Qc Record Id: " + rec.getRecordId());
                 Object readsExamined = rec.getValue(SeqAnalysisSampleQCModel.READS_EXAMINED, user);
                 logInfo("Reads examined: " + readsExamined);
                 Object seqQcStatus = rec.getValue(SeqAnalysisSampleQCModel.SEQ_QCSTATUS, user);
@@ -177,13 +178,11 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                     sumReadsExamined += (long)readsExamined;
                 }
             }
-            logInfo("Total reads examined: " + sumReadsExamined);
         } catch (RemoteException | NotFound e) {
             logError(String.format("%s => Error while calculating sum of Reads Examined:\n%s", ExceptionUtils.getRootCause(e), ExceptionUtils.getStackTrace(e)));
         }
         return sumReadsExamined;
     }
-
 
     /**
      * Method to update remaining reads on SeqAnalysisSampleQC record.
