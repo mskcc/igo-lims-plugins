@@ -7,6 +7,7 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.recmodels.SampleCMOInfoRecordsModel;
 import com.velox.sloan.cmo.recmodels.SampleModel;
 import com.velox.sloan.cmo.recmodels.SeqAnalysisSampleQCModel;
+import com.velox.sloan.cmo.recmodels.SeqRequirementModel;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -68,7 +69,12 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
             if (dataTypeName.equalsIgnoreCase(SampleCMOInfoRecordsModel.DATA_TYPE_NAME)) {
                 validateCmoInfoDataTypeFields(theSavedRecords, dataTypeName);
             }
-
+            // update 'RemainingReads' to be sequenced on SeqRequirements when a SeqAnalysisSampleQC record is saved.
+            for (DataRecord rec: theSavedRecords){
+                if (rec.getDataTypeName().equalsIgnoreCase(SeqAnalysisSampleQCModel.DATA_TYPE_NAME)){
+                    updateRemainingReadsToSequence(rec);
+                }
+            }
             // if there's an error
         }  catch (NotFound e) {
             String errMsg = String.format("NotFound Exception while saving data:\n%s", ExceptionUtils.getStackTrace(e));
@@ -154,27 +160,57 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
     }
 
     /**
-     * Method to update remaining reads on
+     * Method to get Sum of Sequencing ReadsExamined/Sequenced from SeqAnalysisSampleQcRecords for a sample.
+     * @param seqAnalysisSampleQcRecords
+     * @return
+     */
+    private long getSumSequencingReadsExamined(List<DataRecord>seqAnalysisSampleQcRecords){
+        long sumReadsExamined = 0;
+        try{
+            for (DataRecord rec : seqAnalysisSampleQcRecords){
+                Object readsExamined = rec.getValue(SeqAnalysisSampleQCModel.READS_EXAMINED, user);
+                if (readsExamined != null){
+                    sumReadsExamined += (long)readsExamined;
+                }
+            }
+        } catch (RemoteException | NotFound e) {
+            e.printStackTrace();
+        }
+        return sumReadsExamined;
+    }
+
+
+    /**
+     * Method to update remaining reads on SeqAnalysisSampleQC record.
      * @param sampleLevelSequencingQc
      */
     private void updateRemainingReadsToSequence(DataRecord sampleLevelSequencingQc){
-        List<DataRecord> seqQcRecords = new ArrayList<>();
+        List<DataRecord> seqQcRecords;
         try{
             List<DataRecord> parentSample = sampleLevelSequencingQc.getParentsOfType(SampleModel.DATA_TYPE_NAME, user);
             if (parentSample.size() == 1){
                 seqQcRecords = utils.getSequencingQcRecords(parentSample.get(0), pluginLogger, user, clientCallback);
                 List<DataRecord> seqRequirements = utils.getRecordsOfTypeFromParents(seqQcRecords.get(0),
                         SampleModel.DATA_TYPE_NAME, SeqAnalysisSampleQCModel.DATA_TYPE_NAME, user, pluginLogger);
-                CONTINUE_HERE
-                //continue here calculating and updating values on SequendingRequirementsRecords------------->>>>>>>>>
+                if(seqRequirements.size()==0){
+                    throw new NotFound(String.format("Cannot find %s DataRecord for Sample with Record Id %d", SeqRequirementModel.DATA_TYPE_NAME, parentSample.get(0).getRecordId()));
+                }
+                DataRecord seqRequirementRecord = seqRequirements.get(0);
+                Object readsRequested = seqRequirementRecord.getValue(SeqRequirementModel.REQUESTED_READS, user);
+                long totalReadsExamined = getSumSequencingReadsExamined(seqQcRecords);
+                assert readsRequested != null;
+                long remainingReads = 0L;
+                if(((int)readsRequested * 1000000L) > totalReadsExamined){
+                    remainingReads = ((int)readsRequested * 1000000L) - totalReadsExamined;
+                }
+                seqRequirementRecord.setDataField("RemainingReads", remainingReads, user);
+                String msg = String.format("Updated 'RemainingReads' on %s related to %s record with Record Id: %d",
+                        SeqRequirementModel.DATA_TYPE_NAME, SeqAnalysisSampleQCModel.DATA_TYPE_NAME, sampleLevelSequencingQc.getRecordId());
+                dataRecordManager.storeAndCommit(msg, null, user);
             }
-
-        }catch (NullPointerException e){
-            logError(ExceptionUtils.getStackTrace(e));
-        } catch (IoError ioError) {
-            ioError.printStackTrace();
-        } catch (RemoteException e) {
-            e.printStackTrace();
+        } catch (IoError | RemoteException | NotFound | InvalidValue | ServerException e) {
+            logError(String.format("%s => Error while updating Remaining Reads to Sequence on %s related to %s " +
+                    "Record with Record Id: %d", ExceptionUtils.getRootCauseMessage(e), SeqRequirementModel.DATA_TYPE_NAME, SeqAnalysisSampleQCModel.DATA_TYPE_NAME, sampleLevelSequencingQc.getRecordId()));
         }
     }
 
