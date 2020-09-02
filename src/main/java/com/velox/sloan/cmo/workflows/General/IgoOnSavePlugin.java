@@ -32,6 +32,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
     private final List<String> SAMPLE_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS = Arrays.asList("OtherSampleId", "UserSampleID", "Preservation", "Species",
             "TumorOrNormal", "Species", "PatientId", "CmoPatientId");
     private List<String> trackableDataTypes = Arrays.asList("Request");
+    private final String FAILED = "Failed";
     private String error = null;
 
     // define constructor, what structure of class/object would look like
@@ -165,16 +166,18 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
      * @return
      */
     private long getSumSequencingReadsExamined(List<DataRecord>seqAnalysisSampleQcRecords){
+        logInfo("Total SeqAnalysis records: " + seqAnalysisSampleQcRecords.size());
         long sumReadsExamined = 0;
         try{
             for (DataRecord rec : seqAnalysisSampleQcRecords){
                 Object readsExamined = rec.getValue(SeqAnalysisSampleQCModel.READS_EXAMINED, user);
-                if (readsExamined != null){
+                Object seqQcStatus = rec.getValue(SeqAnalysisSampleQCModel.SEQ_QCSTATUS, user);
+                if (readsExamined != null && !seqQcStatus.toString().equalsIgnoreCase(FAILED)){
                     sumReadsExamined += (long)readsExamined;
                 }
             }
         } catch (RemoteException | NotFound e) {
-            e.printStackTrace();
+            logError(String.format("%s => Error while calculating sum of Reads Examined:\n%s", ExceptionUtils.getRootCause(e), ExceptionUtils.getStackTrace(e)));
         }
         return sumReadsExamined;
     }
@@ -196,8 +199,11 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                     throw new NotFound(String.format("Cannot find %s DataRecord for Sample with Record Id %d", SeqRequirementModel.DATA_TYPE_NAME, parentSample.get(0).getRecordId()));
                 }
                 DataRecord seqRequirementRecord = seqRequirements.get(0);
+                logInfo("Sequencing requirement record id: " + seqRequirementRecord.getRecordId());
                 Object readsRequested = seqRequirementRecord.getValue(SeqRequirementModel.REQUESTED_READS, user);
+                logInfo("Requested Reads : " + readsRequested);
                 long totalReadsExamined = getSumSequencingReadsExamined(seqQcRecords);
+                logInfo("Total reads examined : " + readsRequested);
                 assert readsRequested != null;
                 long remainingReads = 0L;
                 if(((int)readsRequested * 1000000L) > totalReadsExamined){
@@ -260,12 +266,10 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                 }
                 Object cmoId = rec.getValue("CorrectedCMOID", user);
                 Object recordId = rec.getRecordId();
-                if (recordId!=null) {
-                    if (isDuplicateCmoId(cmoId, recordId)) {
-                        error = String.format("CorrectedCMOID '%s' already exists in '%s'. Choose a different value", cmoId, rec.getDataTypeName());
-                        clientCallback.displayError(error);
-                        logError(error);
-                    }
+                if (isDuplicateCmoId(cmoId, recordId)) {
+                    error = String.format("CorrectedCMOID '%s' already exists in '%s'. Choose a different value", cmoId, rec.getDataTypeName());
+                    clientCallback.displayError(error);
+                    logError(error);
                 }
             } catch (RemoteException | NotFound | ServerException e) {
                 error = String.format("Error while validating %s record %d for special characters:\n%s", rec.getDataTypeName(), rec.getRecordId(), e.getMessage());

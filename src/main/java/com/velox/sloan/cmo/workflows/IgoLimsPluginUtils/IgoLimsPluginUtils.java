@@ -381,19 +381,15 @@ public class IgoLimsPluginUtils{
      */
    public DataRecord getParentSampleUnderRequest(DataRecord sample, User user, ClientCallbackOperations clientCallback) throws ServerException {
         try{
-            if(sample.getParentsOfType(RequestModel.DATA_TYPE_NAME, user).size()>0){
-                return sample;
-            }
             Object requestId = sample.getValue(SampleModel.REQUEST_ID, user);
-            List<DataRecord> parentSamples = sample.getParentsOfType(SampleModel.DATA_TYPE_NAME, user);
             Stack<DataRecord> sampleStack = new Stack<>();
-            sampleStack.addAll(parentSamples);
+            sampleStack.add(sample);
             do {
                 DataRecord stackSample = sampleStack.pop();
                 if(stackSample.getParentsOfType(RequestModel.DATA_TYPE_NAME, user).size()>0){
                     return stackSample;
                 }
-                List<DataRecord> stackSampleParentSamples = stackSample.getParentsOfType(RequestModel.DATA_TYPE_NAME, user);
+                List<DataRecord> stackSampleParentSamples = stackSample.getParentsOfType(SampleModel.DATA_TYPE_NAME, user);
                 for (DataRecord sa : stackSampleParentSamples) {
                     Object saReqId = sa.getValue(SampleModel.REQUEST_ID, user);
                     if (requestId!= null && saReqId != null && requestId.toString().equalsIgnoreCase(saReqId.toString())){
@@ -656,22 +652,28 @@ public class IgoLimsPluginUtils{
     public List<DataRecord> getSequencingQcRecords(DataRecord sample, PluginLogger logger, User user, ClientCallbackOperations clientCallbackOperations){
         List<DataRecord> sequencingQcRecords = new ArrayList<>();
         try{
+            logger.logInfo("Sample recid: " + sample.getRecordId());
             DataRecord sampleUnderRequest = getParentSampleUnderRequest(sample, user, clientCallbackOperations);
+            logger.logInfo("Sample under request recid: " + sampleUnderRequest.getRecordId());
             DataRecord[] childSeqQcRecords = sampleUnderRequest.getChildrenOfType(SeqAnalysisSampleQCModel.DATA_TYPE_NAME, user);
             if(childSeqQcRecords.length > 0){
                 Collections.addAll(sequencingQcRecords, childSeqQcRecords);
             }
             Object requestId = sample.getValue(SampleModel.REQUEST_ID, user);
             Stack<DataRecord> sampleStack = new Stack<>();
-            DataRecord [] childSamples = sample.getChildrenOfType(SampleModel.DATA_TYPE_NAME, user);
-            if (childSamples.length > 0){
-                for (DataRecord rec : childSamples){
-                    Object reqId = rec.getValue(SampleModel.REQUEST_ID, user);
-                    if (reqId != null && requestId != null && reqId.toString().equalsIgnoreCase(requestId.toString())){
-                        sampleStack.add(rec);
-                    }
-                }
-            }
+            sampleStack.add(sampleUnderRequest);
+//            DataRecord [] childSamples = sample.getChildrenOfType(SampleModel.DATA_TYPE_NAME, user);
+//            logger.logInfo("Sample request id: " + requestId);
+//            logger.logInfo("Total child Samples: " + childSamples.length);
+//            if (childSamples.length > 0){
+//                for (DataRecord rec : childSamples){
+//                    Object reqId = rec.getValue(SampleModel.REQUEST_ID, user);
+//                    logger.logInfo("child sample request id: " + reqId);
+//                    if (reqId != null && requestId != null && reqId.toString().equalsIgnoreCase(requestId.toString())){
+//                        sampleStack.add(rec);
+//                    }
+//                }
+//            }
             do {
                 DataRecord stackSample = sampleStack.pop();
                 DataRecord [] childSeqQc = stackSample.getChildrenOfType(SeqAnalysisSampleQCModel.DATA_TYPE_NAME, user);
@@ -679,8 +681,10 @@ public class IgoLimsPluginUtils{
                     Collections.addAll(sequencingQcRecords, childSeqQc);
                 }
                 DataRecord[] stackSampleChildSamples = stackSample.getChildrenOfType(SampleModel.DATA_TYPE_NAME, user);
+                logger.logInfo("Total child Samples: " + stackSampleChildSamples.length);
                 for (DataRecord sa : stackSampleChildSamples) {
                     Object saReqId = sa.getValue(SampleModel.REQUEST_ID, user);
+                    logger.logInfo("Child Sample request id: " + saReqId);
                     if (requestId!= null && saReqId != null && requestId.toString().equalsIgnoreCase(saReqId.toString())){
                         sampleStack.push(sa);
                     }
