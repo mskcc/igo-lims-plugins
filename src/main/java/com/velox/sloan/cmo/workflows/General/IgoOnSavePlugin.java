@@ -171,11 +171,13 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
         try{
             for (DataRecord rec : seqAnalysisSampleQcRecords){
                 Object readsExamined = rec.getValue(SeqAnalysisSampleQCModel.READS_EXAMINED, user);
+                logInfo("Reads examined: " + readsExamined);
                 Object seqQcStatus = rec.getValue(SeqAnalysisSampleQCModel.SEQ_QCSTATUS, user);
                 if (readsExamined != null && !seqQcStatus.toString().equalsIgnoreCase(FAILED)){
                     sumReadsExamined += (long)readsExamined;
                 }
             }
+            logInfo("Total reads examined: " + sumReadsExamined);
         } catch (RemoteException | NotFound e) {
             logError(String.format("%s => Error while calculating sum of Reads Examined:\n%s", ExceptionUtils.getRootCause(e), ExceptionUtils.getStackTrace(e)));
         }
@@ -189,12 +191,13 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
      */
     private void updateRemainingReadsToSequence(DataRecord sampleLevelSequencingQc){
         List<DataRecord> seqQcRecords;
+
         try{
             List<DataRecord> parentSample = sampleLevelSequencingQc.getParentsOfType(SampleModel.DATA_TYPE_NAME, user);
             if (parentSample.size() == 1){
                 seqQcRecords = utils.getSequencingQcRecords(parentSample.get(0), pluginLogger, user, clientCallback);
                 List<DataRecord> seqRequirements = utils.getRecordsOfTypeFromParents(seqQcRecords.get(0),
-                        SampleModel.DATA_TYPE_NAME, SeqAnalysisSampleQCModel.DATA_TYPE_NAME, user, pluginLogger);
+                        SampleModel.DATA_TYPE_NAME, SeqRequirementModel.DATA_TYPE_NAME, user, pluginLogger);
                 if(seqRequirements.size()==0){
                     throw new NotFound(String.format("Cannot find %s DataRecord for Sample with Record Id %d", SeqRequirementModel.DATA_TYPE_NAME, parentSample.get(0).getRecordId()));
                 }
@@ -203,20 +206,22 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                 Object readsRequested = seqRequirementRecord.getValue(SeqRequirementModel.REQUESTED_READS, user);
                 logInfo("Requested Reads : " + readsRequested);
                 long totalReadsExamined = getSumSequencingReadsExamined(seqQcRecords);
-                logInfo("Total reads examined : " + readsRequested);
+                logInfo("Total reads examined : " + totalReadsExamined);
                 assert readsRequested != null;
                 long remainingReads = 0L;
-                if(((int)readsRequested * 1000000L) > totalReadsExamined){
-                    remainingReads = ((int)readsRequested * 1000000L) - totalReadsExamined;
+                if((Math.floor((double)readsRequested) * 1000000L) > totalReadsExamined){
+                    remainingReads = ((long)Math.floor((double)readsRequested) * 1000000L) - totalReadsExamined;
                 }
                 seqRequirementRecord.setDataField("RemainingReads", remainingReads, user);
-                String msg = String.format("Updated 'RemainingReads' on %s related to %s record with Record Id: %d",
+                seqRequirementRecord.setDataField(SeqRequirementModel.READ_TOTAL, totalReadsExamined, user);
+                String msg = String.format("Updated 'RemainingReads' and 'ReadTotal'on %s related to %s record with Record Id: %d",
                         SeqRequirementModel.DATA_TYPE_NAME, SeqAnalysisSampleQCModel.DATA_TYPE_NAME, sampleLevelSequencingQc.getRecordId());
-                dataRecordManager.storeAndCommit(msg, null, user);
+                logInfo(msg);
             }
-        } catch (IoError | RemoteException | NotFound | InvalidValue | ServerException e) {
+        } catch (IoError | RemoteException | NotFound | InvalidValue e) {
             logError(String.format("%s => Error while updating Remaining Reads to Sequence on %s related to %s " +
-                    "Record with Record Id: %d", ExceptionUtils.getRootCauseMessage(e), SeqRequirementModel.DATA_TYPE_NAME, SeqAnalysisSampleQCModel.DATA_TYPE_NAME, sampleLevelSequencingQc.getRecordId()));
+                    "Record with Record Id: %d\n%s", ExceptionUtils.getRootCauseMessage(e), SeqRequirementModel.DATA_TYPE_NAME, SeqAnalysisSampleQCModel.DATA_TYPE_NAME, sampleLevelSequencingQc.getRecordId(),
+                    ExceptionUtils.getStackTrace(e)));
         }
     }
 
