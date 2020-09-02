@@ -1,14 +1,30 @@
 package com.velox.sloan.cmo.workflows.IgoLimsPluginUtils;
 
+import com.velox.api.datarecord.DataRecord;
+import com.velox.api.datarecord.DataRecordManager;
+import com.velox.api.datarecord.IoError;
+import com.velox.api.datarecord.NotFound;
+import com.velox.api.plugin.PluginLogger;
+import com.velox.api.user.User;
+import com.velox.api.util.ClientCallbackOperations;
 import com.velox.api.util.ServerException;
+import com.velox.sapioutils.client.standalone.VeloxConnection;
+import com.velox.sapioutils.client.standalone.VeloxConnectionException;
+import com.velox.sloan.cmo.recmodels.SampleModel;
+import com.velox.sloan.cmo.workflows.TestUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Row;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.rmi.RemoteException;
 import java.util.*;
 
 import static java.util.Objects.requireNonNull;
@@ -23,9 +39,22 @@ public class IgoLimsPluginUtilsTests {
     private List<String> dataFromFile = new ArrayList<>();
     private List<String> invalidHeaderData;
     private Map<String, Integer> headerValuesMap;
+    private User user;
+    private DataRecordManager dataRecordManager;
+    private VeloxConnection connection;
+    private TestUtils testUtils = new TestUtils();
+    private List<DataRecord> userLibraries;
 
     @Before
     public void setUp() {
+        connection = testUtils.connectServer();
+        user = connection.getUser();
+        dataRecordManager = connection.getDataRecordManager();
+        try {
+            userLibraries = dataRecordManager.queryDataRecords(SampleModel.DATA_TYPE_NAME, "SampleId IN ('09687_AO_1_1', '07566_15_1_1')", user);
+        } catch (NotFound | IoError | RemoteException notFound) {
+            notFound.printStackTrace();
+        }
         String fileName = "FileReaderTestFileWithData.csv";
         byteData = readCsvFileToBytes(fileName);
         String emptyFile = "FileReaderTestEmpty.csv";
@@ -38,7 +67,7 @@ public class IgoLimsPluginUtilsTests {
             headerValuesMap = commonMethods.getCsvHeaderValueMap(dataFromFile);
 
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println(String.format("Error while running IgoLimsPluginUtilsTests:\n%s", ExceptionUtils.getStackTrace(e)));
         }
     }
 
@@ -262,15 +291,19 @@ public class IgoLimsPluginUtilsTests {
     }
 
     @Test
-    public void isUserLibrary() {
+    public void isUserLibrary() throws ServerException {
+        assertTrue(commonMethods.isUserLibrary(userLibraries.get(0), user, Mockito.mock(ClientCallbackOperations.class)));
+        assertFalse(commonMethods.isUserLibrary(userLibraries.get(1), user, Mockito.mock(ClientCallbackOperations.class)));
     }
 
     @Test
-    public void getSampleWithMatchingId() {
+    public void getSampleWithMatchingId() throws ServerException {
+        assertNotNull(commonMethods.getSampleWithMatchingId("07566_15_1_1", userLibraries, "MockFilename", Mockito.mock(ClientCallbackOperations.class), Mockito.mock(PluginLogger.class), user));
     }
 
     @Test
     public void getSampleQuantity() {
+
     }
 
     @Test
@@ -291,6 +324,11 @@ public class IgoLimsPluginUtilsTests {
 
     @Test
     public void removeThousandSeparator() {
+    }
+
+    @After
+    public void Teardown() throws VeloxConnectionException {
+        connection.close();
     }
 
 

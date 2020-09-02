@@ -1,6 +1,7 @@
 package com.velox.sloan.cmo.workflows.IgoLimsPluginUtils;
 
 import com.velox.api.datarecord.DataRecord;
+import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
 import com.velox.api.datatype.TemporaryDataType;
 import com.velox.api.datatype.datatypelayout.DataFormComponent;
@@ -14,6 +15,7 @@ import com.velox.api.util.ClientCallbackOperations;
 import com.velox.api.util.ServerException;
 import com.velox.sloan.cmo.recmodels.RequestModel;
 import com.velox.sloan.cmo.recmodels.SampleModel;
+import com.velox.sloan.cmo.recmodels.SeqAnalysisSampleQCModel;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
@@ -641,5 +643,89 @@ public class IgoLimsPluginUtils{
             updatedLine = updatedLine.replace(val, val.replace(",", "")).replace("\"","");;
         }
         return updatedLine;
+    }
+
+    /**
+     * Method to get all SeqAnalysisSampleQC records for a sample
+     * @param sample
+     * @param logger
+     * @param user
+     * @param clientCallbackOperations
+     * @return
+     */
+    public List<DataRecord> getSequencingQcRecords(DataRecord sample, PluginLogger logger, User user, ClientCallbackOperations clientCallbackOperations){
+        List<DataRecord> sequencingQcRecords = new ArrayList<>();
+        try{
+            DataRecord sampleUnderRequest = getParentSampleUnderRequest(sample, user, clientCallbackOperations);
+            DataRecord[] childSeqQcRecords = sampleUnderRequest.getChildrenOfType(SeqAnalysisSampleQCModel.DATA_TYPE_NAME, user);
+            if(childSeqQcRecords.length > 0){
+                Collections.addAll(sequencingQcRecords, childSeqQcRecords);
+            }
+            Object requestId = sample.getValue(SampleModel.REQUEST_ID, user);
+            Stack<DataRecord> sampleStack = new Stack<>();
+            DataRecord [] childSamples = sample.getChildrenOfType(SampleModel.DATA_TYPE_NAME, user);
+            if (childSamples.length > 0){
+                for (DataRecord rec : childSamples){
+                    Object reqId = rec.getValue(SampleModel.REQUEST_ID, user);
+                    if (reqId != null && requestId != null && reqId.toString().equalsIgnoreCase(requestId.toString())){
+                        sampleStack.add(rec);
+                    }
+                }
+            }
+            do {
+                DataRecord stackSample = sampleStack.pop();
+                DataRecord [] childSeqQc = stackSample.getChildrenOfType(SeqAnalysisSampleQCModel.DATA_TYPE_NAME, user);
+                if(childSeqQc.length > 0){
+                    Collections.addAll(sequencingQcRecords, childSeqQc);
+                }
+                DataRecord[] stackSampleChildSamples = stackSample.getChildrenOfType(SampleModel.DATA_TYPE_NAME, user);
+                for (DataRecord sa : stackSampleChildSamples) {
+                    Object saReqId = sa.getValue(SampleModel.REQUEST_ID, user);
+                    if (requestId!= null && saReqId != null && requestId.toString().equalsIgnoreCase(saReqId.toString())){
+                        sampleStack.push(sa);
+                    }
+                }
+            }while (!sampleStack.isEmpty());
+        } catch (ServerException | RemoteException | NotFound | IoError e) {
+            logger.logError(String.format("%s -> Error while getting %s records for Sample with Record Id %d,\n%s",
+                    ExceptionUtils.getRootCause(e), SeqAnalysisSampleQCModel.DATA_TYPE_NAME, sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+        }
+        return sequencingQcRecords;
+    }
+
+
+    /**
+     * This method will return the first DataRecord(s) with DATA_TYPE_NAME equal to @param targetDataType found in the
+     * parent tree upstream. The targetDataType DataRecord is usually present as a child on one of the parents in the
+     * hierarchy tree. @param parentDataType must either be same as @param record or @param record must be directly
+     * under a DataRecord with DATA_TYPE_NAME equal to @param parentDataType.
+     * @param record
+     * @param parentDataType
+     * @param targetDataType
+     * @return
+     */
+    public List<DataRecord> getRecordsOfTypeFromParents(DataRecord record, String parentDataType, String targetDataType, User user, PluginLogger logger) {
+        List<DataRecord> records = new ArrayList<>();
+        try {
+            if (record.getChildrenOfType(targetDataType, user).length > 0){
+                return Arrays.asList(record.getChildrenOfType(targetDataType, user));
+            }
+
+            Stack<DataRecord> recordsStack = new Stack<>();
+            List<DataRecord> parentRecords = record.getParentsOfType(parentDataType, user);
+            recordsStack.addAll(parentRecords);
+            while (!recordsStack.isEmpty()){
+                DataRecord poppedRecord = recordsStack.pop();
+                if (poppedRecord.getChildrenOfType(targetDataType, user).length > 0){
+                    return Arrays.asList(poppedRecord.getChildrenOfType(targetDataType, user));
+                }
+                recordsStack.addAll(poppedRecord.getParentsOfType(parentDataType, user));
+            }
+
+        } catch (IoError | RemoteException e) {
+            logger.logError(String.format("%s -> Error while getting %s records for %s record with Record Id %d,\n%s",
+                    ExceptionUtils.getRootCause(e), targetDataType, record.getDataTypeName(), record.getRecordId(), ExceptionUtils.getStackTrace(e)));
+        }
+        return records;
     }
 }

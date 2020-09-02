@@ -1,17 +1,16 @@
 package com.velox.sloan.cmo.workflows.General;
 
-import com.velox.api.datarecord.DataRecord;
-import com.velox.api.datarecord.InvalidValue;
-import com.velox.api.datarecord.IoError;
-import com.velox.api.datarecord.NotFound;
+import com.velox.api.datarecord.*;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.recmodels.SampleCMOInfoRecordsModel;
 import com.velox.sloan.cmo.recmodels.SampleModel;
+import com.velox.sloan.cmo.recmodels.SeqAnalysisSampleQCModel;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.mockito.internal.matchers.Null;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -151,6 +150,31 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Method to update remaining reads on
+     * @param sampleLevelSequencingQc
+     */
+    private void updateRemainingReadsToSequence(DataRecord sampleLevelSequencingQc){
+        List<DataRecord> seqQcRecords = new ArrayList<>();
+        try{
+            List<DataRecord> parentSample = sampleLevelSequencingQc.getParentsOfType(SampleModel.DATA_TYPE_NAME, user);
+            if (parentSample.size() == 1){
+                seqQcRecords = utils.getSequencingQcRecords(parentSample.get(0), pluginLogger, user, clientCallback);
+                List<DataRecord> seqRequirements = utils.getRecordsOfTypeFromParents(seqQcRecords.get(0),
+                        SampleModel.DATA_TYPE_NAME, SeqAnalysisSampleQCModel.DATA_TYPE_NAME, user, pluginLogger);
+                CONTINUE_HERE
+                //continue here calculating and updating values on SequendingRequirementsRecords------------->>>>>>>>>
+            }
+
+        }catch (NullPointerException e){
+            logError(ExceptionUtils.getStackTrace(e));
+        } catch (IoError ioError) {
+            ioError.printStackTrace();
+        } catch (RemoteException e) {
+            e.printStackTrace();
         }
     }
 
