@@ -419,7 +419,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
             poolValuesMapList.add(poolValuesMap);
 
             dataRecordManager.addDataRecords("Sample", poolValuesMapList, user);
-            dataRecordManager.storeAndCommit(String.format("Created user pool %s", sampleId), user);
+            dataRecordManager.storeAndCommit(String.format("Created user pool %s", sampleId), null, user);
             pooledSampleRecords = dataRecordManager.queryDataRecords("Sample", "SampleId= '" + sampleId + "'", user);
             pooledSampleRecords.get(0).addChild("SeqRequirementPooled", sequencingRequirementsPooled, user);
             for (DataRecord sample : userPoolSamples) {

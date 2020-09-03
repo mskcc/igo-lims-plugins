@@ -31,7 +31,6 @@ import java.util.*;
 
 public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
 
-    private String[] permittedUsers = {"Sample Receiving", "Sapio Admin", "Admin", "Path Extraction Techs", "Group Leaders", "NA Team"};
     private List<String> ddPCRReportTypes = Arrays.asList("GEX", "RED", "CNV");
     private List<String> gexReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet # gene", "Droplet # Ref", "Ratio ([GOI]/[Ref])", "Accepted Droplets", "Micronic Tube Barcode");
     private List<String> cnvReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count Mu", "Droplet Count WT", "Ratio ([Mu]/[WT])", "Accepted Droplets", "Micronic Tube Barcode");
@@ -44,7 +43,6 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
         setLine2Text("Report");
         setDescription("Generates report for ddPCR experiment with specific columns.");
         setIcon("com/velox/sloan/cmo/resources/export_32.gif");
-        setUserGroupList(permittedUsers);
     }
 
     @Override
