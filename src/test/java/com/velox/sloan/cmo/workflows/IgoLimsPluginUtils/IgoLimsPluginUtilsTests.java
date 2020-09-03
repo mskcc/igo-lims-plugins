@@ -12,6 +12,7 @@ import com.velox.sapioutils.client.standalone.VeloxConnection;
 import com.velox.sapioutils.client.standalone.VeloxConnectionException;
 import com.velox.sloan.cmo.recmodels.SampleModel;
 import com.velox.sloan.cmo.workflows.TestUtils;
+import com.velox.sloan.cmo.workflows.qualitycontrol.sequencingqc.BioAnalyzerResultsParser;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Row;
@@ -40,16 +41,20 @@ public class IgoLimsPluginUtilsTests {
     private List<String> invalidHeaderData;
     private Map<String, Integer> headerValuesMap;
     private User user;
-    private DataRecordManager dataRecordManager;
     private VeloxConnection connection;
     private TestUtils testUtils = new TestUtils();
     private List<DataRecord> userLibraries;
+    private List<String> bioaDataFromFile = new ArrayList<>();
+    private String bioaFileName = "BioAnalyzer_Test_File_QCResultAnnotation.csv";
+    private Map<String, Integer> bioaHeaderValueMap;
+    private final List<String> EXPECTED_BIOA_HEADER_VALS = Arrays.asList("Size [bp]", "Conc. [pg/�l]", "Molarity [pmol/l]",
+            "Observations", "Area", "Aligned Migration Time [s]", "Peak Height", "Peak Width", "% of Total", "Time corrected area");
 
     @Before
     public void setUp() {
         connection = testUtils.connectServer();
         user = connection.getUser();
-        dataRecordManager = connection.getDataRecordManager();
+        DataRecordManager dataRecordManager = connection.getDataRecordManager();
         try {
             userLibraries = dataRecordManager.queryDataRecords(SampleModel.DATA_TYPE_NAME, "SampleId IN ('09687_AO_1_1', '07566_15_1_1')", user);
         } catch (NotFound | IoError | RemoteException notFound) {
@@ -61,10 +66,18 @@ public class IgoLimsPluginUtilsTests {
         byteDataEmpty = readCsvFileToBytes(emptyFile);
         String invalidHeaderFile = "UtilsTestInvalidHeader.csv";
         byte[] byteInvalidHeaderData = readCsvFileToBytes(invalidHeaderFile);
+
+
+        byte[] bioaByteData = readCsvFileToBytes(bioaFileName);
         try {
             dataFromFile = commonMethods.readDataFromCsvFile(byteData);
             invalidHeaderData = commonMethods.readDataFromCsvFile(byteInvalidHeaderData);
             headerValuesMap = commonMethods.getCsvHeaderValueMap(dataFromFile);
+
+            bioaDataFromFile = commonMethods.readDataFromCsvFile(bioaByteData);
+            String BIOA_HEADER_IDENTIFIER = "Size [bp]";
+            bioaHeaderValueMap = commonMethods.getBioanalyzerFileHeaderMap(dataFromFile, fileName, BIOA_HEADER_IDENTIFIER, Mockito.mock(PluginLogger.class));
+            BioAnalyzerResultsParser parser = new BioAnalyzerResultsParser(bioaDataFromFile, bioaFileName, bioaHeaderValueMap, Mockito.mock(ClientCallbackOperations.class), Mockito.mock(PluginLogger.class), user);
 
         } catch (IOException e) {
             System.out.println(String.format("Error while running IgoLimsPluginUtilsTests:\n%s", ExceptionUtils.getStackTrace(e)));
@@ -302,28 +315,41 @@ public class IgoLimsPluginUtilsTests {
     }
 
     @Test
-    public void getSampleQuantity() {
-
+    public void getSampleQuantity() throws NotFound, RemoteException {
+        double quantity = userLibraries.get(0).getDoubleVal(SampleModel.TOTAL_MASS, user);
+        assertTrue(quantity>= 0.0);
     }
 
     @Test
-    public void isBioanalyzerFile() {
+    public void isBioanalyzerFile() throws ServerException {
+        List<String> BIOA_IDENTIFIERS = Arrays.asList("Data File Path", "Date Created", "Date Last Modified",
+                "Version Created", "Assay Name", "Assay Path", "Assay Title", "Assay Version", "Number of Samples Run",
+                "Sample Name");
+        assertTrue(commonMethods.isBioanalyzerFile(bioaDataFromFile, BIOA_IDENTIFIERS, Mockito.mock(ClientCallbackOperations.class), Mockito.mock(PluginLogger.class)));
+        assertFalse(commonMethods.isBioanalyzerFile(dataFromFile, BIOA_IDENTIFIERS, Mockito.mock(ClientCallbackOperations.class), Mockito.mock(PluginLogger.class)));
     }
 
     @Test
     public void hasValidBioanalyzerHeader() {
+        assertTrue(commonMethods.hasValidBioanalyzerHeader(bioaDataFromFile, bioaFileName, EXPECTED_BIOA_HEADER_VALS, Mockito.mock(PluginLogger.class)));
     }
 
     @Test
     public void getBioanalyzerFileHeaderMap() {
+        String BIOA_HEADER_IDENTIFIER = "Size [bp]";
+        assertEquals(commonMethods.getBioanalyzerFileHeaderMap(bioaDataFromFile, bioaFileName, BIOA_HEADER_IDENTIFIER, Mockito.mock(PluginLogger.class)).size(), 10);
     }
 
     @Test
     public void getRecordIds() {
+        assertEquals(commonMethods.getRecordIds(userLibraries).size(), 2);
     }
 
     @Test
     public void removeThousandSeparator() {
+        String line = "\"10,000,000\", ABC, STC, TEST"; // the numeric value in file data are surrounded by double quotes.
+        String lineWithoutSeparator = "10000000, ABC, STC, TEST";
+        assertEquals(commonMethods.removeThousandSeparator(line), lineWithoutSeparator);
     }
 
     @After

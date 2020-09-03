@@ -41,9 +41,6 @@ public class BioAnalyzerResultsParserTest {
     private VeloxConnection connection;
     private List<DataRecord> attachedSamples;
     private TestUtils testUtils = new TestUtils();
-    private List<String> headerValues = Arrays.asList("Size [bp]","Conc. [pg/�l]","Molarity [pmol/l]",
-            "Observations","Area","Aligned Migration Time [s]","Peak Height","Peak Width","% of Total","Time corrected area");
-    private final String BIOA_HEADER_IDENTIFIER = "Size [bp]";
 
     @Before
     public void setUp() {
@@ -62,6 +59,9 @@ public class BioAnalyzerResultsParserTest {
             dataFromFile = utils.readDataFromCsvFile(byteData);
             logger = Mockito.mock(PluginLogger.class);
             clientCallback = Mockito.mock(ClientCallbackOperations.class);
+            //private List<String> headerValues = Arrays.asList("Size [bp]","Conc. [pg/�l]","Molarity [pmol/l]",
+            //        "Observations","Area","Aligned Migration Time [s]","Peak Height","Peak Width","% of Total","Time corrected area");
+            String BIOA_HEADER_IDENTIFIER = "Size [bp]";
             Map<String, Integer> headerValueMap = utils.getBioanalyzerFileHeaderMap(dataFromFile, fileName, BIOA_HEADER_IDENTIFIER, logger);
             parser = new BioAnalyzerResultsParser(dataFromFile, fileName, headerValueMap, clientCallback, logger, user);
         } catch (IOException e) {

@@ -28,7 +28,7 @@ public class BioAnalyzerResultsParser {
             "Size [bp]", "Region Table", "Name", "Region 1");
     IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
 
-    BioAnalyzerResultsParser(List<String> fileData, String fileName, Map<String, Integer> headerMapValues, ClientCallbackOperations clientCallback, PluginLogger logger, User user) {
+    public BioAnalyzerResultsParser(List<String> fileData, String fileName, Map<String, Integer> headerMapValues, ClientCallbackOperations clientCallback, PluginLogger logger, User user) {
         this.fileData = fileData;
         this.fileName = fileName;
         this.headerMapValues = headerMapValues;
