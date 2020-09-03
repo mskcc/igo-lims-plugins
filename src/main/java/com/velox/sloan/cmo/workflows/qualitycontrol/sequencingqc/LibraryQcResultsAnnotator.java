@@ -329,12 +329,14 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
             TemporaryDataType tempDataType = new TemporaryDataType("QCRecommendations", "QC Recommendations");
             List<VeloxFieldDefinition<?>> fieldDefList = new ArrayList<VeloxFieldDefinition<?>>();
             VeloxStringFieldDefinition sampleId = VeloxFieldDefinition.stringFieldBuilder().displayName("IGO ID").dataFieldName("SampleId").visible(true).editable(false).maxLength(100000000).numLines(1).sortDirection(VeloxFieldDefinition.SortDirection.Ascending).build();
+            VeloxDoubleFieldDefinition quantity = VeloxFieldDefinition.doubleFieldBuilder().displayName("Total Mass").dataFieldName("Quantity").visible(true).editable(false).maxValue(100000000).minValue(0.0).precision((short) 3).build();
             VeloxDoubleFieldDefinition adapterPercentage = VeloxFieldDefinition.doubleFieldBuilder().displayName("Adapters (%)").dataFieldName("AdapterPercentage").visible(true).editable(false).maxValue(100000000).minValue(0.0).precision((short) 3).build();
             VeloxDoubleFieldDefinition fragmentsUpto1kb = VeloxFieldDefinition.doubleFieldBuilder().displayName("Fragments Upto 1 kb (%)").dataFieldName("PercentUpto1kb").visible(true).editable(false).maxValue(100000000).minValue(0.0).precision((short) 3).build();
             VeloxDoubleFieldDefinition fragmentsLargerThan1kb = VeloxFieldDefinition.doubleFieldBuilder().displayName("Fragments Larger Than 1kb (%)").dataFieldName("PercentGreaterThan1kb").visible(true).editable(false).maxValue(100000000).minValue(0.0).precision((short) 3).build();
             VeloxBooleanFieldDefinition isUserLibrary = VeloxFieldDefinition.booleanFieldBuilder().displayName("Is User Library").dataFieldName("IsUserLibrary").visible(true).editable(false).build();
-            VeloxPickListFieldDefinition igoRecommendation = VeloxFieldDefinition.pickListFieldBuilder().displayName("IGO Recommendation").dataFieldName("igoRecommendation").visible(true).pickListName("QC Statuses").build();
+            VeloxPickListFieldDefinition igoRecommendation = VeloxFieldDefinition.pickListFieldBuilder().displayName("IGO Recommendation").dataFieldName("IgoRecommendation").visible(true).pickListName("QC Statuses").build();
             fieldDefList.add(sampleId);
+            fieldDefList.add(quantity);
             fieldDefList.add(adapterPercentage);
             fieldDefList.add(fragmentsUpto1kb);
             fieldDefList.add(fragmentsLargerThan1kb);
@@ -347,11 +349,12 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
             for (Map<String, Object> qcResult : qcResults) {
                 Map<String, Object> values = new HashMap<>();
                 values.put("SampleId", qcResult.get("SampleId"));
+                values.put("Quantity", qcResult.get("Quantity"));
                 values.put("AdapterPercentage", qcResult.get("AdapterPercentage"));
                 values.put("PercentUpto1kb", qcResult.get("PercentUpto1kb"));
                 values.put("PercentGreaterThan1kb", qcResult.get("PercentGreaterThan1kb"));
                 values.put("IsUserLibrary", qcResult.get("IsUserLibrary"));
-                values.put("igoRecommendation", qcResult.get("igoRecommendation"));
+                values.put("IgoRecommendation", qcResult.get("IgoRecommendation"));
                 defaultValues.add(values);
             }
             userInputData = clientCallback.showTableEntryDialog("IGO QC Recommendations", "Please review IGO QC Recommendations", tempDataType, defaultValues);
@@ -390,7 +393,7 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
 
 
     /**
-     * Method to finally set the
+     * Method to finally set the IGO QC Recommendations on attached protocol records for each sample.
      *
      * @param userReviewedValues
      * @param attachedProtocolRecords
@@ -405,7 +408,7 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
                     for (Map<String, Object> val : userReviewedValues) {
                         Object sampleId = val.get("SampleId");
                         if (sampleId != null && recSampleId != null && sampleId.toString().equalsIgnoreCase(recSampleId.toString())) {
-                            rec.setDataField("IgoQcRecommendation", val.get("igoRecommendation"), user);
+                            rec.setDataField("IgoQcRecommendation", val.get("IgoRecommendation"), user);
                             dataRecordManager.storeDataFieldChanges(null, user);
                             sampleMappingFound = true;
                         }

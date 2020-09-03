@@ -61,14 +61,26 @@ public class BioAnalyzerResultsParser {
                 String line = utils.removeThousandSeparator(fileDatum); //If numeric values have 1000 separator, remove 1000 separator which is "comma" from such values.
                 logger.logInfo("Line after comma removal from numeric values: " + line);
                 List<String> lineValues = Arrays.asList(line.split(","));
-                if (line.contains(SAMPLE_BEGIN_IDENTIFIER)) {
+                logger.logInfo("Line values" + lineValues.toString());
+                logger.logInfo("Line values size: " + lineValues.size());
+                if (line.contains(SAMPLE_BEGIN_IDENTIFIER) && lineValues.size()>1) {
+                    logger.logInfo("Sample Name value: " + lineValues.get(1));
                     sampleId = lineValues.get(1);
                     continue;
                 }
+                // Set sampleid to null if the Sample Name is missing in Bioanalyzer file. It happens samples fewer than
+                // limit of Bioanalyzer chip are run. This will prevent the reading of Sample data blocks that are empty
+                // on the chip and are not required to be processed.
+                if (line.contains(SAMPLE_BEGIN_IDENTIFIER) && lineValues.size()<2){
+                    sampleId = null;
+                }
                 String lineStartValue = lineValues.size() > 0 ? lineValues.get(0) : null;
+                // Skip lines that does not contain miscellaneous data not required for sample QC annotation.
                 if (lineValues.contains(SAMPLE_DATA_BEGIN_IDENTIFIER) || StringUtils.isBlank(lineStartValue) || IDENTIFIER_TO_SKIP_LINE.contains(lineStartValue)) {
                     continue;
                 }
+                // Start processing data for sample. This will continue until code finds a new line with Sample Name
+                // block with new Sample Name.
                 if (sampleId != null) {
                     logger.logInfo(String.format("Bioanalyzer data from file %s.\n%s", fileName, lineValues.toString()));
                     int startBp = rowFromBp;

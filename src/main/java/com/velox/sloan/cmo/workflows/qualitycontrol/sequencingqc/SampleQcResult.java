@@ -206,11 +206,12 @@ public class SampleQcResult {
     public Map<String, Object> getHashMap(){
         Map<String, Object> map = new HashMap<>();
         map.put("SampleId", this.sampleDescription);
+        map.put("Quantity", this.quantity);
         map.put("AdapterPercentage", this.adapterPercentage);
         map.put("PercentUpto1kb", this.percentfragmentsUpTo1kb);
         map.put("PercentGreaterThan1kb", this.percentFragmentsLargerThan1kb);
         map.put("IsUserLibrary", this.isUserLibrary);
-        map.put("igoRecommendation", this.igoRecommendation);
+        map.put("IgoRecommendation", this.igoRecommendation);
         return map;
     }
 }
