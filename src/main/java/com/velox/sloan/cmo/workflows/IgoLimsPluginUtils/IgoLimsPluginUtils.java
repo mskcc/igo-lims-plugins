@@ -711,4 +711,19 @@ public class IgoLimsPluginUtils{
         }
         return records;
     }
+
+    /**
+     * Check if data record is part of records in List.
+     * @param dataRecords
+     * @param record
+     * @return
+     */
+    public boolean isIncludedInRecords(List<DataRecord> dataRecords, DataRecord record, PluginLogger logger){
+        try{
+            return dataRecords.stream().map(DataRecord::getRecordId).collect(Collectors.toList()).contains(record.getRecordId());
+        }catch (Exception e){
+            logger.logError(String.format("%s -> Error while checking if data record is included in a collection of records %s", ExceptionUtils.getRootCause(e), ExceptionUtils.getStackTrace(e)));
+        }
+        return false;
+    }
 }

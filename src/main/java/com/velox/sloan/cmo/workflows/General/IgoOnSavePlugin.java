@@ -1,6 +1,7 @@
 package com.velox.sloan.cmo.workflows.General;
 
 import com.velox.api.datarecord.*;
+import com.velox.api.plugin.PluginLogger;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
@@ -14,6 +15,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 /**
@@ -165,10 +167,22 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
      * @param seqAnalysisSampleQcRecords
      * @return
      */
-    private long getSumSequencingReadsExamined(List<DataRecord>seqAnalysisSampleQcRecords){
+    private long getSumSequencingReadsExamined(List<DataRecord>seqAnalysisSampleQcRecords, DataRecord savedSequencingQcRecord){
         logInfo("Total SeqAnalysis records: " + seqAnalysisSampleQcRecords.size());
         long sumReadsExamined = 0;
         try{
+            // this plugin is run before changes are committed changes to db. If the record being saved is new record,
+            // it might not be in the db and therefore not part of SeqAnalysisSampleQcRecords returned by LIMS. Check
+            // and add it's reads towards the sum of reads calculated in this method
+            if (!utils.isIncludedInRecords(seqAnalysisSampleQcRecords, savedSequencingQcRecord, pluginLogger)){
+                logInfo("Seq Qc Record Id: " + savedSequencingQcRecord.getRecordId());
+                Object readsExamined = savedSequencingQcRecord.getValue(SeqAnalysisSampleQCModel.READS_EXAMINED, user);
+                logInfo("Reads examined: " + readsExamined);
+                Object seqQcStatus = savedSequencingQcRecord.getValue(SeqAnalysisSampleQCModel.SEQ_QCSTATUS, user);
+                if (readsExamined != null && !seqQcStatus.toString().equalsIgnoreCase(FAILED)){
+                    sumReadsExamined += (long)readsExamined;
+                }
+            }
             for (DataRecord rec : seqAnalysisSampleQcRecords){
                 logInfo("Seq Qc Record Id: " + rec.getRecordId());
                 Object readsExamined = rec.getValue(SeqAnalysisSampleQCModel.READS_EXAMINED, user);
@@ -185,7 +199,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
     }
 
     /**
-     * Method to update remaining reads on SeqAnalysisSampleQC record.
+     * Method to update remaining reads on SeqRequirements record.
      * @param sampleLevelSequencingQc
      */
     private void updateRemainingReadsToSequence(DataRecord sampleLevelSequencingQc){
@@ -204,7 +218,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                 logInfo("Sequencing requirement record id: " + seqRequirementRecord.getRecordId());
                 Object readsRequested = seqRequirementRecord.getValue(SeqRequirementModel.REQUESTED_READS, user);
                 logInfo("Requested Reads : " + readsRequested);
-                long totalReadsExamined = getSumSequencingReadsExamined(seqQcRecords);
+                long totalReadsExamined = getSumSequencingReadsExamined(seqQcRecords, sampleLevelSequencingQc);
                 logInfo("Total reads examined : " + totalReadsExamined);
                 assert readsRequested != null;
                 long remainingReads = 0L;
