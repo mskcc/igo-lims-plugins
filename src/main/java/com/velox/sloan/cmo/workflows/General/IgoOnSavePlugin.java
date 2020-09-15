@@ -1,7 +1,6 @@
 package com.velox.sloan.cmo.workflows.General;
 
 import com.velox.api.datarecord.*;
-import com.velox.api.plugin.PluginLogger;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
@@ -10,21 +9,25 @@ import com.velox.sloan.cmo.recmodels.SampleModel;
 import com.velox.sloan.cmo.recmodels.SeqAnalysisSampleQCModel;
 import com.velox.sloan.cmo.recmodels.SeqRequirementModel;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
+import com.velox.sloan.cmo.workflows.recordmodels.DdPcrAssayResultsModel;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 
 /**
- * A plugin that runs on save and updates the dateModified if changes are made to records within the request data type or any specified data type.
- * The information is important for Splunk indexing and change monitoring.
+ * A plugin that runs on save and updates the following:
+ * - Request DateModified if changes are made to Request records. The information is important for Splunk indexing and change monitoring.
+ * - Maps the Human Percentage values from DDPCR results to DNA QC reports for a sample.
+ * - Checks/Validates that the declared Sample fields do not contain special characters.
+ * - Checks/Validates that the declared SampleCmoInfo fields do not contain special characters.
+ * - Checks/Validates that the declared SampleCmoInfo CMOID values are unique.
+ * - Update the TotalReads sequenced and RemainingReads to sequence on SeqRequirements records for a Sample.
  *
  * @author Ajay Sharma, Anna Patruno
  */
-
 
 // declaration of class
 public class IgoOnSavePlugin extends DefaultGenericPlugin {
@@ -60,7 +63,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
 
             String dataTypeName = theSavedRecords.get(0).getDataTypeName();
             //set Human Percentage on QcReportDna DataRecords when Saving DdPcrAssayResults and HumanPercentageValues are present
-            if (dataTypeName.equalsIgnoreCase("DdPcrAssayResults")) {
+            if (dataTypeName.equalsIgnoreCase(DdPcrAssayResultsModel.DATA_TYPE_NAME)) {
                 mapHumanPercentageFromDdpcrResultsToDnaQcReport(theSavedRecords);
             }
             //validate fields for special characters on Sample Datatype
@@ -74,7 +77,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
             // update 'RemainingReads' to be sequenced on SeqRequirements when a SeqAnalysisSampleQC record is saved.
             for (DataRecord rec: theSavedRecords){
                 logInfo(" Started updateing RemainingReads for SeqAnalysisSampleQC with Record Id: " + rec.getRecordId());
-                if (rec.getDataTypeName().equalsIgnoreCase(SeqAnalysisSampleQCModel.DATA_TYPE_NAME)){
+                if (rec.getDataTypeName().equalsIgnoreCase(SeqAnalysisSampleQCModel.DATA_TYPE_NAME) && !utils.isControlSample(rec, pluginLogger, user)){
                     updateRemainingReadsToSequence(rec);
                 }
             }

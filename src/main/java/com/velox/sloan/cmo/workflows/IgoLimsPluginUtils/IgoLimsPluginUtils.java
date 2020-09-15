@@ -40,6 +40,8 @@ public class IgoLimsPluginUtils{
     private final Pattern SPECIAL_CHARACTER_REGEX_FOR_POOLS = Pattern.compile("^[a-zA-Z0-9,_-]*$");
 
     private final List<String> LIBRARY_SAMPLE_TYPES = Arrays.asList("cdna library", "dna library", "cfdna library", "pooled library");
+    private final String POOLEDNORMAL_IDENTIFIER = "POOLEDNORMAL";
+    private final String CONTROL_IDENTIFIER = "CTRL";
     /**
      * Method to check if a file has .csv extension
      *
@@ -723,6 +725,51 @@ public class IgoLimsPluginUtils{
             return dataRecords.stream().map(DataRecord::getRecordId).collect(Collectors.toList()).contains(record.getRecordId());
         }catch (Exception e){
             logger.logError(String.format("%s -> Error while checking if data record is included in a collection of records %s", ExceptionUtils.getRootCause(e), ExceptionUtils.getStackTrace(e)));
+        }
+        return false;
+    }
+
+    /**
+     * Method to check if a DataRecord contains a field with given FieldName.
+     * @param rec
+     * @param fieldName
+     * @param user
+     * @param logger
+     * @return
+     */
+    public boolean hasFieldWithName(DataRecord rec, String fieldName, User user, PluginLogger logger){
+        try{
+            Map<String,Object> fields = rec.getFields(user);
+            return fields.containsKey(fieldName);
+        }catch (Exception e){
+            logger.logError(String.format("%s -> Error while checking if data record is included in a collection of records %s", ExceptionUtils.getRootCause(e), ExceptionUtils.getStackTrace(e)));
+        }
+        return false;
+    }
+
+    /**
+     * Method to check if DataRecord is control sample or a record belonging to control.
+     * @param rec
+     * @param logger
+     * @return
+     */
+    public boolean isControlSample(DataRecord rec, PluginLogger logger, User user){
+        try {
+            List<DataRecord> parentSamples = rec.getParentsOfType(SampleModel.DATA_TYPE_NAME, user);
+            if (parentSamples.size() > 0){
+                DataRecord parent = parentSamples.get(0);
+                Object isControl = parent.getValue(SampleModel.IS_CONTROL, user);
+                Object igoId = parent.getValue(SampleModel.SAMPLE_ID, user);
+                if (isControl != null){
+                    logger.logInfo(String.format("%s DataRecord with Record ID %s is either Control or linked to a Sample that is Control."));
+                    return (boolean)isControl;
+                }
+                if (igoId!= null && (igoId.toString().contains(POOLEDNORMAL_IDENTIFIER) || igoId.toString().contains(CONTROL_IDENTIFIER))){
+                    return true;
+                }
+            }
+        } catch (RemoteException | IoError | NotFound e) {
+            logger.logError(String.format("%s->Error while validating %s record with record id %d is a control:\n%s", ExceptionUtils.getMessage(e),rec.getDataTypeName(), rec.getRecordId(), ExceptionUtils.getStackTrace(e)));
         }
         return false;
     }
