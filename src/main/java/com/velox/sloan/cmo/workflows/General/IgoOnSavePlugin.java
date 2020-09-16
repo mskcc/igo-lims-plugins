@@ -4,10 +4,7 @@ import com.velox.api.datarecord.*;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
-import com.velox.sloan.cmo.recmodels.SampleCMOInfoRecordsModel;
-import com.velox.sloan.cmo.recmodels.SampleModel;
-import com.velox.sloan.cmo.recmodels.SeqAnalysisSampleQCModel;
-import com.velox.sloan.cmo.recmodels.SeqRequirementModel;
+import com.velox.sloan.cmo.recmodels.*;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import com.velox.sloan.cmo.workflows.recordmodels.DdPcrAssayResultsModel;
 import org.apache.commons.lang3.StringUtils;
@@ -49,36 +46,32 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
         try {
             // returns results in a list if something is changed and save button is clicked
             List<DataRecord> theSavedRecords = dataRecordList;
-            // if the list is greater than 0, something changed
-            if (theSavedRecords.size() > 0) {
-                // iterate through the list
-                for (DataRecord record : theSavedRecords) {
-                    // check that the fields exist in the fields present in the data type in the array listed in arrays.asList
-                    if (trackableDataTypes.contains(record.getDataTypeName())) {
-                        // set DateModified to current time
-                        record.setDataField("DateModified", System.currentTimeMillis(), user);
-                    }
-                }
-            }
 
-            String dataTypeName = theSavedRecords.get(0).getDataTypeName();
-            //set Human Percentage on QcReportDna DataRecords when Saving DdPcrAssayResults and HumanPercentageValues are present
-            if (dataTypeName.equalsIgnoreCase(DdPcrAssayResultsModel.DATA_TYPE_NAME)) {
-                mapHumanPercentageFromDdpcrResultsToDnaQcReport(theSavedRecords);
-            }
-            //validate fields for special characters on Sample Datatype
-            if (dataTypeName.equalsIgnoreCase(SampleModel.DATA_TYPE_NAME)) {
-                validateSampleFields(theSavedRecords, dataTypeName);
-            }
-            // validate fields for special characters on SampleCMOInfoRecords DataType
-            if (dataTypeName.equalsIgnoreCase(SampleCMOInfoRecordsModel.DATA_TYPE_NAME)) {
-                validateCmoInfoDataTypeFields(theSavedRecords, dataTypeName);
-            }
-            // update 'RemainingReads' to be sequenced on SeqRequirements when a SeqAnalysisSampleQC record is saved.
             for (DataRecord rec: theSavedRecords){
-                logInfo(" Started updateing RemainingReads for SeqAnalysisSampleQC with Record Id: " + rec.getRecordId());
-                if (rec.getDataTypeName().equalsIgnoreCase(SeqAnalysisSampleQCModel.DATA_TYPE_NAME) && !utils.isControlSample(rec, pluginLogger, user)){
+                String dtTypeName = rec.getDataTypeName();
+                logInfo("Saved DataRecord's DataType: " + dtTypeName);
+                if (trackableDataTypes.contains(dtTypeName)) {
+                    // set DateModified to current time
+                    rec.setDataField("DateModified", System.currentTimeMillis(), user);
+                }
+                // update 'RemainingReads' to be sequenced on SeqRequirements when a SeqAnalysisSampleQC record is saved.
+                if (dtTypeName.equalsIgnoreCase(SeqAnalysisSampleQCModel.DATA_TYPE_NAME) && !utils.isControlSample(rec, pluginLogger, user)){
+                    logInfo("Started updating RemainingReads for SeqAnalysisSampleQC with Record Id: " + rec.getRecordId());
                     updateRemainingReadsToSequence(rec);
+                }
+                //set Human Percentage on QcReportDna DataRecords when Saving DdPcrAssayResults and HumanPercentageValues are present
+                if (dtTypeName.equalsIgnoreCase(DdPcrAssayResultsModel.DATA_TYPE_NAME)) {
+                    mapHumanPercentageFromDdpcrResultsToDnaQcReport(theSavedRecords);
+                }
+                //validate fields for special characters on Sample Datatype
+                if (dtTypeName.equalsIgnoreCase(SampleModel.DATA_TYPE_NAME)) {
+                    logInfo("Checking for Special Characters in Sample Record with RecordId: " + rec.getRecordId());
+                    validateSampleFields(rec, dtTypeName);
+                }
+                // validate fields for special characters on SampleCMOInfoRecords DataType
+                if (dtTypeName.equalsIgnoreCase(SampleCMOInfoRecordsModel.DATA_TYPE_NAME)) {
+                    logInfo("Checking for Special Characters in SampleCMOInfoRecords Record with RecordId: " + rec.getRecordId());
+                    validateCmoInfoDataTypeFields(rec, dtTypeName);
                 }
             }
             // if there's an error
@@ -170,17 +163,18 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
      * @param seqAnalysisSampleQcRecords
      * @return
      */
-    private long getSumSequencingReadsExamined(List<DataRecord>seqAnalysisSampleQcRecords, DataRecord savedSequencingQcRecord){
+    private long getSumSequencingReadsExamined(List<DataRecord>seqAnalysisSampleQcRecords, DataRecord savedSequencingQcRecord, Object runName){
         logInfo("Total SeqAnalysis records: " + seqAnalysisSampleQcRecords.size());
         long sumReadsExamined = 0;
+        boolean isPairedEnd = isPairedEndRun(runName);
+        logInfo("Is Paired End Run: " + isPairedEnd);
         try{
             // this plugin is run before changes are committed changes to db. If the record being saved is new record,
             // it might not be in the db and therefore not part of SeqAnalysisSampleQcRecords returned by LIMS. Check
             // and add it's reads towards the sum of reads calculated in this method
             if (!utils.isIncludedInRecords(seqAnalysisSampleQcRecords, savedSequencingQcRecord, pluginLogger)){
                 logInfo("Seq Qc Record Id: " + savedSequencingQcRecord.getRecordId());
-                Object readsExamined = savedSequencingQcRecord.getValue(SeqAnalysisSampleQCModel.READS_EXAMINED, user);
-                logInfo("Reads examined: " + readsExamined);
+                Object readsExamined = getReadsExamined(savedSequencingQcRecord, isPairedEnd);
                 Object seqQcStatus = savedSequencingQcRecord.getValue(SeqAnalysisSampleQCModel.SEQ_QCSTATUS, user);
                 if (readsExamined != null && !seqQcStatus.toString().equalsIgnoreCase(FAILED)){
                     sumReadsExamined += (long)readsExamined;
@@ -188,7 +182,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
             }
             for (DataRecord rec : seqAnalysisSampleQcRecords){
                 logInfo("Seq Qc Record Id: " + rec.getRecordId());
-                Object readsExamined = rec.getValue(SeqAnalysisSampleQCModel.READS_EXAMINED, user);
+                Object readsExamined = getReadsExamined(rec, isPairedEnd);
                 logInfo("Reads examined: " + readsExamined);
                 Object seqQcStatus = rec.getValue(SeqAnalysisSampleQCModel.SEQ_QCSTATUS, user);
                 if (readsExamined != null && !seqQcStatus.toString().equalsIgnoreCase(FAILED)){
@@ -202,14 +196,37 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
     }
 
     /**
+     * Method to get Total Reads from the SeqAnalysisSampleQC record based on Run ReadLength.
+     * @param savedSequencingQcRecord
+     * @param isPairedEnd
+     * @return
+     */
+    private Object getReadsExamined(DataRecord savedSequencingQcRecord, boolean isPairedEnd) {
+        try{
+            if (isPairedEnd){
+                return savedSequencingQcRecord.getValue(SeqAnalysisSampleQCModel.READS_EXAMINED, user);
+            }
+            else{
+                return savedSequencingQcRecord.getValue(SeqAnalysisSampleQCModel.UNPAIRED_READS, user);
+            }
+        } catch (RemoteException | NotFound e) {
+            logError(String.format("%s => Error while getting Reads Examined from %s record with ID:%d\n%s",
+                    ExceptionUtils.getRootCause(e), SeqAnalysisSampleQCModel.DATA_TYPE_NAME, savedSequencingQcRecord.getRecordId(), ExceptionUtils.getStackTrace(e)));
+        }
+        return 0;
+    }
+
+    /**
      * Method to update remaining reads on SeqRequirements record.
      * @param sampleLevelSequencingQc
      */
     private void updateRemainingReadsToSequence(DataRecord sampleLevelSequencingQc){
         List<DataRecord> seqQcRecords;
+        Object runName;
 
         try{
             List<DataRecord> parentSample = sampleLevelSequencingQc.getParentsOfType(SampleModel.DATA_TYPE_NAME, user);
+            runName = sampleLevelSequencingQc.getValue(SeqAnalysisSampleQCModel.SEQUENCER_RUN_FOLDER, user);
             if (parentSample.size() == 1){
                 seqQcRecords = utils.getSequencingQcRecords(parentSample.get(0), pluginLogger, user, clientCallback);
                 List<DataRecord> seqRequirements = utils.getRecordsOfTypeFromParents(seqQcRecords.get(0),
@@ -221,7 +238,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                 logInfo("Sequencing requirement record id: " + seqRequirementRecord.getRecordId());
                 Object readsRequested = seqRequirementRecord.getValue(SeqRequirementModel.REQUESTED_READS, user);
                 logInfo("Requested Reads : " + readsRequested);
-                long totalReadsExamined = getSumSequencingReadsExamined(seqQcRecords, sampleLevelSequencingQc);
+                long totalReadsExamined = getSumSequencingReadsExamined(seqQcRecords, sampleLevelSequencingQc, runName);
                 logInfo("Total reads examined : " + totalReadsExamined);
                 assert readsRequested != null;
                 long remainingReads = 0L;
@@ -255,6 +272,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                 return altIds.toString().split(",").length>1;
             }
             if (sampleType != null) {
+                logInfo("Sample Type: " + sampleType.toString());
                 return "Pooled Library".equalsIgnoreCase(sampleType.toString().trim());
             }
         } catch (NotFound | RemoteException e) {
@@ -268,62 +286,59 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
      * values. Special characters except underscore, hyphen and (comma only for Pooled Library Samples) are not allowed
      * in LIMS for certain DataType Fields.
      *
-     * @param savedRecords
+     * @param rec
      * @param dataTypeName
      */
-    private void validateCmoInfoDataTypeFields(List<DataRecord> savedRecords, String dataTypeName) {
-        for (DataRecord rec : savedRecords) {
-            try {
-                Map<String, Object> fields = rec.getFields(user);
-                for (String key : fields.keySet()) {
-                    if (CMOINFO_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS.contains(key.trim())) {
-                        Object fieldValue = rec.getValue(key, user);
-                        if (fieldValue != null && !utils.hasValidCharacters(fieldValue.toString(), false)) {
-                            error = String.format("Invalid Characters found in value '%s' on '%s' record Field '%s' " +
-                                    "Special characters except '_' and '-' are not allowed for this Field", fieldValue.toString(), dataTypeName, key);
-                            logError(error);
-                        }
+    private void validateCmoInfoDataTypeFields(DataRecord rec, String dataTypeName) {
+        try {
+            Map<String, Object> fields = rec.getFields(user);
+            for (String key : fields.keySet()) {
+                if (CMOINFO_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS.contains(key.trim())) {
+                    Object fieldValue = rec.getValue(key, user);
+                    if (fieldValue != null && !utils.hasValidCharacters(fieldValue.toString(), false, pluginLogger)) {
+                        error = String.format("Invalid Characters found in value '%s' on '%s' record Field '%s' " +
+                                "Special characters except '_' and '-' are not allowed for this Field", fieldValue.toString(), dataTypeName, key);
+                        logError(error);
                     }
                 }
-                Object cmoId = rec.getValue("CorrectedCMOID", user);
-                Object recordId = rec.getRecordId();
-                if (isDuplicateCmoId(cmoId, recordId)) {
-                    error = String.format("CorrectedCMOID '%s' already exists in '%s'. Choose a different value", cmoId, rec.getDataTypeName());
-                    clientCallback.displayError(error);
-                    logError(error);
-                }
-            } catch (RemoteException | NotFound | ServerException e) {
-                error = String.format("Error while validating %s record %d for special characters:\n%s", rec.getDataTypeName(), rec.getRecordId(), e.getMessage());
+            }
+            Object cmoId = rec.getValue("CorrectedCMOID", user);
+            Object recordId = rec.getRecordId();
+            if (isDuplicateCmoId(cmoId, recordId)) {
+                error = String.format("CorrectedCMOID '%s' already exists in '%s'. Choose a different value", cmoId, rec.getDataTypeName());
+                clientCallback.displayError(error);
                 logError(error);
             }
+        } catch (RemoteException | NotFound | ServerException e) {
+            error = String.format("Error while validating %s record %d for special characters:\n%s", rec.getDataTypeName(), rec.getRecordId(), e.getMessage());
+            logError(error);
         }
     }
 
     /**
      * Method to check Sample Field values for Special characters. Special characters except underscore, hyphen and
      * (comma only for Pooled Library Samples) are not allowed in LIMS for certain DataType Fields.
-     * @param savedRecords
+     * @param rec
      * @param dataTypeName
      */
-    private void validateSampleFields(List<DataRecord> savedRecords, String dataTypeName) {
-        for (DataRecord rec : savedRecords) {
-            try {
-                boolean isPoolSample = isPooledSampleType(rec);
-                Map<String, Object> fields = rec.getFields(user);
-                for (String key : fields.keySet()) {
-                    if (SAMPLE_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS.contains(key.trim())) {
-                        Object fieldValue = rec.getValue(key, user);
-                        if (fieldValue != null && !utils.hasValidCharacters(fieldValue.toString(), isPoolSample)) {
-                            error = String.format("Invalid Characters found in value '%s' on '%s' record Field '%s' " +
-                                    "Special characters except '_' '-' ',' (comma only for Pooled Library Samples) are not allowed for this Field", fieldValue.toString(), dataTypeName, key);
-                            logError(error);
-                        }
+    private void validateSampleFields(DataRecord rec, String dataTypeName) {
+        try {
+            boolean isPoolSample = isPooledSampleType(rec);
+            Map<String, Object> fields = rec.getFields(user);
+            for (String key : fields.keySet()) {
+                if (SAMPLE_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS.contains(key.trim())) {
+                    Object fieldValue = rec.getValue(key, user);
+
+                    if (fieldValue != null && !utils.hasValidCharacters(fieldValue.toString(), isPoolSample, pluginLogger)) {
+                        error = String.format("Invalid Characters found in value '%s' on '%s' record Field '%s' " +
+                                "Special characters except '_' '-' ',' (comma only for Pooled Library Samples) are not allowed for this Field", fieldValue.toString(), dataTypeName, key);
+                        logError(error);
                     }
                 }
-            } catch (RemoteException | NotFound e) {
-                error = String.format("Error while validating %s record %d for special characters:\n%s", rec.getDataTypeName(), rec.getRecordId(), e.getMessage());
-                logError(error);
             }
+        } catch (RemoteException | NotFound e) {
+            error = String.format("Error while validating %s record %d for special characters:\n%s", rec.getDataTypeName(), rec.getRecordId(), e.getMessage());
+            logError(error);
         }
     }
 
@@ -340,6 +355,44 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
             return cmoId !=null && !StringUtils.isBlank(cmoId.toString()) && cmoInfoRecords.size() > 0;
         } catch (RemoteException | IoError | NotFound e) {
             e.printStackTrace();
+        }
+        return false;
+    }
+
+    /**
+     * Method to get Run ReadLength
+     * @param runName
+     * @return
+     */
+    private String getReadLength(Object runName){
+        try{
+            List<DataRecord> seqRun = dataRecordManager.queryDataRecords(IlluminaSeqExperimentModel.DATA_TYPE_NAME, IlluminaSeqExperimentModel.SEQUENCER_RUN_FOLDER + " LIKE '%" + runName + "%'", user);
+            if (seqRun.size() > 0){
+                logInfo("Sequender Run Folder: " + seqRun.get(0).getValue(IlluminaSeqExperimentModel.SEQUENCER_RUN_FOLDER, user));
+                Object readLength = seqRun.get(0).getValue("ReadLength", user);
+                if(readLength != null){
+                    return readLength.toString();
+                }
+            }
+        } catch (RemoteException | IoError | NotFound e) {
+            logError(String.format("%s => Error while getting RunType for run: %s\n%s", ExceptionUtils.getRootCauseMessage(e),
+                    runName, ExceptionUtils.getStackTrace(e)));
+        }
+        return "";
+    }
+
+    /**
+     * Method to check if a run is Single Read or Paired End.
+     * @param runName
+     * @return
+     */
+    private boolean isPairedEndRun(Object runName){
+        logInfo(String.format("Run name: %s", runName));
+        String readLength = getReadLength(runName);
+        logInfo("Read Length: " + readLength);
+        if (!StringUtils.isEmpty(readLength)){
+            String [] readLengthVals = readLength.split("/");
+            return readLengthVals.length > 2;
         }
         return false;
     }

@@ -303,54 +303,54 @@ public class IgoLimsPluginUtilsTests {
         }
     }
 
-    @Test
-    public void isUserLibrary() throws ServerException {
-        assertTrue(commonMethods.isUserLibrary(userLibraries.get(0), user, Mockito.mock(ClientCallbackOperations.class)));
-        assertFalse(commonMethods.isUserLibrary(userLibraries.get(1), user, Mockito.mock(ClientCallbackOperations.class)));
-    }
-
-    @Test
-    public void getSampleWithMatchingId() throws ServerException {
-        assertNotNull(commonMethods.getSampleWithMatchingId("07566_15_1_1", userLibraries, "MockFilename", Mockito.mock(ClientCallbackOperations.class), Mockito.mock(PluginLogger.class), user));
-    }
-
-    @Test
-    public void getSampleQuantity() throws NotFound, RemoteException {
-        double quantity = userLibraries.get(0).getDoubleVal(SampleModel.TOTAL_MASS, user);
-        assertTrue(quantity>= 0.0);
-    }
-
-    @Test
-    public void isBioanalyzerFile() throws ServerException {
-        List<String> BIOA_IDENTIFIERS = Arrays.asList("Data File Path", "Date Created", "Date Last Modified",
-                "Version Created", "Assay Name", "Assay Path", "Assay Title", "Assay Version", "Number of Samples Run",
-                "Sample Name");
-        assertTrue(commonMethods.isBioanalyzerFile(bioaDataFromFile, BIOA_IDENTIFIERS, Mockito.mock(ClientCallbackOperations.class), Mockito.mock(PluginLogger.class)));
-        assertFalse(commonMethods.isBioanalyzerFile(dataFromFile, BIOA_IDENTIFIERS, Mockito.mock(ClientCallbackOperations.class), Mockito.mock(PluginLogger.class)));
-    }
-
-    @Test
-    public void hasValidBioanalyzerHeader() {
-        assertTrue(commonMethods.hasValidBioanalyzerHeader(bioaDataFromFile, bioaFileName, EXPECTED_BIOA_HEADER_VALS, Mockito.mock(PluginLogger.class)));
-    }
-
-    @Test
-    public void getBioanalyzerFileHeaderMap() {
-        String BIOA_HEADER_IDENTIFIER = "Size [bp]";
-        assertEquals(commonMethods.getBioanalyzerFileHeaderMap(bioaDataFromFile, bioaFileName, BIOA_HEADER_IDENTIFIER, Mockito.mock(PluginLogger.class)).size(), 10);
-    }
-
-    @Test
-    public void getRecordIds() {
-        assertEquals(commonMethods.getRecordIds(userLibraries).size(), 2);
-    }
-
-    @Test
-    public void removeThousandSeparator() {
-        String line = "\"10,000,000\", ABC, STC, TEST"; // the numeric value in file data are surrounded by double quotes.
-        String lineWithoutSeparator = "10000000, ABC, STC, TEST";
-        assertEquals(commonMethods.removeThousandSeparator(line), lineWithoutSeparator);
-    }
+//    @Test
+//    public void isUserLibrary() throws ServerException {
+//        assertTrue(commonMethods.isUserLibrary(userLibraries.get(0), user, Mockito.mock(ClientCallbackOperations.class)));
+//        assertFalse(commonMethods.isUserLibrary(userLibraries.get(1), user, Mockito.mock(ClientCallbackOperations.class)));
+//    }
+//
+//    @Test
+//    public void getSampleWithMatchingId() throws ServerException {
+//        assertNotNull(commonMethods.getSampleWithMatchingId("07566_15_1_1", userLibraries, "MockFilename", Mockito.mock(ClientCallbackOperations.class), Mockito.mock(PluginLogger.class), user));
+//    }
+//
+//    @Test
+//    public void getSampleQuantity() throws NotFound, RemoteException {
+//        double quantity = userLibraries.get(0).getDoubleVal(SampleModel.TOTAL_MASS, user);
+//        assertTrue(quantity>= 0.0);
+//    }
+//
+//    @Test
+//    public void isBioanalyzerFile() throws ServerException {
+//        List<String> BIOA_IDENTIFIERS = Arrays.asList("Data File Path", "Date Created", "Date Last Modified",
+//                "Version Created", "Assay Name", "Assay Path", "Assay Title", "Assay Version", "Number of Samples Run",
+//                "Sample Name");
+//        assertTrue(commonMethods.isBioanalyzerFile(bioaDataFromFile, BIOA_IDENTIFIERS, Mockito.mock(ClientCallbackOperations.class), Mockito.mock(PluginLogger.class)));
+//        assertFalse(commonMethods.isBioanalyzerFile(dataFromFile, BIOA_IDENTIFIERS, Mockito.mock(ClientCallbackOperations.class), Mockito.mock(PluginLogger.class)));
+//    }
+//
+//    @Test
+//    public void hasValidBioanalyzerHeader() {
+//        assertTrue(commonMethods.hasValidBioanalyzerHeader(bioaDataFromFile, bioaFileName, EXPECTED_BIOA_HEADER_VALS, Mockito.mock(PluginLogger.class)));
+//    }
+//
+//    @Test
+//    public void getBioanalyzerFileHeaderMap() {
+//        String BIOA_HEADER_IDENTIFIER = "Size [bp]";
+//        assertEquals(commonMethods.getBioanalyzerFileHeaderMap(bioaDataFromFile, bioaFileName, BIOA_HEADER_IDENTIFIER, Mockito.mock(PluginLogger.class)).size(), 10);
+//    }
+//
+//    @Test
+//    public void getRecordIds() {
+//        assertEquals(commonMethods.getRecordIds(userLibraries).size(), 2);
+//    }
+//
+//    @Test
+//    public void removeThousandSeparator() {
+//        String line = "\"10,000,000\", ABC, STC, TEST"; // the numeric value in file data are surrounded by double quotes.
+//        String lineWithoutSeparator = "10000000, ABC, STC, TEST";
+//        assertEquals(commonMethods.removeThousandSeparator(line), lineWithoutSeparator);
+//    }
 
     @After
     public void Teardown() throws VeloxConnectionException {

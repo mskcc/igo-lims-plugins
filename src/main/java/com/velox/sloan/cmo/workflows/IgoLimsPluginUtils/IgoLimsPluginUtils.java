@@ -365,12 +365,14 @@ public class IgoLimsPluginUtils{
      * @param value
      * @return
      */
-    public boolean hasValidCharacters(String value, Boolean isPooledSample) {
+    public boolean hasValidCharacters(String value, Boolean isPooledSample, PluginLogger logger) {
         Matcher matcher;
+        logger.logInfo("Is Pooled Sample: " + isPooledSample);
+        logger.logInfo("Field value: " +  value);
         if (isPooledSample) {
-            matcher = SPECIAL_CHARACTER_REGEX_FOR_POOLS.matcher(value);
+            matcher = SPECIAL_CHARACTER_REGEX_FOR_POOLS.matcher(value.replace("\n", "").replace("\r", ""));
         } else {
-            matcher = SPECIAL_CHARACTER_REGEX.matcher(value);
+            matcher = SPECIAL_CHARACTER_REGEX.matcher(value.replace("\n", "").replace("\r", ""));
         }
         return matcher.matches();
     }
@@ -761,7 +763,7 @@ public class IgoLimsPluginUtils{
                 Object isControl = parent.getValue(SampleModel.IS_CONTROL, user);
                 Object igoId = parent.getValue(SampleModel.SAMPLE_ID, user);
                 if (isControl != null){
-                    logger.logInfo(String.format("%s DataRecord with Record ID %s is either Control or linked to a Sample that is Control."));
+                    logger.logInfo(String.format("Is Control Sample: %s, Sample Record ID: %d", isControl, rec.getRecordId()));
                     return (boolean)isControl;
                 }
                 if (igoId!= null && (igoId.toString().contains(POOLEDNORMAL_IDENTIFIER) || igoId.toString().contains(CONTROL_IDENTIFIER))){

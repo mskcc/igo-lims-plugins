@@ -76,7 +76,7 @@ public class IndexBarcodeChildRecordGenerator extends DefaultGenericPlugin {
                     }
                 }
             }
-            dataRecordManager.storeAndCommit("Added child records to samples %s " + getSampleIds(dataInFile).toString(), null, user);
+            dataRecordManager.storeAndCommit("Added child records to samples: " + getSampleIds(dataInFile).toString(), null, user);
 
         }catch (RemoteException e) {
             String errMsg = String.format("Remote Exception while creating Index Barcode records.\n%s", ExceptionUtils.getStackTrace(e));

@@ -74,8 +74,8 @@ public class TapeStationResultParserTest {
         connection.close();
     }
 
-    @Test
-    public void parseData() throws ServerException {
-        assertEquals(parser.parseData(attachedSamples).size(),3 );
-    }
+//    @Test
+//    public void parseData() throws ServerException {
+//        assertEquals(parser.parseData(attachedSamples).size(),3 );
+//    }
 }
