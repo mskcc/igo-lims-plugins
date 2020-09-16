@@ -28,8 +28,7 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
     private NewMicronicTubeTareWeightImporter excelFileValidator = new NewMicronicTubeTareWeightImporter();
 
     public MicronicTubeVolumeImporter() {
-        setTaskTableToolbar(true);
-        setTaskFormToolbar(true);
+        setTaskToolbar(true);
         setLine1Text("Calculate Volumes");
         setLine2Text("for micronics");
         setDescription("Upload file to calculate volumes using micronic tube tare weights.");
@@ -41,21 +40,11 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
     }
 
     @Override
-    public boolean onTaskFormToolbar(ActiveWorkflow activeWorkflow, ActiveTask activeTask) {
+    public boolean onTaskToolbar(ActiveWorkflow activeWorkflow, ActiveTask activeTask) {
         try {
             return activeTask.getTask().getTaskOptions().containsKey("UPDATE MICRONIC VOLUMES USING TARE WEIGHT");
         } catch (RemoteException e) {
             logError(String.format("Error while setting task form toolbar button for 'MicronicTubeVolumeImporter' plugin:\n%s", ExceptionUtils.getStackTrace(e)));
-        }
-        return false;
-    }
-
-    @Override
-    public boolean onTaskTableToolbar(ActiveWorkflow activeWorkflow, ActiveTask activeTask) {
-        try {
-            return activeTask.getTask().getTaskOptions().containsKey("UPDATE MICRONIC VOLUMES USING TARE WEIGHT");
-        } catch (RemoteException e) {
-            logError(String.format("Error while setting task table toolbar button for 'MicronicTubeVolumeImporter' plugin:\n%s", ExceptionUtils.getStackTrace(e)));
         }
         return false;
     }
@@ -237,28 +226,28 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws ServerException
      */
-    private double getTubeTareWeight(String tubeBarcode, List<DataRecord> micronicTubeRecordsInLims) {
+    private double getTubeTareWeight(String tubeBarcode, List<DataRecord> micronicTubeRecordsInLims){
         double tareWeight = 0.0;
         boolean barcodeFound = false;
-        for (DataRecord record : micronicTubeRecordsInLims) {
-            try {
+        try {
+            for (DataRecord record : micronicTubeRecordsInLims) {
                 if (Objects.equals(record.getStringVal("MicronicTubeBarcode", user), tubeBarcode)) {
                     tareWeight = record.getDoubleVal("MicronicTubeWeight", user);
                     barcodeFound = true;
                 }
-
-                if (!barcodeFound) {
-                    logError(String.format("TARE WEIGHT not found for sample with following Micronic Tube Barcode: %s", tubeBarcode));
-                    clientCallback.displayWarning(String.format("TARE WEIGHT not found for sample with Micronic Tube Barcode: %s", tubeBarcode));
-                }
-            } catch (RemoteException re) {
-                logError(String.format("RemoteException -> Error reading 'MicronicTubeWeight' field value for MicronicTube with barcode %s:\n%s", tubeBarcode, ExceptionUtils.getStackTrace(re)));
-            } catch (NotFound notFound) {
-                logError(String.format("NotFound Exception -> Error reading 'MicronicTubeWeight' field value for MicronicTube with barcode %s:\n%s", tubeBarcode, ExceptionUtils.getStackTrace(notFound)));
-            } catch (ServerException se) {
-                logError(String.format("ServerException -> Error reading 'MicronicTubeWeight' field value for MicronicTube with barcode %s:\n%s", tubeBarcode, ExceptionUtils.getStackTrace(se)));
-
             }
+            if (!barcodeFound) {
+                String errMsg = String.format("TARE WEIGHT not found for sample with Micronic Tube Barcode: %s", tubeBarcode);
+                logError(errMsg);
+                clientCallback.displayError(errMsg);
+                throw new NotFound(errMsg);
+            }
+        } catch (RemoteException re) {
+            logError(String.format("RemoteException -> Error reading 'MicronicTubeWeight' field value for MicronicTube with barcode %s:\n%s", tubeBarcode, ExceptionUtils.getStackTrace(re)));
+        } catch (NotFound notFound) {
+            logError(String.format("NotFound Exception -> Error reading 'MicronicTubeWeight' field value for MicronicTube with barcode %s:\n%s", tubeBarcode, ExceptionUtils.getStackTrace(notFound)));
+        } catch (ServerException e) {
+            logError(String.format("ServerException -> Error reading 'MicronicTubeWeight' field value for MicronicTube with barcode %s:\n%s", tubeBarcode, ExceptionUtils.getStackTrace(e)));
         }
         return tareWeight;
     }

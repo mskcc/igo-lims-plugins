@@ -34,7 +34,6 @@ public class Covid19Tests {
             String message = ExceptionUtils.getMessage(e);
             System.out.println(message);
         }
-
     }
 
     @Test

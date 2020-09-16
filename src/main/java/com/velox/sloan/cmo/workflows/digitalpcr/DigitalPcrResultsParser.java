@@ -47,7 +47,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 clientCallback.displayError("User did not upload results file.");
                 return new PluginResult(false);
             }
-            List<String> dataInFiles = readDataFromFiles(filesWithDigitalPcrRawData);
+            List<String> dataInFiles = igoUtils.readDataFromFiles(filesWithDigitalPcrRawData, clientCallback);
             if (!isValidFile(filesWithDigitalPcrRawData, dataInFiles)) {
                 return new PluginResult(false);
             }
@@ -131,28 +131,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
         return true;
     }
 
-    /**
-     * Method to read data when users upload multiple CSV files.
-     *
-     * @param fileNames
-     * @return Combined data from multiples CSV files
-     * @throws ServerException
-     * @throws IOException
-     */
-    private List<String> readDataFromFiles(List<String> fileNames) {
-        List<String> combinedFileData = new ArrayList<>();
-        for (String file : fileNames) {
-            try {
-                List<String> data = igoUtils.readDataFromCsvFile(clientCallback.readBytes(file));
-                combinedFileData.addAll(data);
-            } catch (ServerException e) {
-                logError(String.format("ServerException -> Error while reading data from uploaded file '%s':\n%s", file, ExceptionUtils.getStackTrace(e)));
-            } catch (IOException e) {
-                logError(String.format("IOException -> Error while reading data from uploaded file '%s':\n%s", file, ExceptionUtils.getStackTrace(e)));
-            }
-        }
-        return combinedFileData;
-    }
+
 
     /**
      * Remove duplicate headers when data from multiple files is combined
