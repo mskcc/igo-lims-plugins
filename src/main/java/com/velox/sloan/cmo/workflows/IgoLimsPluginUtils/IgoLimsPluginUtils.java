@@ -367,9 +367,9 @@ public class IgoLimsPluginUtils{
      */
     public boolean hasValidCharacters(String value, Boolean isPooledSample, PluginLogger logger) {
         Matcher matcher;
-        logger.logInfo("Is Pooled Sample: " + isPooledSample);
         logger.logInfo("Field value: " +  value);
         if (isPooledSample) {
+            logger.logInfo("Pooled Sample: " + isPooledSample);
             matcher = SPECIAL_CHARACTER_REGEX_FOR_POOLS.matcher(value.replace("\n", "").replace("\r", ""));
         } else {
             matcher = SPECIAL_CHARACTER_REGEX.matcher(value.replace("\n", "").replace("\r", ""));

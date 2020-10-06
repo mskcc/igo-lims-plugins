@@ -29,8 +29,8 @@ import java.util.*;
 // declaration of class
 public class IgoOnSavePlugin extends DefaultGenericPlugin {
     private final List<String> CMOINFO_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS = Arrays.asList("CorrectedCMOID", "CorrectedInvestPatientId", "UserSampleID",
-            "OtherSampleId", "CmoPatientId", "Preservation", "TumorOrNormal", "TumorType", "CollectionYear", "Gender", "SpecimenType", "TissueSource");
-    private final List<String> SAMPLE_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS = Arrays.asList("OtherSampleId", "UserSampleID", "Preservation", "Species",
+            "OtherSampleId", "CmoPatientId", "Preservation", "TumorOrNormal", "CollectionYear", "Gender", "SpecimenType", "TissueSource");
+    private final List<String> SAMPLE_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS = Arrays.asList("OtherSampleId", "UserSampleID", "Preservation",
             "TumorOrNormal", "PatientId", "CmoPatientId");
     private List<String> trackableDataTypes = Arrays.asList("Request");
     private final String FAILED = "Failed";
@@ -304,13 +304,13 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
             }
             Object cmoId = rec.getValue("CorrectedCMOID", user);
             Object recordId = rec.getRecordId();
-            if (isDuplicateCmoId(cmoId, recordId)) {
-                error = String.format("CorrectedCMOID '%s' already exists in '%s'. Choose a different value", cmoId, rec.getDataTypeName());
+            if (cmoId!= null && isDuplicateCmoId(cmoId, recordId)) {
+                error = String.format("CorrectedCMOID for record with recordId %d already exists in '%s'. Choose a different value", recordId, rec.getDataTypeName());
                 clientCallback.displayError(error);
                 logError(error);
             }
-        } catch (RemoteException | NotFound | ServerException e) {
-            error = String.format("Error while validating %s record %d for special characters:\n%s", rec.getDataTypeName(), rec.getRecordId(), e.getMessage());
+        } catch (RemoteException | NotFound | ServerException | NullPointerException e) {
+            error = String.format("Error while validating %s record %d for special characters:\n%s", rec.getDataTypeName(), rec.getRecordId(), ExceptionUtils.getStackTrace(e));
             logError(error);
         }
     }
