@@ -31,7 +31,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
     private final List<String> CMOINFO_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS = Arrays.asList("CorrectedCMOID", "CorrectedInvestPatientId", "UserSampleID",
             "OtherSampleId", "CmoPatientId", "Preservation", "TumorOrNormal", "TumorType", "CollectionYear", "Gender", "SpecimenType", "TissueSource");
     private final List<String> SAMPLE_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS = Arrays.asList("OtherSampleId", "UserSampleID", "Preservation", "Species",
-            "TumorOrNormal", "Species", "PatientId", "CmoPatientId");
+            "TumorOrNormal", "PatientId", "CmoPatientId");
     private List<String> trackableDataTypes = Arrays.asList("Request");
     private final String FAILED = "Failed";
     private String error = null;
