@@ -297,7 +297,8 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                     Object fieldValue = rec.getValue(key, user);
                     if (fieldValue != null && !utils.hasValidCharacters(fieldValue.toString(), false, pluginLogger)) {
                         error = String.format("Invalid Characters found in value '%s' on '%s' record Field '%s' " +
-                                "Special characters except '_' and '-' are not allowed for this Field", fieldValue.toString(), dataTypeName, key);
+                                "Special characters except '_' and '-' are not allowed for this Field. Please check for " +
+                                "whitespaces in between/beginning/trailing the entered field values or dropdown field values you are using.", fieldValue.toString(), dataTypeName, key);
                         logError(error);
                     }
                 }
@@ -331,7 +332,8 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
 
                     if (fieldValue != null && !utils.hasValidCharacters(fieldValue.toString(), isPoolSample, pluginLogger)) {
                         error = String.format("Invalid Characters found in value '%s' on '%s' record Field '%s' " +
-                                "Special characters except '_' '-' ',' (comma only for Pooled Library Samples) are not allowed for this Field", fieldValue.toString(), dataTypeName, key);
+                                "Special characters except '_' '-' ',' (comma only for Pooled Library Samples) are not allowed for this Field. " +
+                                "Please check for whitespaces in between/beginning/trailing the entered field values or dropdown field values you are using.", fieldValue.toString(), dataTypeName, key);
                         logError(error);
                     }
                 }
