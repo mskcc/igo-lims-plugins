@@ -9,6 +9,7 @@ import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
+import com.velox.sloan.cmo.recmodels.SampleModel;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AliquotingTags;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -74,7 +75,12 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
                 clientCallback.displayError(String.format("Did not find %s protocol records attached to this task.", activeTask.getInputDataTypeName()));
                 return new PluginResult(false);
             }
-            getUpdatedFieldValueList(fileData, headerColumnLocationMap, protocolRecords);
+            List<DataRecord> sampleRecords = activeTask.getAttachedDataRecords(SampleModel.DATA_TYPE_NAME, user);
+            if (sampleRecords.isEmpty()) {
+                clientCallback.displayError(String.format("Did not find %s records attached to this task.", SampleModel.DATA_TYPE_NAME));
+                return new PluginResult(false);
+            }
+            getUpdatedFieldValueList(fileData, headerColumnLocationMap, protocolRecords, sampleRecords);
             //clientCallback.displayInfo(String.format("%s, %s, %s, %s, %s, %s, %s", destinationPlateIdFieldName, destinationWellFieldName, sourceMassToUseFieldName, sourceVolumeToUseFieldName, targetConcFieldName, targetMassFieldName, targetVolFieldName));
 
         } catch (Exception e) {
@@ -209,7 +215,6 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
      * Method to get the FieldValues Map from uploaded file for DataRecord
      *
      * @param row
-     * @param rec
      * @param headerValueMap
      * @return
      * @throws ServerException
@@ -218,7 +223,7 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
      * @throws IoError
      * @throws NotFound
      */
-    private Map<String, Object> getUpdatedFieldValues(String row, DataRecord rec, Map<String, Integer> headerValueMap) throws ServerException {
+    private Map<String, Object> getUpdatedFieldValues(String row, Map<String, Integer> headerValueMap) throws ServerException {
         List<String> rowValues = Arrays.asList(row.split(",|\n"));
         List<String> fileHeaders = new ArrayList<>(headerValueMap.keySet());
         Integer headerSize = headerValueMap.size();
@@ -237,6 +242,52 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
     }
 
     /**
+     * Method to check if a protocol record with given values is already assigned a position on plate.
+     * @param sampleId
+     * @param plateId
+     * @param wellPosition
+     * @param protocolRecords
+     * @return
+     */
+    private boolean isAlreadyAssigned(Object sampleId, Object plateId, Object wellPosition, List<DataRecord> protocolRecords){
+        try {
+            for (DataRecord rec : protocolRecords){
+                Object protSampId = rec.getValue(SampleModel.SAMPLE_ID,user);
+                Object protplateId = rec.getValue(destinationPlateIdFieldName, user);
+                Object protDestWell = rec.getValue(destinationWellFieldName, user);
+
+                if(Objects.equals(sampleId, protSampId) && Objects.equals(plateId, protplateId) && Objects.equals(wellPosition, protDestWell)){
+                    return true;
+                }
+            }
+        } catch (RemoteException | NotFound e) {
+            logInfo(String.format("%s -> Error while checking if the protocol values are already assigned.: %s", ExceptionUtils.getRootCause(e), ExceptionUtils.getStackTrace(e)));
+        }
+        return false;
+    }
+
+    /**
+     * Method to create and attach new DataRecord Of InputDataType of the ActiveTask in workflow.
+     * @param row
+     * @param dataTypeName
+     * @param attachedSamples
+     */
+    private void createAndAttachProtocolRec(String row, String dataTypeName, Map<String, Integer> headerValueMap, List<DataRecord> attachedSamples){
+        try{
+            Object sampleId = getFieldValueFromRowValues(row, headerValueMap, String.valueOf(acceptableHeaderValuesEnum.SAMPLE_ID));
+            for (DataRecord sam : attachedSamples){
+                Object samId = sam.getValue(SampleModel.SAMPLE_ID, user);
+                if(Objects.equals(sampleId, samId)){
+                    activeTask.addAttachedDataRecord(sam.addChild(dataTypeName, getUpdatedFieldValues(row, headerValueMap), user));
+                }
+            }
+        } catch (Exception e) {
+            logError(String.format("%s -> Error while creating new protocol record of DataType '%s' : %s", ExceptionUtils.getRootCause(e), dataTypeName, ExceptionUtils.getStackTrace(e)));
+        }
+        return;
+    }
+
+    /**
      * Method to update the FieldValues on DataType with values from uploaded file.
      *
      * @param fileData
@@ -248,14 +299,25 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
      * @throws IoError
      * @throws InvalidValue
      */
-    private void getUpdatedFieldValueList(List<String> fileData, Map<String, Integer> headerValueMap, List<DataRecord> protocolRecords) {
+    private void getUpdatedFieldValueList(List<String> fileData, Map<String, Integer> headerValueMap, List<DataRecord> protocolRecords, List<DataRecord> attachedSamples) {
         for (int i = 1; i < fileData.size(); i++) {
             String row = fileData.get(i);
             Object sampleId = getFieldValueFromRowValues(row, headerValueMap, String.valueOf(acceptableHeaderValuesEnum.SAMPLE_ID));
+            Object plateId = getFieldValueFromRowValues(row, headerValueMap, String.valueOf(acceptableHeaderValuesEnum.DESTINATION_PLATE_ID));
+            Object wellPosition = getFieldValueFromRowValues(row, headerValueMap, String.valueOf(acceptableHeaderValuesEnum.DESTINATION_WELL));
+            boolean isAssigned = isAlreadyAssigned(sampleId, plateId, wellPosition, protocolRecords);
             for (DataRecord proc : protocolRecords) {
                 try {
-                    if (String.valueOf(sampleId).equals(proc.getStringVal("SampleId", user))) {
-                        proc.setFields(getUpdatedFieldValues(row, proc, headerValueMap), user);
+                    // If a SampleId from file is not already assigned a plateid and well position, then assign the values
+                    if (String.valueOf(sampleId).equals(proc.getStringVal("SampleId", user)) && !isAssigned) {
+                        proc.setFields(getUpdatedFieldValues(row, headerValueMap), user);
+                    }
+                    // If a SampleId from file is already assigned a plateid and well position, it means we need to create a replicate and then
+                    // attach to the ActiveTask in the workflow.
+                    // Replicates are not automatically created by CREATE PROTOCOLS plugins. Replicates are created when user manually drags
+                    // and drops samples in two different wells using Sample to Plate assignment GUI.
+                    else if(String.valueOf(sampleId).equals(proc.getStringVal("SampleId", user)) && isAssigned){
+                        createAndAttachProtocolRec(row, dataTypeName, headerValueMap, attachedSamples);
                     }
                 } catch (RemoteException e) {
                     logError(String.format("RemoteException -> Error while updating plate assignment values:\n%s", ExceptionUtils.getStackTrace(e)));
