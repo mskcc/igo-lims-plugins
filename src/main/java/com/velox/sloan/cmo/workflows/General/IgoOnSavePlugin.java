@@ -21,12 +21,10 @@ import java.util.*;
  * - Checks/Validates that the declared Sample fields do not contain special characters.
  * - Checks/Validates that the declared SampleCmoInfo fields do not contain special characters.
  * - Checks/Validates that the declared SampleCmoInfo CMOID values are unique.
- * - Update the TotalReads sequenced and RemainingReads to sequence on SeqRequirements records for a Sample.
+ * - Updates the TotalReads sequenced and RemainingReads to sequence on SeqRequirements records for a Sample.
  *
  * @author Ajay Sharma, Anna Patruno
  */
-
-// declaration of class
 public class IgoOnSavePlugin extends DefaultGenericPlugin {
     private final List<String> CMOINFO_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS = Arrays.asList("CorrectedCMOID", "CorrectedInvestPatientId", "UserSampleID",
             "OtherSampleId", "CmoPatientId", "Preservation", "TumorOrNormal", "CollectionYear", "Gender", "SpecimenType", "TissueSource");
@@ -34,6 +32,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
             "TumorOrNormal", "PatientId", "CmoPatientId");
     private List<String> trackableDataTypes = Arrays.asList("Request");
     private final String FAILED = "Failed";
+    private final String POOLED_SAMPLE_TYPE = "Pooled Library";
     private String error = null;
 
     // define constructor, what structure of class/object would look like
@@ -267,13 +266,17 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
     private boolean isPooledSampleType(DataRecord rec) {
         try {
             Object sampleType = rec.getValue("ExemplarSampleType", user);
-            Object altIds = rec.getStringVal("AltId", user);
-            if (altIds!=null){
-                return altIds.toString().split(",").length>1;
-            }
-            if (sampleType != null) {
+            Object sampleId = rec.getValue(SampleModel.SAMPLE_ID, user);
+            Object otherSampleId = rec.getStringVal(SampleModel.OTHER_SAMPLE_ID, user);
+            if (sampleType !=null){
                 logInfo("Sample Type: " + sampleType.toString());
-                return "Pooled Library".equalsIgnoreCase(sampleType.toString().trim());
+                return sampleType.toString().equalsIgnoreCase(POOLED_SAMPLE_TYPE);
+            }
+            if (sampleId != null){
+                return sampleId.toString().toLowerCase().startsWith("pool-");
+            }
+            if (otherSampleId != null){
+                return otherSampleId.toString().split(",").length > 1;
             }
         } catch (NotFound | RemoteException e) {
             error = String.format("Cannot validate SampleType:\n%s", e.getMessage());
@@ -325,6 +328,9 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
     private void validateSampleFields(DataRecord rec, String dataTypeName) {
         try {
             boolean isPoolSample = isPooledSampleType(rec);
+            logInfo("SampleId: " + rec.getValue(SampleModel.SAMPLE_ID, user));
+            logInfo("IsPooled: " + isPoolSample);
+            logInfo("Sample Type: " + rec.getValue(SampleModel.EXEMPLAR_SAMPLE_TYPE, user));
             Map<String, Object> fields = rec.getFields(user);
             for (String key : fields.keySet()) {
                 if (SAMPLE_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS.contains(key.trim())) {
