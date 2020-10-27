@@ -16,6 +16,7 @@ import com.velox.api.util.ServerException;
 import com.velox.sloan.cmo.recmodels.RequestModel;
 import com.velox.sloan.cmo.recmodels.SampleModel;
 import com.velox.sloan.cmo.recmodels.SeqAnalysisSampleQCModel;
+import com.velox.sloan.cmo.recmodels.StorageUnitModel;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
@@ -38,10 +39,11 @@ public class IgoLimsPluginUtils{
 
     private final Pattern SPECIAL_CHARACTER_REGEX = Pattern.compile("^[a-zA-Z0-9_-]*$");
     private final Pattern SPECIAL_CHARACTER_REGEX_FOR_POOLS = Pattern.compile("^[a-zA-Z0-9,_-]*$");
-
     private final List<String> LIBRARY_SAMPLE_TYPES = Arrays.asList("cdna library", "dna library", "cfdna library", "pooled library");
     private final String POOLEDNORMAL_IDENTIFIER = "POOLEDNORMAL";
     private final String CONTROL_IDENTIFIER = "CTRL";
+    private static final int MAX_COLUMNS_96_WELL = 12;
+    private static final List<String> ROW_NAMES_96 = Arrays.asList("A", "B", "C", "D", "E", "F", "G", "H");
     /**
      * Method to check if a file has .csv extension
      *
@@ -579,7 +581,7 @@ public class IgoLimsPluginUtils{
      * @param temporaryDataTypeFieldDefinitions
      * @throws ServerException
      */
-    public TemporaryDataType setTempDataTypeLayout(TemporaryDataType temporaryDataType, List<VeloxFieldDefinition<?>> temporaryDataTypeFieldDefinitions, String formNameToUse, PluginLogger logger){
+    public static TemporaryDataType setTempDataTypeLayout(TemporaryDataType temporaryDataType, List<VeloxFieldDefinition<?>> temporaryDataTypeFieldDefinitions, String formNameToUse, PluginLogger logger){
         try {
             // Create form
             DataFormComponent form = new DataFormComponent(formNameToUse, formNameToUse);
@@ -615,6 +617,43 @@ public class IgoLimsPluginUtils{
             logger.logError(errMsg);
         }
         return temporaryDataType;
+    }
+
+    /**
+     * Method to create DataForm to show table entry to get user input.
+     *
+     * @param temporaryDataType
+     * @param fieldDefList
+     * @return TemporaryDatatype
+     */
+     public static void createTempDataForm(TemporaryDataType temporaryDataType, List<VeloxFieldDefinition<?>> fieldDefList, String formName, String displayName) {
+        // Create form
+        DataFormComponent form = new DataFormComponent(formName, displayName);
+        form.setCollapsed(false);
+        form.setColumn(0);
+        form.setColumnSpan(4);
+        form.setOrder(0);
+        form.setHeight(10);
+        // Add fields to the form
+        for (int i = 0; i < fieldDefList.size(); i++) {
+            VeloxFieldDefinition<?> fieldDef = fieldDefList.get(i);
+            FieldDefinitionPosition pos = new FieldDefinitionPosition(fieldDef.getDataFieldName());
+            pos.setFormColumn(0);
+            pos.setFormColumnSpan(4);
+            pos.setOrder(i);
+            pos.setFormName(formName);
+            form.setFieldDefinitionPosition(pos);
+        }
+        // Create a tab with the form on it
+        DataTypeTabDefinition tabDef = new DataTypeTabDefinition(formName, displayName);
+        tabDef.setDataTypeLayoutComponent(form);
+        tabDef.setTabOrder(0);
+        // Create a layout with the tab on it
+        DataTypeLayout layout = new DataTypeLayout("Default", "Default", "Default layout for temp fields");
+        layout.setDataTypeTabDefinition(tabDef);
+        // Add the layout to the TDT
+        temporaryDataType.setDataTypeLayout(layout);
+        return;
     }
 
     /**
@@ -774,5 +813,84 @@ public class IgoLimsPluginUtils{
             logger.logError(String.format("%s->Error while validating %s record with record id %d is a control:\n%s", ExceptionUtils.getMessage(e),rec.getDataTypeName(), rec.getRecordId(), ExceptionUtils.getStackTrace(e)));
         }
         return false;
+    }
+
+    /**
+     * Method to get column length 2 when column value is less than 9. eg 01, 02 , 03 etc.
+     * @param col
+     * @return
+     */
+    public static String getColumn(int col) {
+        if (col < 10){
+            return "0"+col;
+        }
+        return String.valueOf(col);
+    }
+
+    /**
+     * Method to get next columnwise well position on plate/rack.
+     * @param wellPos
+     * @return
+     */
+    public static String getNextWellPosColumnWise(String wellPos) {
+        String row = String.valueOf(wellPos.charAt(0));
+        int col = Integer.parseInt(wellPos.substring(1));
+        String nextWellPos = null;
+        System.out.println(row);
+        System.out.println(ROW_NAMES_96.indexOf(row));
+        if (ROW_NAMES_96.indexOf(row) < ROW_NAMES_96.size() -1 && col < MAX_COLUMNS_96_WELL) {
+            nextWellPos = ROW_NAMES_96.get(ROW_NAMES_96.indexOf(row)+1) + getColumn(col);
+        }
+        if (ROW_NAMES_96.indexOf(row) >= ROW_NAMES_96.size() - 1 && col < MAX_COLUMNS_96_WELL) {
+            nextWellPos = ROW_NAMES_96.get(0) + getColumn(col+1);
+        }
+        if (ROW_NAMES_96.indexOf(row) == ROW_NAMES_96.size() - 1 && col >= MAX_COLUMNS_96_WELL) {
+            nextWellPos = ROW_NAMES_96.get(0) + getColumn(1);
+        }
+        return nextWellPos;
+    }
+
+    /**
+     * Method to get next columnwise well position on plate/rack.
+     * @param wellPos
+     * @return
+     */
+    public static String getNextWellPosColWise(String wellPos) {
+        String row = String.valueOf(wellPos.charAt(0));
+        int col = Integer.parseInt(wellPos.substring(1));
+        String nextWellPos = null;
+        System.out.println(row);
+        System.out.println(ROW_NAMES_96.indexOf(row));
+        if (ROW_NAMES_96.indexOf(row) < ROW_NAMES_96.size() -1 && col < MAX_COLUMNS_96_WELL) {
+            nextWellPos = ROW_NAMES_96.get(ROW_NAMES_96.indexOf(row)+1) + getColumn(col);
+        }
+        if (ROW_NAMES_96.indexOf(row) >= ROW_NAMES_96.size() - 1 && col < MAX_COLUMNS_96_WELL) {
+            nextWellPos = ROW_NAMES_96.get(0) + getColumn(col+1);
+        }
+        if (ROW_NAMES_96.indexOf(row) == ROW_NAMES_96.size() - 1 && col >= MAX_COLUMNS_96_WELL) {
+            nextWellPos = ROW_NAMES_96.get(0) + getColumn(1);
+        }
+        return nextWellPos;
+    }
+
+    /**
+     * Method to get next columnwise well position on plate/rack.
+     * @param wellPos
+     * @return
+     */
+    private static String getNextWellPosRowWise(String wellPos) {
+        String row = String.valueOf(wellPos.charAt(0));
+        int col = Integer.parseInt(wellPos.substring(1));
+        String nextWellPos = null;
+        if (ROW_NAMES_96.indexOf(row) < ROW_NAMES_96.size() && col < MAX_COLUMNS_96_WELL) {
+            nextWellPos = row + getColumn(col + 1);
+        }
+        if (ROW_NAMES_96.indexOf(row) < ROW_NAMES_96.size() - 1 && col >= MAX_COLUMNS_96_WELL) {
+            nextWellPos = ROW_NAMES_96.get(ROW_NAMES_96.indexOf(row) + 1) + getColumn(1);
+        }
+        if (ROW_NAMES_96.indexOf(row) == ROW_NAMES_96.size() - 1 && col >= MAX_COLUMNS_96_WELL) {
+            nextWellPos = ROW_NAMES_96.get(0) + getColumn(1) ;
+        }
+        return nextWellPos;
     }
 }

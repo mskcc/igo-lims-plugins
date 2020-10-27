@@ -19,6 +19,8 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import java.rmi.RemoteException;
 import java.util.*;
 
+import static com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils.setTempDataTypeLayout;
+
 /**
  * This plugin is designed to Integrate Quality Assurance Measurements upload during the Quality Control workflow.
  * The plugin will add the uploaded Quality Assurance Measurements as stand alone values to the LIMS without any
@@ -140,7 +142,7 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
         tempPlate.setVeloxFieldDefinitionList(fieldDefList);
         List<Map<String, Object>> userInputData = new ArrayList<>();
         try {
-            utils.setTempDataTypeLayout(tempPlate, fieldDefList, "Quality Assurance info", logger);
+            setTempDataTypeLayout(tempPlate, fieldDefList, "Quality Assurance info", logger);
             List<Map<String, Object>> defaultValuesList = new ArrayList<>();
             for (int i = 1; i <= numToAdd; i++) {
                 Map<String, Object> values = new HashMap<>();
