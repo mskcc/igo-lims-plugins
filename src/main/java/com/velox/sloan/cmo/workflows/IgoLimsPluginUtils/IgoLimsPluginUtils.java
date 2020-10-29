@@ -29,6 +29,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static java.util.Comparator.comparingInt;
+import static java.util.Map.Entry.comparingByValue;
+
 /**
  * This class will contain all the common methods which are often used repeatedly across different plugins.
  *
@@ -44,6 +47,8 @@ public class IgoLimsPluginUtils{
     private final String CONTROL_IDENTIFIER = "CTRL";
     private static final int MAX_COLUMNS_96_WELL = 12;
     private static final List<String> ROW_NAMES_96 = Arrays.asList("A", "B", "C", "D", "E", "F", "G", "H");
+
+
     /**
      * Method to check if a file has .csv extension
      *
@@ -878,7 +883,7 @@ public class IgoLimsPluginUtils{
      * @param wellPos
      * @return
      */
-    private static String getNextWellPosRowWise(String wellPos) {
+    public static String getNextWellPosRowWise(String wellPos) {
         String row = String.valueOf(wellPos.charAt(0));
         int col = Integer.parseInt(wellPos.substring(1));
         String nextWellPos = null;
@@ -893,4 +898,6 @@ public class IgoLimsPluginUtils{
         }
         return nextWellPos;
     }
+
+
 }

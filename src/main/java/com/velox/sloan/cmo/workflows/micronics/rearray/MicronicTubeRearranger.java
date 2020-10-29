@@ -1,6 +1,7 @@
 package com.velox.sloan.cmo.workflows.micronics.rearray;
 
 import com.velox.api.datarecord.DataRecord;
+import com.velox.api.datarecord.NotFound;
 import com.velox.api.datatype.TemporaryDataType;
 import com.velox.api.datatype.fielddefinition.VeloxFieldDefinition;
 import com.velox.api.datatype.fielddefinition.VeloxStringFieldDefinition;
@@ -15,8 +16,11 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils.createTempDataForm;
+import static java.util.Comparator.comparingInt;
+import static java.util.Map.Entry.comparingByValue;
 
 public class MicronicTubeRearranger extends DefaultGenericPlugin{
 
@@ -24,7 +28,7 @@ public class MicronicTubeRearranger extends DefaultGenericPlugin{
     private final int RACK_COL = 8;
     private final String STORAGE_UNIT_TYPE = "Micronic Rack";
     private final int MAX_COLUMNS_96_WELL = 12;
-    private final int MAX_ROWS_96_WELL = 12;
+    private final int MAX_ROWS_96_WELL = 8;
     private final List<String> ROW_NAMES_96 = Arrays.asList("A", "B", "C","D","E","F","G","H");
 
     public MicronicTubeRearranger() {
@@ -269,5 +273,49 @@ public class MicronicTubeRearranger extends DefaultGenericPlugin{
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+
+    /**
+     * Method to get SampleIds from attached samples.
+     * @param samples
+     */
+    private List<String> getSamplesIds(List<DataRecord> samples){
+        try{
+             return samples.stream().map(e ->{
+                try {
+                    return e.getStringVal(SampleModel.SAMPLE_ID, user);
+                } catch (Exception a) {
+                    logError(ExceptionUtils.getStackTrace(a));
+                    return null;
+                }
+            }).collect(Collectors.toList());
+        }catch (Exception e){
+            logError(ExceptionUtils.getStackTrace(e));
+        }
+        return new ArrayList<>();
+    }
+
+    /**
+     * Method to get samples grouped by Micronic Rack.
+     * @param samples
+     * @return
+     */
+    private Map<String, List<DataRecord>> getRackAndSamples(List<DataRecord>samples){
+        Map<String, List<DataRecord>> rackAndSamples = new HashMap<>();
+        try{
+            for (DataRecord rec : samples){
+                Object storageBarcode = rec.getValue(SampleModel.STORAGE_LOCATION_BARCODE, user);
+                if (!Objects.isNull(storageBarcode)){
+                    String key = storageBarcode.toString();
+                    rackAndSamples.putIfAbsent(key, new ArrayList<>());
+                    rackAndSamples.get(key).add(rec);
+                }
+            }
+        } catch (Exception e) {
+            String msg = String.format("%s -> Error while getting Micronic Rack and related Samples: %s", ExceptionUtils.getRootCauseMessage(e), ExceptionUtils.getStackTrace(e));
+            logError(msg);
+        }
+        return rackAndSamples;
     }
 }
