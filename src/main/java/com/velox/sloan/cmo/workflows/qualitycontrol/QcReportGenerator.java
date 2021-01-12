@@ -26,8 +26,8 @@ public class QcReportGenerator extends DefaultGenericPlugin {
 
     private final String QC_TYPE_FOR_DIN = "tapestation sampletable";
     private final String QC_TYPE_FOR_RQN = "fragment analyzer rna quality, fragment analyzer peak table";
-    private final String QC_TYPE_FOR_DV200 = "fragment analyzer smear table, bioanalyzer rna pico, bioanalyzer rna nano";
-    private final String QC_TYPE_FOR_RIN = "bioanalyzer rna pico, bioanalyzer rna nano";
+    private final String QC_TYPE_FOR_DV200 = "fragment analyzer smear table, bioanalyzer rna pico, bioanalyzer rna nano, tapestation rna screentape hisense compactregion table, tapestation rna screentape compactregion table";
+    private final String QC_TYPE_FOR_RIN = "bioanalyzer rna pico, bioanalyzer rna nano, tapestation rna screentape hisense sample table, tapestation rna screentape sample table";
     private final String QC_TYPE_FOR_AVERAGE_BP_SIZE = "TapeStation Compact Peak Table, TapeStation Compact Pico Region Table, " +
             "TapeStation D1000 Compact Region Table, TapeStation D1000 HiSense Compact Region Table, Bioanalyzer DNA High Sens Region Table";
     private final List<String> DNA_SAMPLE_TYPES = Arrays.asList("cdna", "cfdna", "dna");

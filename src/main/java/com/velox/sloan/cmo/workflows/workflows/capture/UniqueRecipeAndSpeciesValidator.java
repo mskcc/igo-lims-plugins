@@ -1,10 +1,11 @@
-package com.velox.sloan.cmo.workflows.workflows;
+package com.velox.sloan.cmo.workflows.workflows.capture;
 
 import com.velox.api.datarecord.DataRecord;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
+import com.velox.sloan.cmo.recmodels.SampleModel;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Arrays;
@@ -13,12 +14,11 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Plugin to validate if the samples launched in the workflow have same recipe. If different recipes found, User is displayed q warning along with options to
- * cancel the workflow or continue running the workflow.
- * Created by sharmaa1 on 8/5/19.
+ * Plugin to validate that all the samples launched in the workflow have same recipe, species values.
+ * If not true, user is displayed a warning along with options to cancel the workflow or continue running the workflow.
+ * @author  sharmaa1 on 8/5/19.
  */
 public class UniqueRecipeAndSpeciesValidator extends DefaultGenericPlugin {
-
     public UniqueRecipeAndSpeciesValidator() {
         setTaskEntry(true);
         setOrder(PluginOrder.LAST.getOrder());
@@ -35,8 +35,8 @@ public class UniqueRecipeAndSpeciesValidator extends DefaultGenericPlugin {
             Set<String> recipes = new HashSet<>();
             Set<String> speciesValues = new HashSet<>();
             for (DataRecord samp : samples) {
-                Object recipe = samp.getValue("Recipe", user);
-                Object species = samp.getValue("Species", user);
+                Object recipe = samp.getValue(SampleModel.RECIPE, user);
+                Object species = samp.getValue(SampleModel.SPECIES, user);
                 if (recipe == null || StringUtils.isBlank((String) recipe)) {
                     clientCallback.displayWarning(String.format("Recipe value not found for sample %s", samp.getStringVal("SampleId", user)));
                 } else {
@@ -63,12 +63,12 @@ public class UniqueRecipeAndSpeciesValidator extends DefaultGenericPlugin {
 
             boolean isUniqueRecipe = recipes.size() == 1;
             if (!isUniqueRecipe) {
-                logInfo(String.format("Two or more Samples launched in this workflow have different recipes: %s", recipes.toString()));
+                logInfo(String.format("Two or more Samples launched in this workflow have mixed recipes on Samples: %s", recipes.toString()));
                 if (!clientCallback.showOkCancelDialog("SAMPLES HAVE DIFFERENT RECIPES!", "Two or more Samples launched in this workflow have different recipes: " + recipes.toString() + "\nDO YOU WANT TO CONTINUE?")) {
-                    logInfo(String.format("User %s elected to cancel workflow %s because of duplicate recipes.", activeWorkflow.getActiveWorkflowName(), user.getAccountName()));
+                    logInfo(String.format("User %s elected to cancel workflow %s because of mixed recipes on Samples.", activeWorkflow.getActiveWorkflowName(), user.getAccountName()));
                     return new PluginResult(false);
                 } else {
-                    logInfo(String.format("User %s elected to continue workflow %s regardless of duplicate recipes warning.", activeWorkflow.getActiveWorkflowName(), user.getAccountName()));
+                    logInfo(String.format("User %s elected to continue workflow %s regardless of mixed recipes warning.", activeWorkflow.getActiveWorkflowName(), user.getAccountName()));
                     return new PluginResult(true);
                 }
             }
@@ -77,10 +77,10 @@ public class UniqueRecipeAndSpeciesValidator extends DefaultGenericPlugin {
             if (!isUniqueSpecies) {
                 logInfo(String.format("Two or more Samples launched in this workflow have different species: %s", speciesValues.toString()));
                 if (!clientCallback.showOkCancelDialog("SAMPLES HAVE DIFFERENT SPECIES!", "Two or more Samples launched in this workflow have different species: " + speciesValues.toString() + "\nDO YOU WANT TO CONTINUE?")) {
-                    logInfo(String.format("User %s elected to cancel workflow %s because of duplicate species.", activeWorkflow.getActiveWorkflowName(), user.getAccountName()));
+                    logInfo(String.format("User %s elected to cancel workflow %s because of mixed species Samples.", activeWorkflow.getActiveWorkflowName(), user.getAccountName()));
                     return new PluginResult(false);
                 } else {
-                    logInfo(String.format("User %s elected to continue workflow %s regardless of duplicate species warning.", activeWorkflow.getActiveWorkflowName(), user.getAccountName()));
+                    logInfo(String.format("User %s elected to continue workflow %s regardless of mixed species warning.", activeWorkflow.getActiveWorkflowName(), user.getAccountName()));
                     return new PluginResult(true);
                 }
             }
