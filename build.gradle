@@ -31,8 +31,6 @@ dependencies {
     compile group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1'
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.13.3'
     testCompile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.13.3'
-
-
     compile ('junit:junit:4.12') {
         exclude group: 'org.hamcrest'
     }
