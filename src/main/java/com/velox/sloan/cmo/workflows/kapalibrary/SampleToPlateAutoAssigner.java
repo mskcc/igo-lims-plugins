@@ -14,20 +14,22 @@ import com.velox.api.datatype.fielddefinition.VeloxIntegerFieldDefinition;
 import com.velox.api.datatype.fielddefinition.VeloxStringFieldDefinition;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
+import com.velox.api.workflow.ActiveTask;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 import org.apache.commons.lang3.StringUtils;
-import org.mockito.internal.matchers.Not;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * @author Ajay Sharma
  * For the Kapa Library Preparation workflow write the well locations to DNALibraryPrepProtocols
  * sorted based on IGO ID.  (User doesn't need to drag and drop).
+ *
+ * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
 
 public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
@@ -43,7 +45,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
 
     @Override
     public boolean shouldRun() throws RemoteException {
-        return activeTask.getStatus() != activeTask.COMPLETE && activeTask.getTask().getTaskOptions().keySet().contains("SORT AND ASSIGN SAMPLES TO PLATE");
+        return activeTask.getStatus() != ActiveTask.COMPLETE && activeTask.getTask().getTaskOptions().containsKey("SORT AND ASSIGN SAMPLES TO PLATE");
     }
 
     @Override
@@ -94,9 +96,26 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
 
-        } catch (Exception e) {
-            clientCallback.displayError(String.format("Error while sample assignment to plates. CAUSE:\n%s", e));
-            logError(e);
+        }catch (NotFound e) {
+            String errMsg = String.format("NotFound Exception while sample assignment to plates:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception while sample assignment to plates:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (InvalidValue e) {
+            String errMsg = String.format("InvalidValue Exception while sample assignment to plates:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IoError e) {
+            String errMsg = String.format("IoError Exception while sample assignment to plates:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
         }
         return new PluginResult(true);
 
@@ -340,7 +359,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * Get the quadrant values that each source plate must be assigned to.
      *
      * @param uniquePlateIds
-     * @return List<Map       <       String       ,       Object>>
+     * @return List<Map < String, Object>>
      */
     private List<Map<String, Object>> getValueMapForPlateQuadrant(List<String> uniquePlateIds) {
         List<Map<String, Object>> uniquePlates = new ArrayList<>();
@@ -366,6 +385,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
 
     /**
      * Method to create DataForm to show table entry to get user input.
+     *
      * @param tempPlate
      * @param fieldDefList
      * @return TemporaryDatatype
@@ -496,7 +516,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * Get PlateId and corresponding quadrant number from user via table input dialog box.
      *
      * @param attachedSamples
-     * @return List<Map       <       String       ,               Object>>
+     * @return List<Map < String, Object>>
      * @throws com.velox.api.util.ServerException
      * @throws RemoteException
      * @throws NotFound
@@ -661,7 +681,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
         if (plateNumber == 1 || plateNumber == 2)
             rowOffSet--;
         char resultRow = (char) (64 + rowOffSet);
-        Integer column = Integer.parseInt(rowAndColumn.substring(1, rowAndColumn.length()));
+        Integer column = Integer.parseInt(rowAndColumn.substring(1));
         Integer toColumn = column * 2;
         if (plateNumber == 1 || plateNumber == 3)
             toColumn--;

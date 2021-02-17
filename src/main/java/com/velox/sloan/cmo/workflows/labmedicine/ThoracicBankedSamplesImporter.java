@@ -1,12 +1,11 @@
 package com.velox.sloan.cmo.workflows.labmedicine;
 
-import com.velox.api.datarecord.DataRecord;
-import com.velox.api.datarecord.IoError;
-import com.velox.api.datarecord.NotFound;
+import com.velox.api.datarecord.*;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -18,8 +17,10 @@ import java.io.InputStream;
 import java.rmi.RemoteException;
 import java.util.*;
 
-/*
- @description This plugin is designed to read Thoracic Banked Sample information from an excel file and assign unique Id's to the samples.
+/**
+ * This plugin is designed to read Thoracic Banked Sample information from an excel file and assign unique Id's to the samples.
+ *
+ * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
 public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
     private final List<String> excelFileHeaderValues = Arrays.asList("Accession#", "DrawDate", "DrawTime", "Pi", "TubeType", "#ofTubes", "BoxDate", "SpecimenType", "Aliquot#", "Comments");
@@ -44,7 +45,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
                 logInfo("Path to excel file is empty. Or file not uploaded and process canceled by the usr.");
                 return new PluginResult(false);
             }
-            if(!isValidExcelFile(excelFilePath)){
+            if (!isValidExcelFile(excelFilePath)) {
                 return new PluginResult(false);
             }
             Sheet sheet = getSheetFromFile(excelFilePath);
@@ -66,20 +67,67 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
                 dataRecordManager.storeAndCommit(String.format("Added %d ThoracicBankTransfer samples", thoracicBankSampleRecords.size()), user);
                 clientCallback.displayInfo(String.format("Added %d new ThoracicBankTransfer sample records.", thoracicBankSampleRecords.size()));
             }
-        } catch (Exception e) {
-            clientCallback.displayError(String.format("Error reading Thoracic Sample Information", e));
-            logError(String.format("Error reading Thoracic Sample Information"), e);
+        } catch (NotFound e) {
+            String errMsg = String.format("NotFound Exception while reading Thoracic Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (RemoteException e) {
+            String errMsg = String.format("Remote Exception while reading Thoracic Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (InvalidValue e) {
+            String errMsg = String.format("InvalidValue Exception while reading Thoracic Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IoError e) {
+            String errMsg = String.format("IoError Exception while reading Thoracic Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (AlreadyExists alreadyExists) {
+            String errMsg = String.format("AlreadyExists Exception while reading Thoracic Sample Information:\n%s", ExceptionUtils.getStackTrace(alreadyExists));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (InvalidFormatException e) {
+            String errMsg = String.format("InvalidFormat Exception while reading Thoracic Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IOException e) {
+            String errMsg = String.format("IOException while reading Thoracic Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
             return new PluginResult(false);
         }
         return new PluginResult(true);
     }
 
+    /**
+     * Method to get excel sheet containing data.
+     *
+     * @param excelFilePath
+     * @return Excel Sheet
+     * @throws IOException
+     * @throws InvalidFormatException
+     * @throws ServerException
+     */
     private Sheet getSheetFromFile(String excelFilePath) throws IOException, InvalidFormatException, ServerException {
         InputStream input = new ByteArrayInputStream(clientCallback.readBytes(excelFilePath));
         Workbook workbook = WorkbookFactory.create(input);
         return workbook.getSheetAt(0);
     }
 
+    /**
+     * Method to check if excel file has valid extension 'xlsx' or 'xls'.
+     *
+     * @param fileName
+     * @return true/false
+     * @throws ServerException
+     */
     private boolean isValidExcelFile(String fileName) throws ServerException {
         if (!dataReader.isValidExcelFile(fileName)) {
             logError(String.format("File '%s' is invalid file type. Only excel file with '.xls' or '.xlsx' extensions are acceptable.", fileName));
@@ -89,6 +137,15 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
         return true;
     }
 
+    /**
+     * Method to check if excel file is valid file.
+     *
+     * @param sheet
+     * @param headerValues
+     * @param fileName
+     * @return true/false
+     * @throws ServerException
+     */
     private boolean isValidFile(Sheet sheet, List<String> headerValues, String fileName) throws ServerException {
         if (!dataReader.excelFileHasData(sheet)) {
             logError(String.format("uploaded File '%s' is Empty. File must have more than 1 rows with data.", fileName));
@@ -103,15 +160,41 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
         return true;
     }
 
+    /**
+     * Method to parse header values from the excel file.
+     *
+     * @param sheet
+     * @param headerValues
+     * @return
+     */
     private Map<String, Integer> parseHeader(Sheet sheet, List<String> headerValues) {
         return dataReader.parseExcelFileHeader(sheet, headerValues);
     }
 
+    /**
+     * Method to read Thoracic Banked Sample records from excel file.
+     *
+     * @param sheet
+     * @param fileHeader
+     * @return List of Maps for Thoracic Banked Sample records
+     * @throws IoError
+     * @throws RemoteException
+     * @throws NotFound
+     */
     private List<Map<String, Object>> getThoracicBankedSampleRecordsFromFile(Sheet sheet, Map<String, Integer> fileHeader) throws IoError, RemoteException, NotFound {
         List<String> existingUuids = getExistingUuids();
         return dataReader.readThoracicBankedSampleRecordsFromFile(sheet, fileHeader, existingUuids);
     }
 
+    /**
+     * Method to get the last LabMedicine DataRecord added to LIMS.
+     *
+     * @return RecordID for the DataRecord
+     * @throws ServerException
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws IoError
+     */
     private long getMostRecentlyAddedLabMedicineRecordId() throws ServerException, NotFound, RemoteException, IoError {
         List<DataRecord> listOfRecords = dataRecordManager.queryDataRecords(LAB_MEDICINE_TRANSFER, null, user);
         List<Long> listOfLabMedicineRecordIds = new ArrayList<>();
@@ -127,6 +210,14 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
         return Collections.max(listOfLabMedicineRecordIds);
     }
 
+    /**
+     * Get all the existing Uuids related to Thoracic Banked Sample in LIMS.
+     *
+     * @return List of existing UUIDS
+     * @throws RemoteException
+     * @throws NotFound
+     * @throws IoError
+     */
     private List<String> getExistingUuids() throws RemoteException, NotFound, IoError {
         List<String> existingUuids = new ArrayList<>();
         List<DataRecord> thoracicBankedSamples = dataRecordManager.queryDataRecords("ThoracicBankTransfer", null, user);
@@ -136,6 +227,12 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
         return existingUuids;
     }
 
+    /**
+     * Get UUID values from a Thoracic Banked Sample DataRecord.
+     *
+     * @param existingRecord
+     * @return UUID value
+     */
     private String getUuidForExistingChildRecords(List<DataRecord> existingRecord) {
         StringBuilder existingRecordsUuids = new StringBuilder();
         for (DataRecord record : existingRecord) {
@@ -148,6 +245,16 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
         return existingRecordsUuids.toString();
     }
 
+    /**
+     * Method to check if new child records should be added LabMedicine DataType in LIMS.
+     *
+     * @param mostRecentLabMedicineRecord
+     * @return
+     * @throws IoError
+     * @throws RemoteException
+     * @throws NotFound
+     * @throws ServerException
+     */
     private boolean shouldAddChildRecordsToLabMedicineRecord(DataRecord mostRecentLabMedicineRecord) throws IoError, RemoteException, NotFound, ServerException {
         boolean addChildRecords = true;
         if (mostRecentLabMedicineRecord.hasChildren(user)) {

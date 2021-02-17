@@ -12,6 +12,7 @@ import com.velox.api.workflow.Workflow;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.managers.TaskUtilManager;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.ArrayList;
@@ -67,28 +68,61 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
             } else {
                 return new PluginResult(false);
             }
-        } catch (Exception e) {
-            clientCallback.displayError(String.format("Error while retrieving promoted samples for request: %s. " +
-                    "Cause: %s", iLabsRequestId, e));
-            logError(e);
+        } catch (RemoteException e) {
+            String errMsg = String.format("Error while retrieving promoted samples for request: %s. " +
+                    "Cause: %s", iLabsRequestId, ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IoError ioError) {
+            String errMsg = String.format("IoError while retrieving promoted samples for request: %s. " +
+                    "Cause: %s", iLabsRequestId, ExceptionUtils.getStackTrace(ioError));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (NotFound notFound) {
+            String errMsg = String.format("NotFound Exception Error while retrieving promoted samples for request: %s. " +
+                    "Cause: %s", iLabsRequestId, ExceptionUtils.getStackTrace(notFound));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
             return new PluginResult(false);
         }
         return new PluginResult(true, new PluginDirective(PluginDirective.Action.RUN_ACTIVE_WORKFLOW, activeWebFormReceivingWorkflow));
     }
 
-    private boolean isValidRequestIdForSamples(List<String> limsRequestIdForPromotedSamples, List<DataRecord> promotedBankedSamples, String iLabsRequestId) throws NotFound, RemoteException, ServerException {
-        if (limsRequestIdForPromotedSamples.size() > 1) {
-            clientCallback.displayError(String.format("iLabs Request ID %s has more than one assigned requestId\n%s", iLabsRequestId,
-                    convertListToString(getLimsRequestId(promotedBankedSamples))));
-            return false;
-        }
-        if (limsRequestIdForPromotedSamples.isEmpty()) {
-            clientCallback.displayError(String.format("LIMS RequestID NOT FOUND for this iLabs Request: %s", iLabsRequestId));
-            return false;
+    /**
+     * Method to validate iLabsRequestId is associated to only one LimsRequestId if promoted.
+     * @param limsRequestIdForPromotedSamples
+     * @param promotedBankedSamples
+     * @param iLabsRequestId
+     * @return
+     */
+    private boolean isValidRequestIdForSamples(List<String> limsRequestIdForPromotedSamples, List<DataRecord> promotedBankedSamples, String iLabsRequestId) {
+
+        try {
+            if (limsRequestIdForPromotedSamples.size() > 1) {
+                clientCallback.displayError(String.format("iLabs Request ID %s has more than one assigned requestId\n%s", iLabsRequestId,
+                        convertListToString(getLimsRequestId(promotedBankedSamples))));
+                return false;
+            }
+            if (limsRequestIdForPromotedSamples.isEmpty()) {
+                clientCallback.displayError(String.format("LIMS RequestID NOT FOUND for this iLabs Request: %s", iLabsRequestId));
+                return false;
+            }
+        }catch (ServerException se) {
+            String errMsg = String.format("InvalidValue Exception while validating Ilab Request ID %s:\n%s", iLabsRequestId, ExceptionUtils.getStackTrace(se));
+            logError(errMsg);
         }
         return true;
     }
 
+    /**
+     * Method to prompt user to auto-launch Sample Receiving workflow in LIMS.
+     * @param promotedBankedSamples
+     * @param limsRequestIdForPromotedSamples
+     * @return
+     * @throws ServerException
+     */
     private boolean shouldLaunchWorkflow(List<DataRecord> promotedBankedSamples, List<String> limsRequestIdForPromotedSamples) throws ServerException {
         clientCallback.displayInfo(String.format("LIMS Request ID for %d Promoted Samples:\n%s",
                 promotedBankedSamples.size(), convertListToString(limsRequestIdForPromotedSamples)));
@@ -98,38 +132,86 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
         return clientCallback.showOkCancelDialog(dialogBoxTitle, dialogBoxMessage);
     }
 
-    private String getBankedSamplesIds(List<DataRecord> promotedBankedSamples) throws NotFound, RemoteException {
+    /**
+     * Method to get Sample ID's for Banked Samples.
+     * @param promotedBankedSamples
+     * @return
+     * @throws NotFound
+     * @throws RemoteException
+     */
+    private String getBankedSamplesIds(List<DataRecord> promotedBankedSamples){
         List<String> cmoSampleIds = new ArrayList<>();
         for (DataRecord promotedBankedSample : promotedBankedSamples) {
-            String cmoSampleId = promotedBankedSample.getStringVal("OtherSampleId", user);
+            String cmoSampleId = null;
+            try {
+                cmoSampleId = promotedBankedSample.getStringVal("OtherSampleId", user);
+            } catch (NotFound notFound) {
+                logError(String.format("'OtherSampleId' field value not found for Banked Sample with Record Id %d:\n%s", promotedBankedSample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
+            } catch (RemoteException e) {
+                logError(String.format("RemoteException while reading 'OtherSampleId' field value for Banked Sample with Record Id %d:\n%s", promotedBankedSample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+            }
             logInfo(String.format("CMO Sample ID: %s", cmoSampleId));
             cmoSampleIds.add(cmoSampleId);
         }
         return StringUtils.join(cmoSampleIds, "\n");
     }
 
-    private List<String> getLimsRequestId(List<DataRecord> promotedBankedSamples) throws NotFound, RemoteException {
+    /**
+     * Method to get LIMS RequestId(s) related to Banked Samples.
+     * @param promotedBankedSamples
+     * @return
+     * @throws NotFound
+     * @throws RemoteException
+     */
+    private List<String> getLimsRequestId(List<DataRecord> promotedBankedSamples){
         List<String> limsRequestIds = new ArrayList<>();
         for (DataRecord promotedBankedSample : promotedBankedSamples) {
-            String requestId = promotedBankedSample.getStringVal("RequestId", user);
+            String requestId = null;
+            try {
+                requestId = promotedBankedSample.getStringVal("RequestId", user);
+            } catch (NotFound notFound) {
+                logError(String.format("'RequestId' field value not found for Banked Sample with Record Id %d:\n%s", promotedBankedSample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
+            } catch (RemoteException e) {
+                logError(String.format("RemoteException while reading 'RequestId' field value for Banked Sample with Record Id %d:\n%s", promotedBankedSample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+            }
             limsRequestIds.add(requestId);
         }
         return limsRequestIds;
     }
 
-    private List<DataRecord> getChildSamplesForRequest(String requestId) throws IoError, RemoteException, NotFound, ServerException {
+    /**
+     * Method to get child samples for Request.
+     * @param requestId
+     * @return
+     */
+    private List<DataRecord> getChildSamplesForRequest(String requestId){
         List<DataRecord> request;
         List<DataRecord> samples = new ArrayList<>();
-        request = dataRecordManager.queryDataRecords("Request", "RequestId = '" + requestId + "'", user);
-        if (!request.isEmpty() && request.size() == 1) {
-            samples = Arrays.asList(request.get(0).getChildrenOfType("Sample", user));
-        }
-        if (samples.size() == 0) {
-            clientCallback.displayError(String.format("No child samples were found attached to request: %s", requestId));
+        try {
+            request = dataRecordManager.queryDataRecords("Request", "RequestId = '" + requestId + "'", user);
+            if (!request.isEmpty() && request.size() == 1) {
+                samples = Arrays.asList(request.get(0).getChildrenOfType("Sample", user));
+            }
+            if (samples.size() == 0) {
+                clientCallback.displayError(String.format("No child samples were found attached to request: %s", requestId));
+            }
+        }catch (NotFound notFound) {
+            logError(String.format("Cannot find child Samples for Request %s:\n%s", requestId, ExceptionUtils.getStackTrace(notFound)));
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException while getting child Samples for Request %s:\n%s", requestId, ExceptionUtils.getStackTrace(e)));
+        } catch (IoError ioError) {
+            ioError.printStackTrace();
+        } catch (ServerException e) {
+            e.printStackTrace();
         }
         return samples;
     }
 
+    /**
+     * Method to get Banked Samples that are marked promoted from a given set of Banked Samples.
+     * @param bankedSamples
+     * @return
+     */
     private List<DataRecord> getPromotedBankedSamples(List<DataRecord> bankedSamples) {
         return bankedSamples.stream().filter(sample -> {
             try {
@@ -141,6 +223,11 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
         }).collect(Collectors.toList());
     }
 
+    /**
+     * Method to  get Banked Samples that are NOT marked promoted from a given set of Banked Samples.
+     * @param bankedSamples
+     * @return
+     */
     private List<DataRecord> getNonPromotedBankedSamples(List<DataRecord> bankedSamples) {
         return bankedSamples.stream().filter(sample -> {
             try {
@@ -152,6 +239,11 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
         }).collect(Collectors.toList());
     }
 
+    /**
+     * Method to get Webform Receiving workflow.
+     * @param workflows
+     * @return
+     */
     private List<Workflow> getWebformReceivingWorkflow(List<Workflow> workflows) {
         return workflows.stream().filter(workflow -> {
             try {
@@ -163,40 +255,75 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
         }).collect(Collectors.toList());
     }
 
-    private ActiveTask getWorkflowTaskToAttachSamples(List<ActiveTask> workflowTasks) throws ServerException, RemoteException, NotFound {
+    /**
+     * Method to get workflow task to attach samples to.
+     * @param workflowTasks
+     * @return
+     * @throws ServerException
+     * @throws RemoteException
+     * @throws NotFound
+     */
+    private ActiveTask getWorkflowTaskToAttachSamples(List<ActiveTask> workflowTasks){
         ActiveTask workflowTask = null;
-        for (ActiveTask task : workflowTasks) {
-            if (task.getTaskName().equalsIgnoreCase("Select Received Samples")) {
-                workflowTask = task;
-                logInfo("Task to attach samples: " + workflowTask.getTaskName());
-                break;
+        try {
+            for (ActiveTask task : workflowTasks) {
+                if (task.getTaskName().equalsIgnoreCase("Select Received Samples")) {
+                    workflowTask = task;
+                    logInfo("Task to attach samples: " + workflowTask.getTaskName());
+                    break;
+                }
             }
-        }
-        if (workflowTask == null) {
-            clientCallback.displayError("'Select Received Samples' task not found in 'Webform Receiving' workflow.\n" +
-                    "Please make sure that the task names for this workflow did not change.");
-            throw new NotFound("Select Received Samples not found.");
+            if (workflowTask == null) {
+                clientCallback.displayError("'Select Received Samples' task not found in 'Webform Receiving' workflow.\n" +
+                        "Please make sure that the task names for this workflow did not change.");
+                throw new NotFound("Select Received Samples not found.");
+            }
+        }catch (RemoteException re) {
+            logError(String.format("Error while getting workflow task to attach Samples:\n%s", ExceptionUtils.getStackTrace(re)));
+        } catch (NotFound notFound) {
+            logError(String.format("NotFound Error while getting workflow task to attach Samples:\n%s", ExceptionUtils.getStackTrace(notFound)));
+        } catch (ServerException se) {
+            logError(String.format("ServerException while getting workflow task to attach Samples:\n%s", ExceptionUtils.getStackTrace(se)));
         }
         return workflowTask;
     }
 
-    private ActiveWorkflow launchWebformReceivingWorkflow(String limsRequestIdForPromotedSamples) throws ServerException, RemoteException, IoError, NotFound {
-        List<Workflow> workflows = dataMgmtServer.getWorkflowManager(user).getLatestWorkflowList(user);
-        List<Workflow> webformReceivingWorkflow = getWebformReceivingWorkflow(workflows);
-        if (webformReceivingWorkflow.isEmpty()) {
-            clientCallback.displayError("'Webform Receiving' workflow not found. Please check if the workflow name has changed.");
-            throw new NotFound("'Webform Receiving' workflow not found.");
+    /**
+     * Method to launch WebformReceiving workflow.
+     * @param limsRequestIdForPromotedSamples
+     * @return
+     */
+    private ActiveWorkflow launchWebformReceivingWorkflow(String limsRequestIdForPromotedSamples){
+        try {
+            List<Workflow> workflows = dataMgmtServer.getWorkflowManager(user).getLatestWorkflowList(user);
+            List<Workflow> webformReceivingWorkflow = getWebformReceivingWorkflow(workflows);
+            if (webformReceivingWorkflow.isEmpty()) {
+                clientCallback.displayError("'Webform Receiving' workflow not found. Please check if the workflow name has changed.");
+                throw new NotFound("'Webform Receiving' workflow not found.");
+            }
+            ActiveWorkflow activeWebFormReceivingWorkflow = dataMgmtServer.getWorkflowManager(user).createActiveWorkflow(user, webformReceivingWorkflow.get(0));
+            activeWebFormReceivingWorkflow.setActiveWorkflowName(activeWebFormReceivingWorkflow.getActiveWorkflowName());
+            List<ActiveTask> workflowTasks = activeWebFormReceivingWorkflow.getActiveTaskList();
+            ActiveTask taskToAttachSamples = getWorkflowTaskToAttachSamples(workflowTasks);
+            List<DataRecord> childSamplesForRequest = getChildSamplesForRequest(limsRequestIdForPromotedSamples);
+            TaskUtilManager.attachRecordsToTask(taskToAttachSamples, childSamplesForRequest);
+            activeWebFormReceivingWorkflow.commitChanges(user);
+            return activeWebFormReceivingWorkflow;
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException -> failed to launch Webform Receiving Workflow:\n%s", ExceptionUtils.getStackTrace(e) ));
+        } catch (NotFound notFound) {
+            logError(String.format("NotFound Exception -> failed to launch Webform Receiving Workflow:\n%s", ExceptionUtils.getStackTrace(notFound) ));
+        } catch (ServerException e) {
+            logError(String.format("ServerException -> failed to launch Webform Receiving Workflow:\n%s", ExceptionUtils.getStackTrace(e) ));
         }
-        ActiveWorkflow activeWebFormReceivingWorkflow = dataMgmtServer.getWorkflowManager(user).createActiveWorkflow(user, webformReceivingWorkflow.get(0));
-        activeWebFormReceivingWorkflow.setActiveWorkflowName(activeWebFormReceivingWorkflow.getActiveWorkflowName());
-        List<ActiveTask> workflowTasks = activeWebFormReceivingWorkflow.getActiveTaskList();
-        ActiveTask taskToAttachSamples = getWorkflowTaskToAttachSamples(workflowTasks);
-        List<DataRecord> childSamplesForRequest = getChildSamplesForRequest(limsRequestIdForPromotedSamples);
-        TaskUtilManager.attachRecordsToTask(taskToAttachSamples, childSamplesForRequest);
-        activeWebFormReceivingWorkflow.commitChanges(user);
-        return activeWebFormReceivingWorkflow;
+        return null;
     }
 
+    /**
+     * Method to convert ArrayList to String.
+     * @param listWithValues
+     * @return
+     */
     private String convertListToString(List<String> listWithValues) {
         return StringUtils.join(listWithValues, "\n");
     }

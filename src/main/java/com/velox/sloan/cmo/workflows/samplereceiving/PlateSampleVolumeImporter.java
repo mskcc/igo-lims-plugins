@@ -11,10 +11,16 @@ import com.velox.api.workflow.ActiveWorkflow;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
+import java.io.IOException;
 import java.rmi.RemoteException;
 import java.util.*;
 
+
+/**
+ * This plugin is designed to import Volume information from samples on plate using a file upload.
+ */
 public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
     private String[] permittedUsers = {"Sample Receiving", "Sapio Admin", "Admin"};
     private List<String> expectedFileHeaderValues = Arrays.asList("RACKID", "TUBE", "SAMPLES", "STATUS", "VOLMED", "VOLAVG", "VOLSTDEV");
@@ -31,15 +37,15 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
     }
 
     public boolean shouldRun() throws Throwable {
-        return activeTask.getTask().getTaskOptions().keySet().contains("UPDATE VOLUME FOR SAMPLES ON PLATE");
+        return activeTask.getTask().getTaskOptions().containsKey("UPDATE VOLUME FOR SAMPLES ON PLATE");
     }
 
     @Override
     public boolean onTaskFormToolbar(ActiveWorkflow activeWorkflow, ActiveTask activeTask) {
         try {
-            return activeTask.getTask().getTaskOptions().keySet().contains("UPDATE VOLUME FOR SAMPLES ON PLATE");
-        } catch (Exception e) {
-            logInfo(Arrays.toString(e.getStackTrace()));
+            return activeTask.getTask().getTaskOptions().containsKey("UPDATE VOLUME FOR SAMPLES ON PLATE");
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException -> Error while setting Task Form toolbar button for plugin PlateSampleVolumeImporter.\n%s", ExceptionUtils.getStackTrace(e)));
         }
         return false;
     }
@@ -47,14 +53,14 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
     @Override
     public boolean onTaskTableToolbar(ActiveWorkflow activeWorkflow, ActiveTask activeTask) {
         try {
-            return activeTask.getTask().getTaskOptions().keySet().contains("UPDATE VOLUME FOR SAMPLES ON PLATE");
-        } catch (Exception e) {
-            logInfo(Arrays.toString(e.getStackTrace()));
+            return activeTask.getTask().getTaskOptions().containsKey("UPDATE VOLUME FOR SAMPLES ON PLATE");
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException -> Error while setting Task Table toolbar button for plugin PlateSampleVolumeImporter.\n%s", ExceptionUtils.getStackTrace(e)));
         }
         return false;
     }
 
-    public PluginResult run() {
+    public PluginResult run() throws ServerException {
         try {
             String plateVolumeFile = clientCallback.showFileDialog("Upload file with plate volume data", null);
             if (StringUtils.isEmpty(plateVolumeFile)) {
@@ -87,12 +93,26 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
             updateSampleVolumes(samples, volumeRecordsFromfile);
-        } catch (Exception e) {
-            logError(e);
+        } catch (RemoteException e) {
+            String errMsg = String.format("RemoteException -> Error while parsing the plate volume data file:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (IOException e) {
+            String errMsg = String.format("IOException -> Error while parsing the plate volume data file:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
         }
         return new PluginResult(true);
     }
 
+    /**
+     * Method to validate file type.
+     * @param fileName
+     * @return
+     * @throws ServerException
+     */
     private boolean isValidCsvFile(String fileName) throws ServerException {
         if (!commonMethods.isCsvFile(fileName)) {
             clientCallback.displayError(String.format("Uploaded file '%s' is not a .csv file.", fileName));
@@ -101,6 +121,13 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
         return true;
     }
 
+    /**
+     * Method to validate file type and if the file has valid data.
+     * @param fileData
+     * @param fileName
+     * @return
+     * @throws ServerException
+     */
     private boolean csvFileHasValidData(List<String> fileData, String fileName) throws ServerException {
         if (!commonMethods.csvFileHasData(fileData)) {
             clientCallback.displayError(String.format("Uploaded file '%s' is empty.", fileName));
@@ -118,6 +145,13 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
         return true;
     }
 
+    /**
+     * Method to read Volume values from the file.
+     * @param rowData
+     * @param header
+     * @return
+     * @throws ServerException
+     */
     private double getVolumeFromRowData(String[] rowData, Map<String, Integer> header) throws ServerException {
         double volume = Double.parseDouble(rowData[header.get("VOLMED")]);
         String plateId = rowData[header.get("RACKID")].trim();
@@ -129,6 +163,13 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
         return volume;
     }
 
+    /**
+     * Method to read metadata from file.
+     * @param fileData
+     * @param header
+     * @return
+     * @throws ServerException
+     */
     private List<Map<String, Object>> getRecordsFromFile(List<String> fileData, Map<String, Integer> header) throws ServerException {
         List<Map<String, Object>> volumeDataRecords = new ArrayList<>();
         int minimumValuesInRow = 5;
@@ -147,6 +188,14 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
         return volumeDataRecords;
     }
 
+    /**
+     * Method to check if file data has duplicate row values.
+     * @param fileData
+     * @param header
+     * @param filename
+     * @return
+     * @throws ServerException
+     */
     private boolean fileDataHasDuplicateRecords(List<String> fileData, Map<String, Integer> header, String filename) throws ServerException {
         Set<String> uniqueRecords = new HashSet<>();
         List<String> duplicateRecords = new ArrayList<>();
@@ -165,22 +214,44 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
         return false;
     }
 
-    private void updateSampleVolumes(List<DataRecord> samples, List<Map<String, Object>> volumeRecordsFromFile) throws NotFound, RemoteException, ServerException, IoError, InvalidValue {
+    /**
+     * Method to update volume and plate information on samples.
+     * @param samples
+     * @param volumeRecordsFromFile
+     * @throws NotFound
+     * @throws RemoteException
+     * @throws ServerException
+     * @throws IoError
+     * @throws InvalidValue
+     */
+    private void updateSampleVolumes(List<DataRecord> samples, List<Map<String, Object>> volumeRecordsFromFile) {
         for (DataRecord sample : samples) {
-            String sampleId = sample.getStringVal("SampleId", user).trim();
-            String samplePlateId = sample.getStringVal("RelatedRecord23", user);
-            String sampleRowPosition = sample.getSelectionVal("RowPosition", user).trim();
-            String sampleColumnPosition = sample.getSelectionVal("ColPosition", user).trim();
-            boolean found = false;
-            for (Map<String, Object> volumeData : volumeRecordsFromFile) {
-                if (!(StringUtils.isBlank(samplePlateId)) && samplePlateId.equals(String.valueOf(volumeData.get("RelatedRecord23")))
-                        && sampleRowPosition.equals(String.valueOf(volumeData.get("RowPosition"))) && sampleColumnPosition.equals(String.valueOf(volumeData.get("ColPosition")))) {
-                    sample.setDataField("Volume", volumeData.get("Volume"), user);
-                    found = true;
+            try {
+                String sampleId = sample.getStringVal("SampleId", user).trim();
+                String samplePlateId = sample.getStringVal("RelatedRecord23", user);
+                String sampleRowPosition = sample.getSelectionVal("RowPosition", user).trim();
+                String sampleColumnPosition = sample.getSelectionVal("ColPosition", user).trim();
+                boolean found = false;
+                for (Map<String, Object> volumeData : volumeRecordsFromFile) {
+                    if (!(StringUtils.isBlank(samplePlateId)) && samplePlateId.equals(String.valueOf(volumeData.get("RelatedRecord23")))
+                            && sampleRowPosition.equals(String.valueOf(volumeData.get("RowPosition"))) && sampleColumnPosition.equals(String.valueOf(volumeData.get("ColPosition")))) {
+                        sample.setDataField("Volume", volumeData.get("Volume"), user);
+                        found = true;
+                    }
                 }
-            }
-            if (!found) {
-                clientCallback.displayWarning(String.format("Volume data not found in file records for sample: %s", sampleId));
+                if (!found) {
+                    clientCallback.displayWarning(String.format("Volume data not found in file records for sample: %s", sampleId));
+                }
+            } catch (InvalidValue invalidValue) {
+                logError(String.format("InvalidValue Exception -> Error while setting Volume and Storage value for sample with recordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(invalidValue)));
+            } catch (IoError ioError) {
+                logError(String.format("IoError Exception -> Error while setting Volume and Storage value for sample with recordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(ioError)));
+            } catch (ServerException e) {
+                logError(String.format("ServerException -> Error while setting Volume and Storage value for sample with recordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+            } catch (RemoteException e) {
+                logError(String.format("RemoteException -> Error while setting Volume and Storage value for sample with recordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+            } catch (NotFound notFound) {
+                logError(String.format("NotFound Exception -> Error while setting Volume and Storage value for sample with recordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
             }
         }
     }
