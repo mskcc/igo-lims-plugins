@@ -1,4 +1,11 @@
+package com.velox.sloan.cmo.workflows.dmpbankedsample;
+
+import com.velox.api.plugin.PluginLogger;
+import com.velox.api.util.ClientCallbackOperations;
 import com.velox.api.util.ServerException;
+import com.velox.sloan.cmo.workflows.Test;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -8,16 +15,12 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 
 public class DmpToBankedSampleDataReader {
@@ -44,14 +47,12 @@ public class DmpToBankedSampleDataReader {
         Map<String, Integer> headerNames = new HashMap<>();
         Row headerRow = sheet.getRow(0);
         for (Cell cell : headerRow) {
-
             headerNames.put(cell.getStringCellValue(), cell.getColumnIndex());
         }
         return headerNames;
     }
 
-
-    public ArrayList<Map<String, Object>> readDmpBankedSampleRecordsFromFile(Sheet sheet, Map<String, Integer> fileHeader, String iLabsId, String username) throws IOException {
+    public ArrayList<Map<String, Object>> readDmpBankedSampleRecordsFromFile(Sheet sheet, Map<String, Integer> fileHeader, String iLabsId, String username, Map<String, String>dualIdtIndices, ClientCallbackOperations clientCallback) throws IOException, ServerException {
         ArrayList<Map<String, Object>> dmpBankedSampleRecords = new ArrayList<>();
         int firstRowAfterHeaderRowWithData = 1;
         // every banked sample needs a transaction id
@@ -66,14 +67,12 @@ public class DmpToBankedSampleDataReader {
                 continue;
             }
 
-
             // fields required in Banked but not present in DMP excel. DMP only deals with Humans
             newDmpSampleRecord.put("Organism", "Human");
             newDmpSampleRecord.put("Species", "Human");
             newDmpSampleRecord.put("TransactionId", transactionId);
             // Investigator/PM will be the currently logged in user (for sample-submission we will get this with get_jwt_identity()
             newDmpSampleRecord.put("Investigator", username);
-
 
             // straightforward fields
             newDmpSampleRecord.put("PlateId", row.getCell(fileHeader.get("Barcode/Plate ID")).getStringCellValue());
@@ -122,15 +121,29 @@ public class DmpToBankedSampleDataReader {
 
 
             // only Libraries come with Indexes. If the Index is named like DMP0xyz we have to remove the 0
-            if (nucleicAcidType.equals("DNA Library")) {
-                String dmpIndex = row.getCell(fileHeader.get("Index")).getStringCellValue();
-                if (dmpIndex.startsWith("DMP0")) {
-                    dmpIndex = dmpIndex.replaceFirst("0", "");
+            if (nucleicAcidType.equals("DNA Library") || nucleicAcidType.equals("Library")) {
+                String indexId = row.getCell(fileHeader.get("Index")).getStringCellValue();
+                String dmpIndexI7 = row.getCell(fileHeader.get("Index Sequence")).getStringCellValue();
+                String dmpIndexI5 = "";
+                Object i5ValFromFile = row.getCell(fileHeader.get("Index Sequence I5"));
+                if (!Objects.isNull(i5ValFromFile)){
+                    dmpIndexI5 = i5ValFromFile.toString();
                 }
-                newDmpSampleRecord.put("BarcodeId", dmpIndex);
-
+                if (indexId.startsWith("DMP0")) {
+                    indexId = indexId.replaceFirst("0", "");
+                }
+                if (!(StringUtils.isBlank(dmpIndexI5)) && !(StringUtils.isBlank(dmpIndexI7))){
+                    String dualSequence = dmpIndexI7 + "-" + dmpIndexI5;
+                    String dualIndexId = dualIdtIndices.get(dualSequence);
+                    if(StringUtils.isBlank(dualIndexId)){
+                        clientCallback.displayError(String.format("Dual Index Barcode Sequence %s parsed from the sheet is not found in LIMS Index Assignment records.", dualSequence));
+                    }
+                    newDmpSampleRecord.put("BarcodeId", dualIndexId);
+                }
+                else{
+                    newDmpSampleRecord.put("BarcodeId", indexId);
+                }
             }
-
 
             // fields that need to be translated using other APIs
             // http://oncotree.mskcc.org/#/home
@@ -152,9 +165,8 @@ public class DmpToBankedSampleDataReader {
             // CMO Patient ID is important for PMs
             String patientId = "";
             patientId = String.valueOf(row.getCell(fileHeader.get("MRN")).getStringCellValue());
-            newDmpSampleRecord.put("CMOPatientId", "C-" + crdb(patientId));
+            newDmpSampleRecord.put("CMOPatientId", "C-" + crdb(patientId, clientCallback));
             newDmpSampleRecord.put("PatientId", "MRN_REDACTED");
-
 
             // preservation and sampleOrigin can only be filled after cancerType was found because they all depend on each other
             // specimenType impacts preservation AND depends on sampleClass
@@ -177,15 +189,11 @@ public class DmpToBankedSampleDataReader {
                 }
             }
             newDmpSampleRecord.put("SpecimenType", specimenType);
-
-
             String samplePreservation = preservation.equals("Blood") ? "EDTA-Streck" : preservation;
             newDmpSampleRecord.put("Preservation", samplePreservation);
             // add to list
             dmpBankedSampleRecords.add(newDmpSampleRecord);
         }
-
-
         //sort list!
         // Samples need to be sorted by Well Position. Row first, then column
         ArrayList<Map<String, Object>> dmpBankedSampleRecordsSorted = sortByWellPosition(dmpBankedSampleRecords);
@@ -195,10 +203,7 @@ public class DmpToBankedSampleDataReader {
             record.put("RowIndex", counter + 1);
             dmpBankedSampleRecordsSorted.set(counter, record);
         }
-
-
         return dmpBankedSampleRecordsSorted;
-
     }
 
 
@@ -286,52 +291,48 @@ public class DmpToBankedSampleDataReader {
     }
 
     // Patient ID redaction using CRDB, for a Python example check sample-submission-backend/views/upload: /patientIdConverter
-    String crdb(String patientId) throws IOException, FileNotFoundException {
+    private String crdb(String patientId, ClientCallbackOperations cb) throws IOException, FileNotFoundException, ServerException {
 
-        StringBuffer response = new StringBuffer();
-        // curl  -u cmoint:cmointp "http://plcrdba1.mskcc.org:7001/rest/cmo/getDataAUTH?mrn=00300678&sid=P1"
-        String patientId_scrambled = "";
-        try {
-            URL url = new URL("http://plcrdba1.mskcc.org:7001/rest/cmo/getDataAUTH?mrn=" + (String) patientId + "&sid=P1");
-            String auth = new String("cmoint" + ":" + "cmointp");
-            byte[] bytesEncoded = Base64.encodeBase64(auth.getBytes());
-            String authEncoded = new String(bytesEncoded);
-
+        // crdb endpoint for this service was updated on February 19 2021
+        // curl  -u cmoint:cmointp "https://plcrdbapp1.mskcc.org:7002/rest/cmo/getDataAUTH?mrn=00300678&sid=P1"
+        StringBuilder response = new StringBuilder();
+        String resourceFile = Objects.requireNonNull(Test.class.getClassLoader().getResource("properties")).getPath();
+        try (InputStream input = new FileInputStream(resourceFile)) {
+            URL url = new URL("https://plcrdbapp1.mskcc.org:7002/rest/cmo/getDataAuthV2");
             HttpURLConnection con = (HttpURLConnection) url.openConnection();
-            con.setRequestMethod("GET");
-            con.setRequestProperty("Authorization", "Basic " + authEncoded);
-
+            con.setRequestMethod("POST");
+            con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            con.setDoOutput(true);
+            con.setDoInput(true);
+            Properties prop = new Properties();
+            prop.load(input);
+            String encodedUn = new String (Base64.encodeBase64(prop.get("crdbUn").toString().getBytes()));
+            String encodedPw = new String (Base64.encodeBase64(prop.get("crdbPw").toString().getBytes()));
+            String body = String.format("{\"username\": \"%s\" , \"password\": \"%s\", \"mrn\": \"%s\", \"sid\": \"%s\"}", encodedUn, encodedPw, patientId, prop.get("crdbSid"));
+            OutputStream os = con.getOutputStream();
+            os.write(body.getBytes(StandardCharsets.UTF_8));
+            os.close();
             BufferedReader in = new BufferedReader(
                     new InputStreamReader(con.getInputStream()));
             String inputLine;
-
             while ((inputLine = in.readLine()) != null) {
                 response.append(inputLine);
             }
             in.close();
             con.disconnect();
         } catch (FileNotFoundException e) {
-
-            return "";
-
+            cb.displayError(String.format("CRDB connection error: %s", ExceptionUtils.getStackTrace(e)));
+            return "CRDB Connection Error";
         }
-
         JSONParser patient_parser = new JSONParser();
         try {
             JSONObject json_response = (JSONObject) patient_parser.parse(response.toString());
-
-
             if (json_response.get("PRM_JOB_STATUS").equals("0")) {
                 return (String) json_response.get("PRM_PT_ID");
             } else return (String) json_response.get("PRM_ERR_MSG");
-
-
         } catch (ParseException e) {
-
-            e.printStackTrace();
+            cb.displayError(String.format("Error while getting scrambled 'PATIENT ID' value from CRDB: %s", ExceptionUtils.getStackTrace(e)));
             return "CRDB Error";
         }
-
-
     }
 }
