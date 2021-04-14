@@ -775,4 +775,18 @@ public class IgoLimsPluginUtils{
         }
         return false;
     }
+
+    /**
+     * Method to convert List to properly formatted values to use with SQL IN clause.
+     * @param vals
+     * @return
+     */
+    public String listToSqlInClauseVal( List<Object> vals){
+        StringJoiner joiner = new StringJoiner("', '");
+        for (Object val : vals) {
+            joiner.add((CharSequence)val);
+        }
+        String format = String.format("('%s')", joiner.toString());
+        return format;
+    }
 }

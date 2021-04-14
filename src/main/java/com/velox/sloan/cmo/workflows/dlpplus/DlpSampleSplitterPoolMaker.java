@@ -7,6 +7,7 @@ import com.velox.api.util.ServerException;
 import com.velox.api.workflow.ActiveTask;
 import com.velox.sapio.commons.exemplar.plugin.PluginOrder;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
+import com.velox.sloan.cmo.recmodels.SampleModel;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -90,8 +91,12 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                 logInfo("User did not positively confirm CELL TYPE to process. Aborting plugin task.");
                 return new PluginResult(false);
             }
+            Object recipe = samplesAttachedToTask.get(0).getValue(SampleModel.RECIPE, user);
+            Object dlpRequestedReads = getDlpRequetedReads(recipe);
             Map<String, List<DataRecord>> newDlpSamples = createDlpSamplesAndProtocolRecords(rowsSeparatedBySampleMap, headerValuesMap, samplesAttachedToTask, cellTypeToProcess);
-            createPools(newDlpSamples);
+            assert dlpRequestedReads != null;
+            createPools(newDlpSamples, (Double) dlpRequestedReads);
+
         } catch (IoError e) {
             String errMsg = String.format("IoError Exception while parsing the DLP plus spotting file:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
@@ -426,18 +431,8 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             valuesForControlRec.put("IsControl", true);
             controlSample = dataRecordManager.addDataRecord("Sample", user);
             controlSample.setFields(valuesForControlRec, user);
-        } catch (NotFound notFound) {
-            notFound.printStackTrace();
-        } catch (IoError ioError) {
-            ioError.printStackTrace();
-        } catch (ServerException e) {
-            e.printStackTrace();
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        } catch (InvalidValue invalidValue) {
-            invalidValue.printStackTrace();
-        } catch (AlreadyExists alreadyExists) {
-            alreadyExists.printStackTrace();
+        } catch (NotFound | AlreadyExists | InvalidValue | IoError | ServerException | RemoteException notFound) {
+            logError(Arrays.toString(notFound.getStackTrace()));
         }
         return controlSample;
     }
@@ -685,6 +680,18 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     }
 
 
+    private Object getDlpRequetedReads(Object recipe) throws IoError, RemoteException, NotFound {
+        String queryClause = String.format("PlatformApplication = '%s' AND ReferenceOnly=1", recipe);
+        List<DataRecord> coverageReqRefs = dataRecordManager.queryDataRecords("ApplicationReadCoverageRef",
+                queryClause, user);
+        if (coverageReqRefs.isEmpty()){
+            String message = String.format("Could not fetch 'ApplicationReadCoverageRef' for recipe '%s'. Please make " +
+                    "that the recipe exists with valid reads values in 'ApplicationReadCoverageRef' table", recipe);
+            throw new NotFound(message);
+        }
+        return coverageReqRefs.get(0).getValue("MillionReadsHuman", user);
+    }
+
     /**
      * Method to get values for SeqRequirementPooled DataRecord to set on new Pooled Samples to be created.
      *
@@ -697,13 +704,13 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws ServerException
      */
-    private Map<String, Object> getSeqRequirementPooledValues(String poolId, String otherSampleId, int numberOfSamples, String quadrant) throws NotFound, RemoteException, ServerException {
+    private Map<String, Object> getSeqRequirementPooledValues(String poolId, String otherSampleId, int numberOfSamples, String quadrant, Double requestedReadsPerSample) throws NotFound, RemoteException, ServerException {
         Map<String, Object> seqReqValues = new HashMap<>();
         seqReqValues.put("SampleId", poolId);
         seqReqValues.put("OtherSampleId", otherSampleId);
         seqReqValues.put("AltId", otherSampleId);
         seqReqValues.put("SequencingRunType", seqRunTypeByQuadrant.get(quadrant));
-        seqReqValues.put("RequestedReads", numberOfSamples * 1.0); //this is a constant value 1M/sample defined value confirmed with Juan Li from innovation team
+        seqReqValues.put("RequestedReads", numberOfSamples * requestedReadsPerSample); //requestedReadsPerSample value is fetched from 'ApplicationReadCoverageRef' table in LIMS.
         return seqReqValues;
     }
 
@@ -746,7 +753,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
      * @throws AlreadyExists
      * @throws ServerException
      */
-    private void createPools(Map<String, List<DataRecord>> newlyCreatedChildSamplesByQuadrant) throws NotFound, RemoteException, InvalidValue, IoError, AlreadyExists, ServerException {
+    private void createPools(Map<String, List<DataRecord>> newlyCreatedChildSamplesByQuadrant, Double requestedReadsPerSample) throws NotFound, RemoteException, IoError, AlreadyExists, ServerException {
         List<DataRecord> pooledSampleRecords = new ArrayList<>();
         for (Map.Entry entry : newlyCreatedChildSamplesByQuadrant.entrySet()) {
             String quadrant = (String) entry.getKey();
@@ -771,7 +778,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             }
             dataRecordManager.storeAndCommit("Adding pool Info for DLP sample " + poolId, null, user);
             DataRecord seqReq = dataRecordManager.queryDataRecords("SeqRequirementPooled", "SampleId = '" + poolId + "'", user).get(0);
-            seqReq.setFields(getSeqRequirementPooledValues(poolId, otherSampleId, samples.size(), quadrant), user);
+            seqReq.setFields(getSeqRequirementPooledValues(poolId, otherSampleId, samples.size(), quadrant, requestedReadsPerSample), user);
             pooledSampleRecords.add(pooledSample);
         }
         activeTask.removeAllTaskAttachments();
