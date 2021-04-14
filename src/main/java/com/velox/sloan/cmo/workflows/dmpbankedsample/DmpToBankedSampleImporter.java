@@ -27,7 +27,7 @@ public class DmpToBankedSampleImporter extends DefaultGenericPlugin {
             new ArrayList<>(Arrays.asList("Tracking ID", "PI Name", "Study of Title",
                     "Barcode/Plate ID", "Well Position", "DMP ID", "Investigator Sample ID",
                     "Nucleic Acid Type (Library or DNA)", "Recipe", "Preservation (FFPE or Blood)", "Volume (ul)",
-                    "Concentration (ng/ul)", "Index", "Index Sequence", "Index Sequence I5", "Collection Year", "Tissue Site", "Tumor Type", "Sex"));
+                    "Concentration (ng/ul)", "Index", "Index Sequence", "Index Sequence I5", "Collection Year", "Tissue Site", "Tumor Type", "Sex", "Requested Coverage"));
 
     private DmpToBankedSampleDataReader dataReader = new DmpToBankedSampleDataReader();
 

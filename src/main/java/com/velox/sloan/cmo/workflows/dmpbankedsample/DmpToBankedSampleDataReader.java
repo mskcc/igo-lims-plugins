@@ -191,6 +191,7 @@ public class DmpToBankedSampleDataReader {
             newDmpSampleRecord.put("SpecimenType", specimenType);
             String samplePreservation = preservation.equals("Blood") ? "EDTA-Streck" : preservation;
             newDmpSampleRecord.put("Preservation", samplePreservation);
+            newDmpSampleRecord.put("RequestedCoverage", row.getCell(fileHeader.get("Requested Coverage")).getStringCellValue());
             // add to list
             dmpBankedSampleRecords.add(newDmpSampleRecord);
         }
