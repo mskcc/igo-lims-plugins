@@ -29,9 +29,9 @@ class CoverageToReadsUtil {
         if (Objects.isNull(coverage)) {
             coverage = "";
         }
-        Iterator var9 = seqReqReferences.iterator();
-        while(var9.hasNext()) {
-            DataRecord d = (DataRecord)var9.next();
+        Iterator references = seqReqReferences.iterator();
+        while(references.hasNext()) {
+            DataRecord d = (DataRecord)references.next();
             Object dRecipe = d.getValue("PlatformApplication", user);
             Object dPanel = d.getValue("CapturePanel", user);
             Object dRunType = d.getValue("SequencingRunType", user);
