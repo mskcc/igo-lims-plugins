@@ -92,7 +92,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
             Object recipe = samplesAttachedToTask.get(0).getValue(SampleModel.RECIPE, user);
-            Object dlpRequestedReads = getDlpRequetedReads(recipe);
+            Object dlpRequestedReads = getDlpRequestedReads(recipe);
             Map<String, List<DataRecord>> newDlpSamples = createDlpSamplesAndProtocolRecords(rowsSeparatedBySampleMap, headerValuesMap, samplesAttachedToTask, cellTypeToProcess);
             assert dlpRequestedReads != null;
             createPools(newDlpSamples, (Double) dlpRequestedReads);
@@ -680,8 +680,8 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     }
 
 
-    private Object getDlpRequetedReads(Object recipe) throws IoError, RemoteException, NotFound {
-        String queryClause = String.format("PlatformApplication = '%s' AND ReferenceOnly=1", recipe);
+    private Object getDlpRequestedReads(Object recipe) throws IoError, RemoteException, NotFound {
+        String queryClause = String.format("PlatformApplication = '%s' AND ReferenceOnly != 1", recipe);
         List<DataRecord> coverageReqRefs = dataRecordManager.queryDataRecords("ApplicationReadCoverageRef",
                 queryClause, user);
         if (coverageReqRefs.isEmpty()){
