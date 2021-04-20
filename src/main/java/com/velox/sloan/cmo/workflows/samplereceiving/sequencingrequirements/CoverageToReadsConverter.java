@@ -276,7 +276,7 @@ public class CoverageToReadsConverter extends DefaultGenericPlugin {
                 if (capturePanels.size()==1){
                     return capturePanels.get(0);
                 }
-                String msg = String.format("Recipe '%s' should have a 'CapturePanel' value. Missing 'CapturePanel' value may result in failure to update RequestedReads/RequestedCoverage. Select 'OK' to pick CapturePanel value.", recipe);
+                String msg = String.format("Recipe '%s' should have a 'CapturePanel' value. Missing 'CapturePanel' value may result in failure to update RequestedReads/RequestedCoverage. Select 'YES' to pick CapturePanel value.", recipe);
                 boolean selectPanel = this.clientCallback.showYesNoDialog(String.format("Missing 'Capture Panel' value for Recipe '%s'.", recipe), msg);
                 if (selectPanel) {
                     List panelSelected = this.clientCallback.showListDialog("Select CapturePanel/Baitset from the list", capturePanels, false, this.user);
