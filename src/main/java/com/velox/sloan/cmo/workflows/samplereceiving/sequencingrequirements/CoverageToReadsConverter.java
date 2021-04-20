@@ -75,7 +75,7 @@ public class CoverageToReadsConverter extends DefaultGenericPlugin {
             // If user submitted pooled libraries, do not run the plugin.
             if (sampleType.toString().toLowerCase().equals("pooled library")){
                 logInfo("Skipping coverage to reads conversion for user submitted pools");
-                return new PluginResult(false);
+                return new PluginResult(true);
             }
 
             if (seqRequirements.isEmpty()) {
@@ -90,6 +90,7 @@ public class CoverageToReadsConverter extends DefaultGenericPlugin {
             this.activeTask.getTask().getTaskOptions().put("SEQUENCING REQUIREMENTS UPDATED", "");
         } catch (NotFound | ServerException | IoError | InvalidValue | RemoteException var6) {
             this.logError(String.valueOf(var6.getStackTrace()));
+            return new PluginResult(true);
         }
         return new PluginResult(true);
     }
