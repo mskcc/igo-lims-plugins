@@ -23,7 +23,7 @@ import java.util.*;
  */
 public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
     private String[] permittedUsers = {"Sample Receiving", "Sapio Admin", "Admin"};
-    private List<String> expectedFileHeaderValues = Arrays.asList("RACKID", "TUBE", "SAMPLES", "STATUS", "VOLMED", "VOLAVG", "VOLSTDEV");
+    private List<String> expectedFileHeaderValues = Arrays.asList("RACKID", "TUBE", "SAMPLES", "STATUS", "VOLMED", "VOLAVG", "VOLSTDEV", "DISMED");
     private List<String> headerWithMustHaveValuesInRow = Arrays.asList("RACKID", "TUBE");
     private IgoLimsPluginUtils commonMethods = new IgoLimsPluginUtils();
 
