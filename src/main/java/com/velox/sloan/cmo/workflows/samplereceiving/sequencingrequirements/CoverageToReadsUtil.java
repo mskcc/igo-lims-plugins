@@ -55,4 +55,33 @@ class CoverageToReadsUtil {
         }
         return null;
     }
+
+    public static DataRecord getRefRecordFromRecipeAndCapturePanel(Object recipe, Object panel, Object tumorOrNormal, List<DataRecord> seqReqReferences, User user, PluginLogger logger) throws NotFound, RemoteException {
+        if (Objects.isNull(recipe)) {
+            recipe = "";
+        }
+        if (Objects.isNull(panel)) {
+            panel = "";
+        }
+        if (Objects.isNull(tumorOrNormal)) {
+            tumorOrNormal = "";
+        }
+        Iterator references = seqReqReferences.iterator();
+        while(references.hasNext()) {
+            DataRecord d = (DataRecord)references.next();
+            Object dRecipe = d.getValue("PlatformApplication", user);
+            Object dPanel = d.getValue("CapturePanel", user);
+            Object dTumorOrNormal = d.getValue("TumorNormal", user);
+            Object dCoverage = d.getValue("Coverage", user);
+            logger.logInfo(String.format("Given values: Recipe: %s, Panel: %s, TumorOrNormal: %s", recipe, panel, tumorOrNormal));
+            logger.logInfo(String.format("Reference values: Recipe: %s, Panel: %s, TumorOrNormal: %s, RequestedCoverage: %s", dRecipe, dPanel, dTumorOrNormal, dCoverage));
+            logger.logInfo("dRecipe = recipe: " + Objects.equals(dRecipe, recipe));
+            logger.logInfo("dPanel = panel: " + Objects.equals(dPanel, panel));
+            logger.logInfo("dTumorOrNormal = tumorOrNormal: " + Objects.equals(dTumorOrNormal, tumorOrNormal));
+            if (Objects.equals(dRecipe, recipe) && Objects.equals(dPanel, panel) && Objects.equals(dTumorOrNormal, tumorOrNormal) && Objects.nonNull(dCoverage)) {
+                return d;
+            }
+        }
+        return null;
+    }
 }

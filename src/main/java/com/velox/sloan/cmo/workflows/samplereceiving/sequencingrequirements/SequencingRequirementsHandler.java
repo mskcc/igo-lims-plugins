@@ -24,14 +24,14 @@ import org.apache.commons.lang3.StringUtils;
  *
  * @author sharmaa1
  */
-public class CoverageToReadsConverter extends DefaultGenericPlugin {
+public class SequencingRequirementsHandler extends DefaultGenericPlugin {
     IgoLimsPluginUtils util = new IgoLimsPluginUtils();
     private boolean panelSelectionOffered = false;
     private Object runType = null;
     private Object panelName = null;
     private Object recipe = null;
 
-    public CoverageToReadsConverter() {
+    public SequencingRequirementsHandler() {
         this.setTaskEntry(true);
         this.setOrder(PluginOrder.LAST.getOrder());
     }
@@ -43,7 +43,7 @@ public class CoverageToReadsConverter extends DefaultGenericPlugin {
 
     public PluginResult run() {
         try {
-            this.logInfo("Running reads converter plugin");
+            this.logInfo("Running sequencing requirements handler plugin");
             List<DataRecord> coverageReqRefs = this.dataRecordManager.queryDataRecords("ApplicationReadCoverageRef", "ReferenceOnly != 1", this.user);
             List<DataRecord> attachedSamples = this.activeTask.getAttachedDataRecords("Sample", this.user);
             List<DataRecord> seqRequirements = this.activeTask.getAttachedDataRecords("SeqRequirement", this.user);
@@ -63,7 +63,11 @@ public class CoverageToReadsConverter extends DefaultGenericPlugin {
                 logError(msg);
                 return new PluginResult(false);
             }
-
+            //******************************************************************
+            if(recipe.toString().equals("CellLineAuthentication") || recipe.toString().equals("COVID19") || recipe.toString().equals("ddPCR") || recipe.toString().equals("DLP")) {
+                return new PluginResult(true);
+            }
+            //******************************************************************
             Object sampleType = attachedSamples.get(0).getValue(SampleModel.EXEMPLAR_SAMPLE_TYPE, user);
             if (Objects.isNull(sampleType) || StringUtils.isBlank(sampleType.toString())){
                 String msg = "SampleType value missing on the samples";
@@ -309,23 +313,64 @@ public class CoverageToReadsConverter extends DefaultGenericPlugin {
         }
         this.logInfo("Run Type after prompt : " + this.runType);
         Iterator sampleIter = samples.iterator();
+        //******************Create the required mappings from Ref table********************
+        Iterator refIter = coverageReqRefs.iterator();
+        Map<Object, List<Object>> refRecipeToCoverageMap = new HashMap<Object, List<Object>>();
+        Map<Object, Object> refRecipeToTranslatedReadsHumanMap = new HashMap<Object, Object>();
+        Map<Object, List<Object>> recipeToCapturePanelMap = new HashMap<Object, List<Object>>();
+        while(refIter.hasNext()) {
+            DataRecord ref = (DataRecord) refIter.next();
+            Object refRecipe = ref.getValue("PlatformApplication", this.user);
+            Object refCoverage = ref.getValue("Coverage", this.user);
+            Object refCapturePanel = ref.getValue("CapturePanel", this.user);
+            List<Object> coverageList = null;
+            List<Object> capturePanelList = null;
+            if(!refRecipeToCoverageMap.containsKey(refRecipe)) {
+                coverageList = new LinkedList<>();
+                coverageList.add(refCoverage);
+                refRecipeToCoverageMap.put(refRecipe, coverageList);
+            }
+            else {
+                refRecipeToCoverageMap.get(refRecipe).add(refCoverage);
+            }
+
+            Object refHumanTranslatedReadsHuman = ref.getValue("MillionReadsHuman", this.user);
+            if(!refRecipeToTranslatedReadsHumanMap.containsKey(refRecipe)) {
+                refRecipeToTranslatedReadsHumanMap.put(refRecipe, refHumanTranslatedReadsHuman);
+            }
+            // it should be unique association of recipe to reads in ref table.
+
+            if(!recipeToCapturePanelMap.containsKey(refRecipe)) {
+                capturePanelList = new LinkedList<>();
+                capturePanelList.add(refCapturePanel);
+                recipeToCapturePanelMap.put(refRecipe, capturePanelList);
+            }
+            else {
+                recipeToCapturePanelMap.get(refRecipe).add(refCapturePanel);
+            }
+        }
+        //******************************************************************
         while(true) {
             while(true) {
                 while(sampleIter.hasNext()) {
                     DataRecord s = (DataRecord)sampleIter.next();
                     Object igoId = s.getValue("SampleId", this.user);
                     Object sampleId = s.getValue("OtherSampleId", this.user);
-                    Object altId = s.getValue("AltId", this.user);
+                    //Object altId = s.getValue("AltId", this.user);
                     this.logInfo("Recipe: " + recipe);
                     Object species = s.getValue("Species", this.user);
                     Object tumorOrNormal = s.getValue("TumorOrNormal", this.user);
                     Object reads = null;
                     Object coverage = null;
+                    //******************************************************************
+                    Object sequencingReadLength = null;
+                    //******************************************************************
                     boolean isCoverageRecipe = this.isCoverageBasedApplication(coverageRecipes);
                     this.logInfo("Is coverage Recipe: " + isCoverageRecipe);
                     this.logInfo("Sample ID: " + sampleId);
                     Iterator banked = bankedSamples.iterator();
                     DataRecord d;
+                    DataRecord seqReq;
                     Object igoIdSr;
                     while(banked.hasNext()) {
                         d = (DataRecord)banked.next();
@@ -335,6 +380,14 @@ public class CoverageToReadsConverter extends DefaultGenericPlugin {
                             this.logInfo("Matching bSample ID: " + igoIdSr);
                             reads = d.getValue("RequestedReads", this.user);
                             coverage = d.getValue("RequestedCoverage", this.user);
+                            Iterator seqReqs1 = seqRequirements.iterator();
+                            //******************************************************************
+                            sequencingReadLength = d.getValue("SequencingReadLength", this.user);
+
+                            if(!Objects.isNull(reads) && !Objects.isNull(sequencingReadLength)) {
+                                return;
+                            }
+                            //******************************************************************
                             if (!Objects.isNull(coverage)) {
                                 coverage = coverage.toString().replace("X", "").replace("x", "").trim();
                             }
@@ -348,50 +401,125 @@ public class CoverageToReadsConverter extends DefaultGenericPlugin {
                                 this.panelName = d.getValue("CapturePanel", this.user);
                                 this.logInfo("Panel: " + this.panelName);
                             }
-                        }
-                    }
-                    if (isCoverageRecipe) {
-                        if (!this.panelSelectionOffered && (Objects.isNull(this.panelName) || StringUtils.isBlank(this.panelName.toString().trim()))) {
-                            this.panelName = this.getPanelName(coverageReqRefs);
-                            this.panelSelectionOffered = true;
-                        }
-                        reads = CoverageToReadsUtil.getCoverageReadsFromRefs(recipe, this.panelName, species, this.runType, tumorOrNormal, coverage, coverageReqRefs, this.user, this.pluginLogger);
-                        this.logInfo("Reads: " + reads);
-                        if (Objects.isNull(reads)) {
-                            String errMsg = String.format("Could not find read requirements for Sample %s based on metadata Recipe: %s, Species: %s, Panel: %s, RunType: %s, TumorOrNormal: %s, RequestedCoverage: %s", sampleId, recipe, species, this.panelName, this.runType, tumorOrNormal, coverage);
-                            this.clientCallback.displayError(errMsg);
-                            this.logError(errMsg);
-                        } else {
-                            Iterator seqReqs1 = seqRequirements.iterator();
-
+                            //******************************************************************
                             while(seqReqs1.hasNext()) {
-                                d = (DataRecord)seqReqs1.next();
-                                igoIdSr = d.getValue("SampleId", this.user);
+                                seqReq = (DataRecord)seqReqs1.next();
+                                igoIdSr = seqReq.getValue("SampleId", this.user);
                                 if (Objects.equals(igoIdSr, igoId)) {
-                                    d.setDataField("SequencingRunType", this.runType, this.user);
-                                    d.setDataField("RequestedReads", reads, this.user);
-                                    d.setDataField("CoverageTarget", coverage, this.user);
-                                    d.setDataField("MinimumReads", reads, this.user);
-                                    d.setDataField("AltId", altId, this.user);
-                                    String msg = String.format("Updating sequencing requirements for Sample %s with valuesRunType: %s, RequestedCoverage: %s, RequestedReads: %s, MinimumReads: %s", sampleId, this.runType, coverage, reads, reads);
-                                    this.logInfo(msg);
+                                    if(recipe.toString().equals("ImmunoSeq")) {
+                                        seqReq.setDataField("SequencingRunType", , this.user);
+                                        return;
+                                    }
+                                    if(Objects.isNull(reads)) {
+                                        if(Objects.isNull(refRecipeToCoverageMap.get(recipe)) || refRecipeToCoverageMap.get(recipe).size() == 0) {
+                                            seqReq.setDataField("MaxReads", refRecipeToTranslatedReadsHumanMap.get(recipe), this.user);
+                                        }
+                                    }
                                 }
+                                if(Objects.isNull(coverage) && Objects.isNull(seqReq.getValue("RequestedReads", this.user))) {
+                                    if(Objects.isNull(this.panelName)) {
+                                        if(recipeToCapturePanelMap.get(recipe).size() > 1) {
+                                            try {
+                                                Object[] listOfCapturePanels = recipeToCapturePanelMap.get(recipe).toArray(new String[recipeToCapturePanelMap.get(recipe).size()]);
+                                                String[] stringListOfCapturePanels = new String[listOfCapturePanels.length];
+                                                for(int i = 0 ; i < listOfCapturePanels.length; i++) {
+                                                    stringListOfCapturePanels[i] = listOfCapturePanels[i].toString();
+                                                }
+                                                int selectedCapturePanelIndex = clientCallback.showOptionDialog("", "Please select a capture panel", stringListOfCapturePanels, 0);
+                                                this.panelName = (Object) stringListOfCapturePanels[selectedCapturePanelIndex];
+                                            }
+                                            catch (ServerException se) {
+                                                this.logError(String.valueOf(se.getStackTrace()));
+                                                return;
+                                            }
+                                        }
+                                        DataRecord refRecord = CoverageToReadsUtil.getRefRecordFromRecipeAndCapturePanel(recipe, this.panelName, tumorOrNormal, coverageReqRefs, this.user, this.pluginLogger);
+                                        if (species.toString().equalsIgnoreCase("Human")) {
+                                            seqReq.setDataField("RequestedReads", refRecord.getValue("MillionReadsHuman", this.user), this.user);
+                                        }
+                                        if (species.toString().equalsIgnoreCase("Mouse")) {
+                                            seqReq.setDataField("RequestedReads", refRecord.getValue("MillionReadsMouse", this.user), this.user);
+                                        }
+                                        seqReq.setDataField("Coverage", refRecord.getValue("Coverage", this.user), this.user);
+                                    }
+                                }
+                                else {
+                                    // requested coverage has a value
+                                    if(recipeToCapturePanelMap.get(recipe).size() > 1) {
+                                        try {
+                                            Object[] listOfCapturePanels = recipeToCapturePanelMap.get(recipe).toArray(new String[recipeToCapturePanelMap.get(recipe).size()]);
+                                            String[] stringListOfCapturePanels = new String[listOfCapturePanels.length];
+                                            for(int i = 0 ; i < listOfCapturePanels.length; i++) {
+                                                stringListOfCapturePanels[i] = listOfCapturePanels[i].toString();
+                                            }
+                                            int selectedCapturePanelIndex = clientCallback.showOptionDialog("", "Please select a capture panel", stringListOfCapturePanels, 0);
+                                            this.panelName = (Object) stringListOfCapturePanels[selectedCapturePanelIndex];
+                                        }
+                                        catch (ServerException se) {
+                                            this.logError(String.valueOf(se.getStackTrace()));
+                                            return;
+                                        }
+                                    }
+                                    DataRecord refRecord = CoverageToReadsUtil.getRefRecordFromRecipeAndCapturePanel(recipe, this.panelName, tumorOrNormal, coverageReqRefs, this.user, this.pluginLogger);
+                                    if (species.toString().equalsIgnoreCase("Human")) {
+                                        seqReq.setDataField("RequestedReads", refRecord.getValue("MillionReadsHuman", this.user), this.user);
+                                    }
+                                    if (species.toString().equalsIgnoreCase("Mouse")) {
+                                        seqReq.setDataField("RequestedReads", refRecord.getValue("MillionReadsMouse", this.user), this.user);
+                                    }
+                                    seqReq.setDataField("Coverage", refRecord.getValue("Coverage", this.user), this.user);
+
+                                }
+
                             }
-                        }
-                    } else {
-                        Iterator seqReqs2 = seqRequirements.iterator();
-                        while(seqReqs2.hasNext()) {
-                            d = (DataRecord)seqReqs2.next();
-                            igoIdSr = d.getValue("SampleId", this.user);
-                            if (Objects.equals(igoIdSr, igoId)) {
-                                d.setDataField("SequencingRunType", this.runType, this.user);
-                                d.setDataField("RequestedReads", reads, this.user);
-                                d.setDataField("CoverageTarget", coverage, this.user);
-                                d.setDataField("MinimumReads", reads, this.user);
-                                d.setDataField("AltId", altId, this.user);
-                            }
+                            //******************************************************************
+
+
+
                         }
                     }
+//                    if (isCoverageRecipe) {
+//                        if (!this.panelSelectionOffered && (Objects.isNull(this.panelName) || StringUtils.isBlank(this.panelName.toString().trim()))) {
+//                            this.panelName = this.getPanelName(coverageReqRefs);
+//                            this.panelSelectionOffered = true;
+//                        }
+//                        reads = CoverageToReadsUtil.getCoverageReadsFromRefs(recipe, this.panelName, species, this.runType, tumorOrNormal, coverage, coverageReqRefs, this.user, this.pluginLogger);
+//                        this.logInfo("Reads: " + reads);
+//                        if (Objects.isNull(reads)) {
+//                            String errMsg = String.format("Could not find read requirements for Sample %s based on metadata Recipe: %s, Species: %s, Panel: %s, RunType: %s, TumorOrNormal: %s, RequestedCoverage: %s", sampleId, recipe, species, this.panelName, this.runType, tumorOrNormal, coverage);
+//                            this.clientCallback.displayError(errMsg);
+//                            this.logError(errMsg);
+//                        } else {
+//                            Iterator seqReqs1 = seqRequirements.iterator();
+//
+//                            while(seqReqs1.hasNext()) {
+//                                d = (DataRecord)seqReqs1.next();
+//                                igoIdSr = d.getValue("SampleId", this.user);
+//                                if (Objects.equals(igoIdSr, igoId)) {
+//                                    d.setDataField("SequencingRunType", this.runType, this.user);
+//                                    d.setDataField("RequestedReads", reads, this.user);
+//                                    d.setDataField("CoverageTarget", coverage, this.user);
+//                                    d.setDataField("MinimumReads", reads, this.user);
+//                                    d.setDataField("AltId", altId, this.user);
+//                                    String msg = String.format("Updating sequencing requirements for Sample %s with valuesRunType: %s, RequestedCoverage: %s, RequestedReads: %s, MinimumReads: %s", sampleId, this.runType, coverage, reads, reads);
+//                                    this.logInfo(msg);
+//                                }
+//                            }
+//                        }
+//                    } else {
+//                        Iterator seqReqs2 = seqRequirements.iterator();
+//                        while(seqReqs2.hasNext()) {
+//                            d = (DataRecord)seqReqs2.next();
+//                            igoIdSr = d.getValue("SampleId", this.user);
+//                            if (Objects.equals(igoIdSr, igoId)) {
+//                                d.setDataField("SequencingRunType", this.runType, this.user);
+//                                d.setDataField("RequestedReads", reads, this.user);
+//                                d.setDataField("CoverageTarget", coverage, this.user);
+//                                d.setDataField("MinimumReads", reads, this.user);
+//                                d.setDataField("AltId", altId, this.user);
+//                            }
+//                        }
+//                    }
                 }
                 return;
             }
