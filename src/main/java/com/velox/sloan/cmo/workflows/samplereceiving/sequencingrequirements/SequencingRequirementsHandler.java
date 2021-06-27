@@ -26,7 +26,7 @@ import org.apache.commons.lang3.StringUtils;
  */
 public class SequencingRequirementsHandler extends DefaultGenericPlugin {
     IgoLimsPluginUtils util = new IgoLimsPluginUtils();
-    private boolean panelSelectionOffered = false;
+    //private boolean panelSelectionOffered = false;
     private Object runType = null;
     private Object panelName = null;
     private Object recipe = null;
@@ -64,7 +64,10 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
             //******************************************************************
-            if(recipe.toString().equals("CellLineAuthentication") || recipe.toString().equals("COVID19") || recipe.toString().equals("ddPCR") || recipe.toString().equals("DLP")) {
+            if(recipe.toString().equals("CellLineAuthentication") ||
+                    recipe.toString().equals("COVID19") ||
+                    recipe.toString().equals("ddPCR") ||
+                    recipe.toString().equals("DLP")) {
                 return new PluginResult(true);
             }
             //******************************************************************
@@ -87,10 +90,10 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
 
-            List<String> coverageRecipes = this.getCoverageRecipes(coverageReqRefs);
-            this.logInfo("Coverage Recipes: " + coverageRecipes);
+//            List<String> coverageRecipes = this.getCoverageRecipes(coverageReqRefs);
+//            this.logInfo("Coverage Recipes: " + coverageRecipes);
             List<DataRecord> relatedBankedSampleInfo = this.getBankedSamples(attachedSamples);
-            this.updateSeqReq(attachedSamples, relatedBankedSampleInfo, coverageRecipes, seqRequirements, coverageReqRefs);
+            this.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs);
             this.activeTask.getTask().getTaskOptions().put("SEQUENCING REQUIREMENTS UPDATED", "");
         } catch (NotFound | ServerException | IoError | InvalidValue | RemoteException var6) {
             this.logError(String.valueOf(var6.getStackTrace()));
@@ -297,7 +300,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
      * Method to update SequencingRequirements from 'ApplicationReadCoverageRef' values.
      * @param samples
      * @param bankedSamples
-     * @param coverageRecipes
      * @param seqRequirements
      * @param coverageReqRefs
      * @throws NotFound
@@ -306,7 +308,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
      * @throws IoError
      * @throws InvalidValue
      */
-    private void updateSeqReq(List<DataRecord> samples, List<DataRecord> bankedSamples, List<String> coverageRecipes, List<DataRecord> seqRequirements, List<DataRecord> coverageReqRefs) throws NotFound, RemoteException, ServerException, IoError, InvalidValue {
+    public void updateSeqReq(List<DataRecord> samples, List<DataRecord> bankedSamples, List<DataRecord> seqRequirements, List<DataRecord> coverageReqRefs) throws NotFound, RemoteException, ServerException, IoError, InvalidValue {
         this.logInfo(bankedSamples.toString());
         if (Objects.isNull(this.runType) || this.runType == "") {
             this.runType = this.getRunType(bankedSamples, coverageReqRefs);
@@ -365,8 +367,8 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                     //******************************************************************
                     Object sequencingReadLength = null;
                     //******************************************************************
-                    boolean isCoverageRecipe = this.isCoverageBasedApplication(coverageRecipes);
-                    this.logInfo("Is coverage Recipe: " + isCoverageRecipe);
+                    //boolean isCoverageRecipe = this.isCoverageBasedApplication(coverageRecipes);
+                    //this.logInfo("Is coverage Recipe: " + isCoverageRecipe);
                     this.logInfo("Sample ID: " + sampleId);
                     Iterator banked = bankedSamples.iterator();
                     DataRecord d;
@@ -385,7 +387,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                             sequencingReadLength = d.getValue("SequencingReadLength", this.user);
 
                             if(!Objects.isNull(reads) && !Objects.isNull(sequencingReadLength)) {
-                                return;
+                                continue;
                             }
                             //******************************************************************
                             if (!Objects.isNull(coverage)) {
@@ -407,8 +409,8 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                 igoIdSr = seqReq.getValue("SampleId", this.user);
                                 if (Objects.equals(igoIdSr, igoId)) {
                                     if(recipe.toString().equals("ImmunoSeq")) {
-                                        seqReq.setDataField("SequencingRunType", , this.user);
-                                        return;
+                                        seqReq.setDataField("SequencingRunType", this.runType, this.user);
+                                        continue;
                                     }
                                     if(Objects.isNull(reads)) {
                                         if(Objects.isNull(refRecipeToCoverageMap.get(recipe)) || refRecipeToCoverageMap.get(recipe).size() == 0) {
@@ -430,7 +432,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                             }
                                             catch (ServerException se) {
                                                 this.logError(String.valueOf(se.getStackTrace()));
-                                                return;
+                                                continue;
                                             }
                                         }
                                         DataRecord refRecord = CoverageToReadsUtil.getRefRecordFromRecipeAndCapturePanel(recipe, this.panelName, tumorOrNormal, coverageReqRefs, this.user, this.pluginLogger);
