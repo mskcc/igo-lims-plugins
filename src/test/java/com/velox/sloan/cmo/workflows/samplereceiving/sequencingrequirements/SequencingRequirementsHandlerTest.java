@@ -1,9 +1,16 @@
 package com.velox.sloan.cmo.workflows.samplereceiving.sequencingrequirements;
 
-import com.velox.api.datarecord.DataRecord;
-import com.velox.api.datarecord.NotFound;
+import com.velox.api.datarecord.*;
 import com.velox.api.plugin.PluginResult;
+import com.velox.api.user.User;
 import com.velox.api.util.ServerException;
+import com.velox.sapioutils.client.standalone.VeloxConnection;
+import com.velox.sloan.cmo.recmodels.BankedSampleModel;
+import com.velox.sloan.cmo.recmodels.SampleModel;
+import com.velox.sloan.cmo.recmodels.SeqRequirementModel;
+import com.velox.sloan.cmo.workflows.TestUtils;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.rmi.RemoteException;
@@ -13,24 +20,47 @@ import static org.junit.Assert.assertEquals;
 
 
 public class SequencingRequirementsHandlerTest extends SequencingRequirementsHandler {
+    User user;
+    DataRecordManager dataRecordManager;
+    VeloxConnection connection;
+    TestUtils testUtils = new TestUtils();
+    @Before
+    public void setUp() {
+        connection = testUtils.connectServer();
+        user = connection.getUser();
+        dataRecordManager = connection.getDataRecordManager();
+    }
+
     @Test
     public void sequencingRequirementsTest() {
         SequencingRequirementsHandler seqReqHandler = new SequencingRequirementsHandler();
-        PluginResult pr = seqReqHandler.run();
+
         try {
-            List<DataRecord> attachedSamples = this.activeTask.getAttachedDataRecords("Sample", this.user);
-            List<DataRecord> seqRequirements = this.activeTask.getAttachedDataRecords("SeqRequirement", this.user);
+            //seqReqHandler.shouldRun();
+            //PluginResult pr = seqReqHandler.run();
+            String sampleIds = "('07566_12_1_1', '07566_13_1_1', '09687_AO_1_1')";
+            String igoId = "('07566_12_1_1', '07566_13_1_1', '09687_AO_1_1')";
+            List<DataRecord> coverageReqRefs = dataRecordManager.queryDataRecords("ApplicationReadCoverageRef", "ReferenceOnly != 1", user);
+            List<DataRecord> attachedSamples = dataRecordManager.queryDataRecords("Sample",  "SampleId IN" + sampleIds, user);
+            List<DataRecord> seqRequirements = dataRecordManager.queryDataRecords("SeqRequirement", "IGO ID IN " + igoId, user);
+            List<DataRecord> relatedBankedSampleInfo = this.getBankedSamples(attachedSamples);
+
+//            attachedSamples = dataRecordManager.queryDataRecords(SampleModel.DATA_TYPE_NAME, SampleModel.SAMPLE_ID + " IN " + sampleIds, user);
+//            seqRequirements = dataRecordManager.queryDataRecords(SeqRequirementModel.SAMPLE_ID, SeqRequirementModel.SAMPLE_ID + " IN " + , user);
+//            coverageReqRefs = dataRecordManager.queryDataRecords();
+//            relatedBankedSampleInfo = dataRecordManager.queryDataRecords(BankedSampleModel.OTHER_SAMPLE_ID, BankedSampleModel.OTHER_SAMPLE_ID + " IN " + ,user);
+            seqReqHandler.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs);
             //ImmunoSeq
             if (attachedSamples.get(0).getValue("SampleId", this.user).toString().equals("07340_B_53_2_1_1_1")) {
                 assertEquals(seqRequirements.get(0).getValue("SequencingRunType", this.user).toString(), "");
             }
             //ddPCR, DLP, CellLineAuthentication, COVID19
-            if (attachedSamples.get(0).getValue("SampleId", this.user).toString().equals("05816_CM_1_1")
-                    || attachedSamples.get(0).getValue("SampleId", this.user).toString().equals("09875_1")
-                    || attachedSamples.get(0).getValue("SampleId", this.user).toString().equals("05134_H_1")
-                    || attachedSamples.get(0).getValue("SampleId", this.user).toString().equals("06000_FZ_1")) {
-                assertEquals(pr, new PluginResult(true));
-            }
+//            if (attachedSamples.get(0).getValue("SampleId", this.user).toString().equals("05816_CM_1_1")
+//                    || attachedSamples.get(0).getValue("SampleId", this.user).toString().equals("09875_1")
+//                    || attachedSamples.get(0).getValue("SampleId", this.user).toString().equals("05134_H_1")
+//                    || attachedSamples.get(0).getValue("SampleId", this.user).toString().equals("06000_FZ_1")) {
+//                assertEquals();
+//            }
 
             // requested reads empty
             // coverage is empty for the recipe
@@ -70,8 +100,12 @@ public class SequencingRequirementsHandlerTest extends SequencingRequirementsHan
                 assertEquals(seqRequirements.get(0).getValue("Coverage", this.user).toString(), "");
             }
         }
-        catch (NotFound | ServerException | RemoteException ex) {
+        catch (NotFound | ServerException | IoError | InvalidValue | RemoteException ex) {
             this.logError(String.valueOf(ex.getStackTrace()));
         }
+    }
+    @After
+    public void tearDown() throws Exception {
+        connection.close();
     }
 }

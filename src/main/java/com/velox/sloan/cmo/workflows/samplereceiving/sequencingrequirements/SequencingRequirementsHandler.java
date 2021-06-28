@@ -64,12 +64,12 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
             //******************************************************************
-            if(recipe.toString().equals("CellLineAuthentication") ||
-                    recipe.toString().equals("COVID19") ||
-                    recipe.toString().equals("ddPCR") ||
-                    recipe.toString().equals("DLP")) {
-                return new PluginResult(true);
-            }
+//            if(recipe.toString().equals("CellLineAuthentication") ||
+//                    recipe.toString().equals("COVID19") ||
+//                    recipe.toString().equals("ddPCR") ||
+//                    recipe.toString().equals("DLP")) {
+//                return new PluginResult(true);
+//            }
             //******************************************************************
             Object sampleType = attachedSamples.get(0).getValue(SampleModel.EXEMPLAR_SAMPLE_TYPE, user);
             if (Objects.isNull(sampleType) || StringUtils.isBlank(sampleType.toString())){
@@ -128,7 +128,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws IoError
      */
-    private List<DataRecord> getBankedSamples(List<DataRecord> attachedSamples) throws NotFound, RemoteException, IoError {
+    public List<DataRecord> getBankedSamples(List<DataRecord> attachedSamples) throws NotFound, RemoteException, IoError {
         Object requestId = ((DataRecord)attachedSamples.get(0)).getValue("RequestId", this.user);
         List<Object> sampleIds = this.getSampleIds(attachedSamples);
         this.logInfo("RequestId: " + requestId);
@@ -315,6 +315,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
         }
         this.logInfo("Run Type after prompt : " + this.runType);
         Iterator sampleIter = samples.iterator();
+
         //******************Create the required mappings from Ref table********************
         Iterator refIter = coverageReqRefs.iterator();
         Map<Object, List<Object>> refRecipeToCoverageMap = new HashMap<Object, List<Object>>();
@@ -355,6 +356,14 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
         while(true) {
             while(true) {
                 while(sampleIter.hasNext()) {
+
+                    if(recipe.toString().equals("CellLineAuthentication") ||
+                            recipe.toString().equals("COVID19") ||
+                            recipe.toString().equals("ddPCR") ||
+                            recipe.toString().equals("DLP")) {
+                        continue;
+                    }
+
                     DataRecord s = (DataRecord)sampleIter.next();
                     Object igoId = s.getValue("SampleId", this.user);
                     Object sampleId = s.getValue("OtherSampleId", this.user);
@@ -475,53 +484,8 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
 
                             }
                             //******************************************************************
-
-
-
                         }
                     }
-//                    if (isCoverageRecipe) {
-//                        if (!this.panelSelectionOffered && (Objects.isNull(this.panelName) || StringUtils.isBlank(this.panelName.toString().trim()))) {
-//                            this.panelName = this.getPanelName(coverageReqRefs);
-//                            this.panelSelectionOffered = true;
-//                        }
-//                        reads = CoverageToReadsUtil.getCoverageReadsFromRefs(recipe, this.panelName, species, this.runType, tumorOrNormal, coverage, coverageReqRefs, this.user, this.pluginLogger);
-//                        this.logInfo("Reads: " + reads);
-//                        if (Objects.isNull(reads)) {
-//                            String errMsg = String.format("Could not find read requirements for Sample %s based on metadata Recipe: %s, Species: %s, Panel: %s, RunType: %s, TumorOrNormal: %s, RequestedCoverage: %s", sampleId, recipe, species, this.panelName, this.runType, tumorOrNormal, coverage);
-//                            this.clientCallback.displayError(errMsg);
-//                            this.logError(errMsg);
-//                        } else {
-//                            Iterator seqReqs1 = seqRequirements.iterator();
-//
-//                            while(seqReqs1.hasNext()) {
-//                                d = (DataRecord)seqReqs1.next();
-//                                igoIdSr = d.getValue("SampleId", this.user);
-//                                if (Objects.equals(igoIdSr, igoId)) {
-//                                    d.setDataField("SequencingRunType", this.runType, this.user);
-//                                    d.setDataField("RequestedReads", reads, this.user);
-//                                    d.setDataField("CoverageTarget", coverage, this.user);
-//                                    d.setDataField("MinimumReads", reads, this.user);
-//                                    d.setDataField("AltId", altId, this.user);
-//                                    String msg = String.format("Updating sequencing requirements for Sample %s with valuesRunType: %s, RequestedCoverage: %s, RequestedReads: %s, MinimumReads: %s", sampleId, this.runType, coverage, reads, reads);
-//                                    this.logInfo(msg);
-//                                }
-//                            }
-//                        }
-//                    } else {
-//                        Iterator seqReqs2 = seqRequirements.iterator();
-//                        while(seqReqs2.hasNext()) {
-//                            d = (DataRecord)seqReqs2.next();
-//                            igoIdSr = d.getValue("SampleId", this.user);
-//                            if (Objects.equals(igoIdSr, igoId)) {
-//                                d.setDataField("SequencingRunType", this.runType, this.user);
-//                                d.setDataField("RequestedReads", reads, this.user);
-//                                d.setDataField("CoverageTarget", coverage, this.user);
-//                                d.setDataField("MinimumReads", reads, this.user);
-//                                d.setDataField("AltId", altId, this.user);
-//                            }
-//                        }
-//                    }
                 }
                 return;
             }
