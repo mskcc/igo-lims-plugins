@@ -442,7 +442,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                         if (species.toString().equalsIgnoreCase("Mouse")) {
                                             seqReq.setDataField("RequestedReads", refRecord.getValue("MillionReadsMouse", this.user), this.user);
                                         }
-                                        seqReq.setDataField("Coverage", refRecord.getValue("Coverage", this.user), this.user);
+                                        seqReq.setDataField("CoverageTarget", refRecord.getValue("Coverage", this.user), this.user);
                                     }
                                 }
                                 else {
@@ -469,7 +469,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                     if (species.toString().equalsIgnoreCase("Mouse")) {
                                         seqReq.setDataField("RequestedReads", refRecord.getValue("MillionReadsMouse", this.user), this.user);
                                     }
-                                    seqReq.setDataField("Coverage", refRecord.getValue("Coverage", this.user), this.user);
+                                    seqReq.setDataField("CoverageTarget", refRecord.getValue("Coverage", this.user), this.user);
 
                                 }
 
