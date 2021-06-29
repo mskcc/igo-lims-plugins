@@ -22,7 +22,7 @@ import static org.junit.Assert.assertEquals;
 public class SequencingRequirementsHandlerTest extends SequencingRequirementsHandler {
     User user;
     DataRecordManager dataRecordManager;
-    VeloxConnection connection;
+    VeloxConnection connection = new VeloxConnection("/Users/mirhajf/igo-lims-plugins/Connection.txt");
     TestUtils testUtils = new TestUtils();
     @Before
     public void setUp() {
@@ -36,19 +36,13 @@ public class SequencingRequirementsHandlerTest extends SequencingRequirementsHan
         SequencingRequirementsHandler seqReqHandler = new SequencingRequirementsHandler();
 
         try {
-            //seqReqHandler.shouldRun();
-            //PluginResult pr = seqReqHandler.run();
-            String sampleIds = "('07566_12_1_1', '07566_13_1_1', '09687_AO_1_1')";
+            String sampleIds = "('07340_B_53_2_1_1_1', 'UPS_PBMC_02', '07555_1')";
             String igoId = "('07566_12_1_1', '07566_13_1_1', '09687_AO_1_1')";
             List<DataRecord> coverageReqRefs = dataRecordManager.queryDataRecords("ApplicationReadCoverageRef", "ReferenceOnly != 1", user);
             List<DataRecord> attachedSamples = dataRecordManager.queryDataRecords("Sample",  "SampleId IN" + sampleIds, user);
-            List<DataRecord> seqRequirements = dataRecordManager.queryDataRecords("SeqRequirement", "IGO ID IN " + igoId, user);
+            List<DataRecord> seqRequirements = dataRecordManager.queryDataRecords("SeqRequirement", "SampleId IN " + igoId, user);
             List<DataRecord> relatedBankedSampleInfo = this.getBankedSamples(attachedSamples);
 
-//            attachedSamples = dataRecordManager.queryDataRecords(SampleModel.DATA_TYPE_NAME, SampleModel.SAMPLE_ID + " IN " + sampleIds, user);
-//            seqRequirements = dataRecordManager.queryDataRecords(SeqRequirementModel.SAMPLE_ID, SeqRequirementModel.SAMPLE_ID + " IN " + , user);
-//            coverageReqRefs = dataRecordManager.queryDataRecords();
-//            relatedBankedSampleInfo = dataRecordManager.queryDataRecords(BankedSampleModel.OTHER_SAMPLE_ID, BankedSampleModel.OTHER_SAMPLE_ID + " IN " + ,user);
             seqReqHandler.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs);
             //ImmunoSeq
             if (attachedSamples.get(0).getValue("SampleId", this.user).toString().equals("07340_B_53_2_1_1_1")) {
