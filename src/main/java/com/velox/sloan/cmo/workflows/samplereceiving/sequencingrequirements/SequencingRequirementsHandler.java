@@ -1,10 +1,13 @@
 package com.velox.sloan.cmo.workflows.samplereceiving.sequencingrequirements;
 
+import com.velox.api.datafielddefinition.PickListFieldDefinition;
 import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.InvalidValue;
 import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
+import com.velox.api.servermanager.PickListConfig;
+import com.velox.api.servermanager.PickListManager;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
@@ -13,6 +16,8 @@ import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import javafx.scene.input.PickResult;
 import org.apache.commons.lang3.StringUtils;
 
 /**
@@ -307,7 +312,14 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
         }
         this.logInfo("Run Type after prompt : " + this.runType);
         Iterator sampleIter = samples.iterator();
+        // Fetching the NonSequencingRecipes from its pick list
+        PickListConfig nonSeqRecipes = null;
+        try {
+            nonSeqRecipes = dataMgmtServer.getPickListManager(user).getPickListConfig("NonSequencingRecipes");
+        }
+        catch (RemoteException re) {
 
+        }
         //******************Create the required mappings from Ref table********************
         Iterator refIter = coverageReqRefs.iterator();
         Map<Object, List<Object>> refRecipeToCoverageMap = new HashMap<Object, List<Object>>();
@@ -349,10 +361,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
             while(true) {
                 while(sampleIter.hasNext()) {
 
-                    if(recipe.toString().equals("CellLineAuthentication") ||
-                            recipe.toString().equals("COVID19") ||
-                            recipe.toString().equals("ddPCR") ||
-                            recipe.toString().equals("DLP")) {
+                    if(nonSeqRecipes.getEntryList().contains(recipe)) {
                         continue;
                     }
 

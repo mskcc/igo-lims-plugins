@@ -77,7 +77,7 @@ public class SequencingRequirementsHandlerTest extends SequencingRequirementsHan
 
             // requested reads empty
             // coverage is empty for the recipe
-            if (attachedSamples.get(0).getValue("SampleId", this.user).toString().equals("UPS_PBMC_02")) {
+            if (attachedSamples.get(0).getValue("SampleId", this.user).toString().equals("")) {
                 assertEquals(seqRequirements.get(0).getValue("MaxReads", this.user).toString(), "10.0");
             }
 
