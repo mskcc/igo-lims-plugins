@@ -63,14 +63,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                 logError(msg);
                 return new PluginResult(false);
             }
-            //******************************************************************
-//            if(recipe.toString().equals("CellLineAuthentication") ||
-//                    recipe.toString().equals("COVID19") ||
-//                    recipe.toString().equals("ddPCR") ||
-//                    recipe.toString().equals("DLP")) {
-//                return new PluginResult(true);
-//            }
-            //******************************************************************
             Object sampleType = attachedSamples.get(0).getValue(SampleModel.EXEMPLAR_SAMPLE_TYPE, user);
             if (Objects.isNull(sampleType) || StringUtils.isBlank(sampleType.toString())){
                 String msg = "SampleType value missing on the samples";
@@ -421,13 +413,17 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                         seqReq.setDataField("SequencingRunType", this.runType, this.user);
                                         continue;
                                     }
-                                    if(Objects.isNull(reads)) {
+                                    if(!Objects.isNull(reads)) {
                                         if(Objects.isNull(refRecipeToCoverageMap.get(recipe)) || refRecipeToCoverageMap.get(recipe).size() == 0) {
-                                            seqReq.setDataField("MaxReads", refRecipeToTranslatedReadsHumanMap.get(recipe), this.user);
+                                            String minMaxRead = d.getValue("RequestedReads", this.user).toString().split("million")[0];
+                                            Object[] minMax = new Object[2];
+                                            minMax = (Object[]) minMaxRead.split("-");
+                                            seqReq.setDataField("RequestedReads", minMax[1], this.user);
+                                            seqReq.setDataField("MinimumReads", minMax[0], this.user);
                                         }
                                     }
                                 }
-                                if(Objects.isNull(coverage) && Objects.isNull(seqReq.getValue("RequestedReads", this.user))) {
+                                if(Objects.isNull(coverage) && Objects.isNull(d.getValue("RequestedReads", this.user))) {
                                     if(Objects.isNull(this.panelName)) {
                                         if(recipeToCapturePanelMap.get(recipe).size() > 1) {
                                             try {
@@ -486,6 +482,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                             //******************************************************************
                         }
                     }
+                    continue;
                 }
                 return;
             }

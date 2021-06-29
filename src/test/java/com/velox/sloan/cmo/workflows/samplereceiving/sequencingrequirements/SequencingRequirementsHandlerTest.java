@@ -1,19 +1,15 @@
 package com.velox.sloan.cmo.workflows.samplereceiving.sequencingrequirements;
 
 import com.velox.api.datarecord.*;
-import com.velox.api.plugin.PluginResult;
 import com.velox.api.user.User;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.client.standalone.VeloxConnection;
 import com.velox.sapioutils.client.standalone.VeloxStandalone;
 import com.velox.sapioutils.client.standalone.VeloxStandaloneException;
 import com.velox.sapioutils.client.standalone.VeloxTask;
-import com.velox.sloan.cmo.recmodels.BankedSampleModel;
 import com.velox.sloan.cmo.recmodels.SampleModel;
 import com.velox.sloan.cmo.recmodels.SeqRequirementModel;
 import com.velox.sloan.cmo.workflows.TestUtils;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.rmi.RemoteException;
@@ -59,11 +55,10 @@ public class SequencingRequirementsHandlerTest extends SequencingRequirementsHan
         SequencingRequirementsHandler seqReqHandler = new SequencingRequirementsHandler();
 
         try {
-            String sampleIds = "('07340_B_53_2_1_1_1', 'UPS_PBMC_02', '07555_1')";
-            String igoId = "('07566_12_1_1', '07566_13_1_1', '09687_AO_1_1')";
+            String igoId = "('07340_B_53_2_1_1_1', '07566_12_1_1', '07566_13_1_1', '09687_AO_1_1')";
 
             List<DataRecord> coverageReqRefs = dataRecordManager.queryDataRecords("ApplicationReadCoverageRef", "ReferenceOnly != 1", user);
-            List<DataRecord> attachedSamples = dataRecordManager.queryDataRecords(SampleModel.DATA_TYPE_NAME, SampleModel.SAMPLE_ID + " IN " + sampleIds, user);
+            List<DataRecord> attachedSamples = dataRecordManager.queryDataRecords(SampleModel.DATA_TYPE_NAME, SampleModel.SAMPLE_ID + " IN " + igoId, user);
             List<DataRecord> seqRequirements = dataRecordManager.queryDataRecords(SeqRequirementModel.DATA_TYPE_NAME, SeqRequirementModel.SAMPLE_ID + " IN " + igoId, user);
             List<DataRecord> relatedBankedSampleInfo = this.getBankedSamples(attachedSamples);
 
@@ -111,7 +106,7 @@ public class SequencingRequirementsHandlerTest extends SequencingRequirementsHan
                 assertEquals(seqRequirements.get(0).getValue("Coverage", user).toString(), "");
             }
 
-            // if banked sample capture panel has a value
+            // if banked sample coverage has a value and banked sample capture panel has a value
             // check max reads & coverage values
             if (attachedSamples.get(0).getValue("SampleId", user).toString().equals("")) {
                 assertEquals(seqRequirements.get(0).getValue("MaxReads", user).toString(), "");
@@ -119,7 +114,7 @@ public class SequencingRequirementsHandlerTest extends SequencingRequirementsHan
             }
         }
         catch (NotFound | ServerException | IoError | InvalidValue | RemoteException ex) {
-            this.logError(String.valueOf(ex.getStackTrace()));
+            System.out.println(String.valueOf(ex.getStackTrace()));
         }
     }
 
