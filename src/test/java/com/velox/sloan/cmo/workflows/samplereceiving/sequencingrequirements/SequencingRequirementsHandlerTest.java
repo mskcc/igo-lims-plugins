@@ -56,7 +56,7 @@ public class SequencingRequirementsHandlerTest extends SequencingRequirementsHan
 
         try {
             String igoId = "('07340_B_53_2_1_1_1', '12123_1', '05463_BA_1', '11856_B_1', '11113_I_1', '05538_AD_2', " +
-                    "'06000_IW_3', '04553_L_1')";
+                    "'06000_IW_3', '04553_L_1', '05257_CT_1', '05240_AH_1')";
 
             List<DataRecord> coverageReqRefs = dataRecordManager.queryDataRecords("ApplicationReadCoverageRef",
                     "ReferenceOnly != 1", user);
@@ -67,7 +67,7 @@ public class SequencingRequirementsHandlerTest extends SequencingRequirementsHan
             List<DataRecord> relatedBankedSampleInfo = this.getBankedSamples(attachedSamples);
 
 
-            // NonSequencingRequirement recipes before velues
+            // NonSequencingRequirement recipes before values
             String sample1ReqReads = seqRequirements.get(1).getValue("RequestedReads", user).toString();
             String sample1Coverage = seqRequirements.get(1).getValue("CoverageTarget", user).toString();
 

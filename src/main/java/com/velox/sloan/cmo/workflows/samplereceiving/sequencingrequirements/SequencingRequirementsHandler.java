@@ -324,6 +324,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
 
         }
         //******************Create the required mappings from Ref table********************
+        //ignore lines that Reference only is true/set
         Iterator refIter = coverageReqRefs.iterator();
         Map<Object, List<Object>> refRecipeToCoverageMap = new HashMap<Object, List<Object>>();
         Map<Object, Object> refRecipeToTranslatedReadsHumanMap = new HashMap<Object, Object>();
@@ -347,7 +348,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                 refRecipeToCoverageMap.get(refRecipe).add(refCoverage);
             }
 
-            Object refHumanTranslatedReadsHuman = ref.getValue("MillionReadsHuman", this.user);
+            Object refHumanTranslatedReadsHuman = ref.getValue("MaxReads", this.user);
             if(!refRecipeToTranslatedReadsHumanMap.containsKey(refRecipe)) {
                 refRecipeToTranslatedReadsHumanMap.put(refRecipe, refHumanTranslatedReadsHuman);
             }
@@ -459,7 +460,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                         }
                                     }
 
-                                    else if (Objects.isNull(coverage) && Objects.isNull(reads)) {
+                                    else if (Objects.isNull(coverage) && Objects.isNull(seqReq.getValue("RequestedReads", this.user))) {
                                         if (Objects.isNull(this.panelName)) {
                                             if (recipeToCapturePanelMap.get(recipe).size() > 1) {
                                                 try {
