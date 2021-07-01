@@ -27,8 +27,8 @@ public class SequencingRequirementsHandlerTest extends SequencingRequirementsHan
     public void setUpTestTearUp() {
         try {
             try {
-                System.out.println("Connection start");
                 if (connection.isConnected()) {
+                    System.out.println("Connection start");
                     connection = testUtils.connectServer();
                     user = connection.getUser();
                     dataRecordManager = connection.getDataRecordManager();
