@@ -332,44 +332,43 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
         Map<Object, List<Object>> recipeToSequencingRunTypeMap = new HashMap<Object, List<Object>>();
         while(refIter.hasNext()) {
             DataRecord ref = (DataRecord) refIter.next();
-            Object refRecipe = ref.getValue("PlatformApplication", this.user);
-            Object refCoverage = ref.getValue("Coverage", this.user);
-            Object refCapturePanel = ref.getValue("CapturePanel", this.user);
-            Object refSeqRunType = ref.getValue("SequencingRunType", this.user);
-            List<Object> coverageList = null;
-            List<Object> capturePanelList = null;
-            List<Object> runTypeList = null;
-            if(!refRecipeToCoverageMap.containsKey(refRecipe)) {
-                coverageList = new LinkedList<>();
-                coverageList.add(refCoverage);
-                refRecipeToCoverageMap.put(refRecipe, coverageList);
-            }
-            else {
-                refRecipeToCoverageMap.get(refRecipe).add(refCoverage);
-            }
+            //if(ref.getValue("ReferenceOnly", this.user) ) {
+                Object refRecipe = ref.getValue("PlatformApplication", this.user);
+                Object refCoverage = ref.getValue("Coverage", this.user);
+                Object refCapturePanel = ref.getValue("CapturePanel", this.user);
+                Object refSeqRunType = ref.getValue("SequencingRunType", this.user);
+                List<Object> coverageList = null;
+                List<Object> capturePanelList = null;
+                List<Object> runTypeList = null;
+                if (!refRecipeToCoverageMap.containsKey(refRecipe)) {
+                    coverageList = new LinkedList<>();
+                    coverageList.add(refCoverage);
+                    refRecipeToCoverageMap.put(refRecipe, coverageList);
+                } else {
+                    refRecipeToCoverageMap.get(refRecipe).add(refCoverage);
+                }
 
-            Object refHumanTranslatedReadsHuman = ref.getValue("MaxReads", this.user);
-            if(!refRecipeToTranslatedReadsHumanMap.containsKey(refRecipe)) {
-                refRecipeToTranslatedReadsHumanMap.put(refRecipe, refHumanTranslatedReadsHuman);
-            }
-            // it should be unique association of recipe to reads in ref table.
+                Object refHumanTranslatedReadsHuman = ref.getValue("MaxReads", this.user);
+                if (!refRecipeToTranslatedReadsHumanMap.containsKey(refRecipe)) {
+                    refRecipeToTranslatedReadsHumanMap.put(refRecipe, refHumanTranslatedReadsHuman);
+                }
+                // it should be unique association of recipe to reads in ref table.
 
-            if(!recipeToCapturePanelMap.containsKey(refRecipe)) {
-                capturePanelList = new LinkedList<>();
-                capturePanelList.add(refCapturePanel);
-                recipeToCapturePanelMap.put(refRecipe, capturePanelList);
-            }
-            else {
-                recipeToCapturePanelMap.get(refRecipe).add(refCapturePanel);
-            }
-            if(!recipeToSequencingRunTypeMap.containsKey(refRecipe)) {
-                runTypeList = new LinkedList<>();
-                runTypeList.add(refSeqRunType);
-                recipeToSequencingRunTypeMap.put(refRecipe, runTypeList);
-            }
-            else {
-                recipeToSequencingRunTypeMap.get(refRecipe).add(refSeqRunType);
-            }
+                if (!recipeToCapturePanelMap.containsKey(refRecipe)) {
+                    capturePanelList = new LinkedList<>();
+                    capturePanelList.add(refCapturePanel);
+                    recipeToCapturePanelMap.put(refRecipe, capturePanelList);
+                } else {
+                    recipeToCapturePanelMap.get(refRecipe).add(refCapturePanel);
+                }
+                if (!recipeToSequencingRunTypeMap.containsKey(refRecipe)) {
+                    runTypeList = new LinkedList<>();
+                    runTypeList.add(refSeqRunType);
+                    recipeToSequencingRunTypeMap.put(refRecipe, runTypeList);
+                } else {
+                    recipeToSequencingRunTypeMap.get(refRecipe).add(refSeqRunType);
+                }
+            //}
         }
         //******************************************************************
         while(true) {

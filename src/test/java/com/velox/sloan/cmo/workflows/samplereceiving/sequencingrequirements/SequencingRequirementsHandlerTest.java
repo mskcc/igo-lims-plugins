@@ -24,13 +24,15 @@ public class SequencingRequirementsHandlerTest extends SequencingRequirementsHan
     VeloxConnection connection = new VeloxConnection("/Users/mirhajf/igo-lims-plugins/Connection.txt");
     TestUtils testUtils = new TestUtils();
     @Test
-    public void setUp() {
+    public void setUpTestTearUp() {
         try {
             try {
+                System.out.println("Connection start");
                 if (connection.isConnected()) {
                     connection = testUtils.connectServer();
                     user = connection.getUser();
                     dataRecordManager = connection.getDataRecordManager();
+                    System.out.println("Connected successfully.");
                 }
 
                 VeloxStandalone.run(connection, new VeloxTask<Object>() {
@@ -40,14 +42,15 @@ public class SequencingRequirementsHandlerTest extends SequencingRequirementsHan
                         return new Object();
                     }
                 });
-            } catch (Throwable e) {
 
+            } catch (Throwable e) {
+                e.printStackTrace();
             }
             finally {
                 connection.close();
             }
         } catch (Throwable t) {
-
+            t.printStackTrace();
         }
     }
 
@@ -56,7 +59,7 @@ public class SequencingRequirementsHandlerTest extends SequencingRequirementsHan
 
         try {
             String igoId = "('07340_B_53_2_1_1_1', '12123_1', '05463_BA_1', '11856_B_1', '11113_I_1', '05538_AD_2', " +
-                    "'06000_IW_3', '04553_L_1', '05257_CT_1', '05240_AH_1')";
+                    "'06000_IW_3', '04553_L_1', '05257_CT_1', '04553_M_1', '05240_AH_1')";
 
             List<DataRecord> coverageReqRefs = dataRecordManager.queryDataRecords("ApplicationReadCoverageRef",
                     "ReferenceOnly != 1", user);
@@ -104,46 +107,49 @@ public class SequencingRequirementsHandlerTest extends SequencingRequirementsHan
                 assertEquals(seqRequirements.get(4).getValue("CoverageTarget", user).toString(), sample4Coverage);
             }
 
-            // requested reads empty
-            // coverage is empty for the recipe
-            if (attachedSamples.get(7).getValue("SampleId", this.user).toString().equals("")) {
-                assertEquals(seqRequirements.get(7).getValue("MaxReads", this.user).toString(), "10.0");
+            //
+            if (attachedSamples.get(5).getValue("SampleId", this.user).toString().equals("05538_AD_2")) {
+                assertEquals(seqRequirements.get(5).getValue("SequencingRunType", this.user).toString(), "PE100");
+                assertEquals(seqRequirements.get(5).getValue("RequestedReads", this.user).toString(), "40");
+                assertEquals(seqRequirements.get(5).getValue("MinimumReads", this.user).toString(), "30");
             }
 
-            //banked sample coverage is empty & sequencing requirements requested reads is empty
-            // if banked sample capture panel is empty
-
-            //EXPECTED: ask LIMS user to select capture panel
-            // check max reads & coverage values
-            if (attachedSamples.get(8).getValue("SampleId", user).toString().equals("07555_1")) {
-                assertEquals(seqRequirements.get(8).getValue("RequestedReads", user).toString(), "");
-                assertEquals(seqRequirements.get(8).getValue("CoverageTarget", user).toString(), "");
+            if (attachedSamples.get(6).getValue("SampleId", this.user).toString().equals("06000_IW_3")) {
+                assertEquals(seqRequirements.get(6).getValue("SequencingRunType", this.user).toString(), "PE50");
+                assertEquals(seqRequirements.get(6).getValue("RequestedReads", this.user).toString(), "10");
+                assertEquals(seqRequirements.get(6).getValue("MinimumReads", this.user).toString(), "5");
             }
 
-            // if banked sample capture panel has a value
-            // check max reads & coverage values
-            if (attachedSamples.get(9).getValue("SampleId", user).toString().equals("")) {
-                assertEquals(seqRequirements.get(9).getValue("RequestedReads", user).toString(), "");
-                assertEquals(seqRequirements.get(9).getValue("CoverageTarget", user).toString(), "");
+
+            if (attachedSamples.get(7).getValue("SampleId", this.user).toString().equals("04553_L_1")) {
+                assertEquals(seqRequirements.get(7).getValue("SequencingRunType", this.user).toString(), "PE100");
+                assertEquals(seqRequirements.get(7).getValue("CoverageTarget", this.user).toString(), "500");
+                assertEquals(seqRequirements.get(7).getValue("RequestedReads", this.user).toString(), "14.0");
             }
 
-            //banked sample coverage has a value and more than 1 capture panel mapped to banked sample recipe
-            //EXPECTED: ask LIMS user to select capture panel
-            // check max reads & coverage values
-            if (attachedSamples.get(10).getValue("SampleId", user).toString().equals("")) {
-                assertEquals(seqRequirements.get(10).getValue("RequestedReads", user).toString(), "");
-                assertEquals(seqRequirements.get(10).getValue("CoverageTarget", user).toString(), "");
+
+            if (attachedSamples.get(8).getValue("SampleId", user).toString().equals("05257_CT_1")) {
+                assertEquals(seqRequirements.get(8).getValue("SequencingRunType", this.user).toString(), "PE100");
+                assertEquals(seqRequirements.get(8).getValue("CoverageTarget", this.user).toString(), "1000");
+                assertEquals(seqRequirements.get(8).getValue("RequestedReads", this.user).toString(), "60.0");
             }
 
-            // if banked sample coverage has a value and banked sample capture panel has a value
-            // check max reads & coverage values
-            if (attachedSamples.get(11).getValue("SampleId", user).toString().equals("")) {
-                assertEquals(seqRequirements.get(11).getValue("RequestedReads", user).toString(), "");
-                assertEquals(seqRequirements.get(11).getValue("CoverageTarget", user).toString(), "");
+
+            if (attachedSamples.get(9).getValue("SampleId", user).toString().equals("04553_M_1")) {
+                assertEquals(seqRequirements.get(9).getValue("SequencingRunType", user).toString(), "PE100");
+                assertEquals(seqRequirements.get(9).getValue("CoverageTarget", user).toString(), "150");
+                assertEquals(seqRequirements.get(9).getValue("RequestedReads", this.user).toString(), "95.0");
+            }
+
+
+            if (attachedSamples.get(10).getValue("SampleId", user).toString().equals("05240_AH_1")) {
+                assertEquals(seqRequirements.get(10).getValue("SequencingRunType", user).toString(), "PE150");
+                assertEquals(seqRequirements.get(10).getValue("CoverageTarget", user).toString(), "40");
+                assertEquals(seqRequirements.get(10).getValue("RequestedReads", user).toString(), "600.0");
             }
         }
         catch (NotFound | ServerException | IoError | InvalidValue | RemoteException ex) {
-            System.out.println(ex.getStackTrace());
+            ex.printStackTrace();
         }
     }
 }
