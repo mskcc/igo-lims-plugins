@@ -129,12 +129,18 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
      * @throws IoError
      */
     public List<DataRecord> getBankedSamples(List<DataRecord> attachedSamples) throws NotFound, RemoteException, IoError {
-        Object requestId = ((DataRecord)attachedSamples.get(0)).getValue("RequestId", this.user);
-        List<Object> sampleIds = this.getSampleIds(attachedSamples);
-        this.logInfo("RequestId: " + requestId);
-        String whereClause = String.format("%s IN %s AND %s='%s'", "UserSampleID", this.util.listToSqlInClauseVal(sampleIds), "RequestId", requestId);
-        this.logInfo("WHERE CLAUSE: " + whereClause);
-        return this.dataRecordManager.queryDataRecords("BankedSample", whereClause, this.user);
+        List<DataRecord> bankedSamples = new LinkedList<>();
+        for(int i = 0; i < attachedSamples.size(); i++) {
+            Object requestId = ((DataRecord)attachedSamples.get(i)).getValue("RequestId", this.user);
+            Object userSampleId = ((DataRecord)attachedSamples.get(i)).getValue("UserSampleID", this.user);
+            List<Object> sampleIds = this.getSampleIds(attachedSamples);
+            this.logInfo("RequestId: " + requestId);
+            String whereClause = String.format("%s='%s' AND %s=%s", "UserSampleID", this.util.listToSqlInClauseVal(sampleIds), "RequestId", requestId);
+            this.logInfo("WHERE CLAUSE: " + whereClause);
+            bankedSamples.add(this.dataRecordManager.queryDataRecords("BankedSample", whereClause, this.user).get(0));
+        }
+        return bankedSamples;
+
     }
 
 
@@ -330,14 +336,14 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
         //******************Create the required mappings from Ref table********************
         //ignore lines that Reference only is true/set
         Iterator refIter = coverageReqRefs.iterator();
-        Map<Object, List<Object>> refRecipeToCoverageMap = new HashMap<Object, List<Object>>();
-        Map<Object, Object> refRecipeToTranslatedReadsHumanMap = new HashMap<Object, Object>();
-        Map<Object, List<Object>> recipeToCapturePanelMap = new HashMap<Object, List<Object>>();
-        Map<Object, Object> recipeToSequencingRunTypeMap = new HashMap<Object, Object>();
+        Map<String, List<Object>> refRecipeToCoverageMap = new HashMap<String, List<Object>>();
+        Map<String, Object> refRecipeToTranslatedReadsHumanMap = new HashMap<String, Object>();
+        Map<String, List<Object>> recipeToCapturePanelMap = new HashMap<String, List<Object>>();
+        Map<String, Object> recipeToSequencingRunTypeMap = new HashMap<String, Object>();
         while(refIter.hasNext()) {
             DataRecord ref = (DataRecord) refIter.next();
             //if(ref.getValue("ReferenceOnly", user) ) {
-                Object refRecipe = ref.getValue("PlatformApplication", user);
+                String refRecipe = ref.getValue("PlatformApplication", user).toString();
                 Object refCoverage = ref.getValue("Coverage", user);
                 Object refCapturePanel = ref.getValue("CapturePanel", user);
                 Object refSeqRunType = ref.getValue("SequencingRunType", user);
@@ -346,10 +352,15 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                 List<Object> runTypeList = null;
                 if (!refRecipeToCoverageMap.containsKey(refRecipe)) {
                     coverageList = new LinkedList<>();
-                    coverageList.add(refCoverage);
-                    refRecipeToCoverageMap.put(refRecipe, coverageList);
+                    if(!Objects.isNull(refCoverage) && !refCoverage.toString().trim().isEmpty()) {
+                        coverageList.add(refCoverage);
+                        refRecipeToCoverageMap.put(refRecipe, coverageList);
+                    }
+
                 } else {
-                    refRecipeToCoverageMap.get(refRecipe).add(refCoverage);
+                    if(!Objects.isNull(refCoverage) && !refCoverage.toString().trim().isEmpty()) {
+                        refRecipeToCoverageMap.get(refRecipe).add(refCoverage);
+                    }
                 }
 
                 Object refHumanTranslatedReadsHuman = ref.getValue("MaxReads", user);
@@ -360,16 +371,26 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
 
                 if (!recipeToCapturePanelMap.containsKey(refRecipe)) {
                     capturePanelList = new LinkedList<>();
-                    capturePanelList.add(refCapturePanel);
-                    recipeToCapturePanelMap.put(refRecipe, capturePanelList);
+                    if(!Objects.isNull(refCapturePanel) && !refCapturePanel.toString().trim().isEmpty()) {
+                        capturePanelList.add(refCapturePanel);
+                        recipeToCapturePanelMap.put(refRecipe, capturePanelList);
+                    }
+
                 } else {
-                    recipeToCapturePanelMap.get(refRecipe).add(refCapturePanel);
+                    if(!Objects.isNull(refCapturePanel) && !refCapturePanel.toString().trim().isEmpty()) {
+                        recipeToCapturePanelMap.get(refRecipe).add(refCapturePanel);
+                    }
                 }
                 if (!recipeToSequencingRunTypeMap.containsKey(refRecipe)) {
                     recipeToSequencingRunTypeMap.put(refRecipe, refSeqRunType);
                 }
+
             //}
         }
+//        System.out.println("refRecipeToCoverageMap size: " + refRecipeToCoverageMap.size());
+//        for(Map.Entry<String, List<Object>> e : recipeToCapturePanelMap.entrySet()) {
+//            System.out.println(e.getKey() + ": " + e.getValue());
+//        }
         //******************************************************************
         while(true) {
             while(true) {
@@ -382,8 +403,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                     DataRecord s = (DataRecord)sampleIter.next();
                     Object igoId = s.getValue("SampleId", user);
                     Object sampleId = s.getValue("OtherSampleId", user);
-                    //Object altId = s.getValue("AltId", user);
-                    //this.logInfo("Recipe: " + recipe);
                     Object species = s.getValue("Species", user);
                     Object tumorOrNormal = s.getValue("TumorOrNormal", user);
                     Object reads = null;
@@ -391,9 +410,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                     //******************************************************************
                     Object sequencingReadLength = null;
                     //******************************************************************
-                    //boolean isCoverageRecipe = this.isCoverageBasedApplication(coverageRecipes);
-                    //this.logInfo("Is coverage Recipe: " + isCoverageRecipe);
-                    //this.logInfo("Sample ID: " + sampleId);
                     Iterator banked = bankedSamples.iterator();
                     DataRecord d;
                     DataRecord seqReq;
@@ -401,9 +417,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                     while(banked.hasNext()) {
                         d = (DataRecord)banked.next();
                         igoIdSr = d.getValue("UserSampleID", user);
-                        //this.logInfo("bSample ID: " + igoIdSr);
                         if (Objects.equals(sampleId, igoIdSr)) {
-                            //this.logInfo("Matching bSample ID: " + igoIdSr);
                             reads = d.getValue("RequestedReads", user);
                             coverage = d.getValue("RequestedCoverage", user);
                             Iterator seqReqs1 = seqRequirements.iterator();
@@ -411,15 +425,16 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                             runType = d.getValue("RunType", user);
                             sequencingReadLength = d.getValue("SequencingReadLength", user);
 
-                            if(!Objects.isNull(reads) && !Objects.isNull(sequencingReadLength)) {
-                                continue;
-                            }
+
+                            System.out.println("reads: " + reads.toString());
+                            System.out.println("sequencingReadLength: " + sequencingReadLength.toString());
+                            System.out.println("runType: " + runType.toString());
+
                             //******************************************************************
                             if (!Objects.isNull(coverage)) {
                                 coverage = coverage.toString().replace("X", "").replace("x", "").trim();
                             }
 
-                            //this.logInfo("Coverage: " + coverage);
                             if (Objects.isNull(coverage) && reads != null && reads.toString().endsWith("X")) {
                                 coverage = reads.toString().replace("X", "").replace("x", "").trim();
                             }
@@ -428,26 +443,47 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                 this.panelName = d.getValue("CapturePanel", user);
                                 //this.logInfo("Panel: " + this.panelName);
                             }
+
                             //******************************************************************
                             while(seqReqs1.hasNext()) {
                                 seqReq = (DataRecord)seqReqs1.next();
                                 igoIdSr = seqReq.getValue("SampleId", user);
                                 if (Objects.equals(igoIdSr, igoId)) {
                                     if (recipe.toString().equals("ImmunoSeq")) {
-                                        seqReq.setDataField("SequencingRunType", this.runType, user);
+                                        if(!Objects.isNull(runType) && !runType.toString().trim().isEmpty()) {
+                                            seqReq.setDataField("SequencingRunType", runType, user);
+                                        }
+                                        else {
+                                            seqReq.setDataField("SequencingRunType",
+                                                    recipeToSequencingRunTypeMap.get(recipe.toString()), user);
+                                        }
                                         continue;
                                     }
-
-                                    if (!Objects.isNull(runType)) {
+                                    if (!Objects.isNull(runType) && !runType.toString().trim().isEmpty()) {
                                         seqReq.setDataField("SequencingRunType", runType, user);
                                     } else {
+                                        System.out.println("Changing runtype!!!");
                                         seqReq.setDataField("SequencingRunType", recipeToSequencingRunTypeMap.get(recipe), user);
                                     }
-
-                                    if (!Objects.isNull(reads)) {
-                                        if (Objects.isNull(refRecipeToCoverageMap.get(recipe)) || refRecipeToCoverageMap.get(recipe).size() == 0) {
-                                            String minMaxRead = d.getValue("RequestedReads", user)
-                                                    .toString().split(" ")[0];
+                                    if((!Objects.isNull(reads) && !reads.toString().trim().isEmpty()) &&
+                                            (!Objects.isNull(sequencingReadLength) && !sequencingReadLength.toString().trim().isEmpty())) {
+                                        String minMaxRead = d.getValue("RequestedReads", user)
+                                                .toString().split(" ")[0];
+                                        Object[] minMax = new Object[2];
+                                        if (minMaxRead.contains("-")) {
+                                            minMax = (Object[]) minMaxRead.split("-");
+                                            seqReq.setDataField("RequestedReads", minMax[1], user);
+                                            seqReq.setDataField("MinimumReads", minMax[0], user);
+                                        } else { // no range
+                                            seqReq.setDataField("RequestedReads", minMaxRead, user);
+                                        }
+                                        continue;
+                                    }
+                                    if (!Objects.isNull(reads) && !reads.toString().trim().isEmpty()) {
+                                        if (Objects.isNull(refRecipeToCoverageMap.get(recipe.toString())) ||
+                                                refRecipeToCoverageMap.get(recipe.toString()).size() == 0) {
+                                            String minMaxRead = d.getValue("RequestedReads", user).toString()
+                                                    .split(" ")[0];
                                             Object[] minMax = new Object[2];
                                             if (minMaxRead.contains("-")) {
                                                 minMax = (Object[]) minMaxRead.split("-");
@@ -459,23 +495,26 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                         }
                                     }
 
-                                    else if (Objects.isNull(coverage) && Objects.isNull(seqReq.getValue("RequestedReads", user))) {
+                                    else if ((Objects.isNull(coverage) || coverage.toString().trim().isEmpty()) &&
+                                            (Objects.isNull(seqReq.getValue("RequestedReads", user)) ||
+                                                    seqReq.getValue("RequestedReads", user).toString().trim().isEmpty())) {
                                         if (Objects.isNull(this.panelName)) {
-                                            if (recipeToCapturePanelMap.get(recipe).size() > 1) {
-                                                try {
-                                                    Object[] listOfCapturePanels = recipeToCapturePanelMap.get(recipe)
-                                                            .toArray(new String[recipeToCapturePanelMap.get(recipe).size()]);
+                                            if (recipeToCapturePanelMap.get(recipe.toString()).size() > 1) {
+                                                //try {
+                                                    Object[] listOfCapturePanels = recipeToCapturePanelMap.get(recipe.toString())
+                                                            .toArray(new String[recipeToCapturePanelMap.get(recipe.toString()).size()]);
                                                     String[] stringListOfCapturePanels = new String[listOfCapturePanels.length];
                                                     for (int i = 0; i < listOfCapturePanels.length; i++) {
                                                         stringListOfCapturePanels[i] = listOfCapturePanels[i].toString();
                                                     }
-                                                    int selectedCapturePanelIndex = clientCallback.showOptionDialog("",
-                                                            "Please select a capture panel", stringListOfCapturePanels, 0);
-                                                    this.panelName = (Object) stringListOfCapturePanels[selectedCapturePanelIndex];
-                                                } catch (ServerException se) {
-                                                    this.logError(String.valueOf(se.getStackTrace()));
-                                                    continue;
-                                                }
+//                                                    int selectedCapturePanelIndex = clientCallback.showOptionDialog("",
+//                                                            "Please select a capture panel", stringListOfCapturePanels, 0);
+                                                    this.panelName = (Object) stringListOfCapturePanels[0];
+//                                                }
+//                                                catch (ServerException se) {
+//                                                    this.logError(String.valueOf(se.getStackTrace()));
+//                                                    continue;
+//                                                }
                                             }
                                             DataRecord refRecord = CoverageToReadsUtil.getRefRecordFromRecipeAndCapturePanel
                                                     (recipe, this.panelName, tumorOrNormal, coverageReqRefs, user, this.pluginLogger);
@@ -488,7 +527,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                                         "MillionReadsMouse", user), user);
                                             }
                                             if(refRecipeToCoverageMap.get(recipe).size() > 0 &&
-                                                    !Objects.isNull(refRecipeToCoverageMap.get(recipe))) {
+                                                    !Objects.isNull(refRecipeToCoverageMap.get(recipe.toString()))) {
                                                 seqReq.setDataField("CoverageTarget", refRecord.getValue(
                                                         "Coverage", user), user);
                                             }
@@ -497,20 +536,21 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                     } else {
                                         // requested coverage has a value
                                         if (recipeToCapturePanelMap.get(recipe).size() > 1) {
-                                            try {
+                                            //try {
                                                 Object[] listOfCapturePanels = recipeToCapturePanelMap.get(recipe).toArray(
-                                                        new String[recipeToCapturePanelMap.get(recipe).size()]);
+                                                        new String[recipeToCapturePanelMap.get(recipe.toString()).size()]);
                                                 String[] stringListOfCapturePanels = new String[listOfCapturePanels.length];
                                                 for (int i = 0; i < listOfCapturePanels.length; i++) {
                                                     stringListOfCapturePanels[i] = listOfCapturePanels[i].toString();
                                                 }
-                                                int selectedCapturePanelIndex = clientCallback.showOptionDialog("",
-                                                        "Please select a capture panel", stringListOfCapturePanels, 0);
-                                                this.panelName = (Object) stringListOfCapturePanels[selectedCapturePanelIndex];
-                                            } catch (ServerException se) {
-                                                this.logError(String.valueOf(se.getStackTrace()));
-                                                return;
-                                            }
+//                                                int selectedCapturePanelIndex = clientCallback.showOptionDialog("",
+//                                                        "Please select a capture panel", stringListOfCapturePanels, 0);
+                                                this.panelName = (Object) stringListOfCapturePanels[0];
+//                                            }
+//                                            catch (ServerException se) {
+//                                                this.logError(String.valueOf(se.getStackTrace()));
+//                                                continue;
+//                                            }
                                         }
                                         DataRecord refRecord = CoverageToReadsUtil.getRefRecordFromRecipeAndCapturePanel(
                                                 recipe, this.panelName, tumorOrNormal, coverageReqRefs, user, this.pluginLogger);
