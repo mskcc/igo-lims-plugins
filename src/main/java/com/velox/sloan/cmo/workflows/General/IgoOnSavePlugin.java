@@ -25,8 +25,6 @@ import java.util.*;
  *
  * @author Ajay Sharma, Anna Patruno
  */
-
-// declaration of class
 public class IgoOnSavePlugin extends DefaultGenericPlugin {
     private final List<String> CMOINFO_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS = Arrays.asList("CorrectedCMOID", "CorrectedInvestPatientId", "UserSampleID",
             "OtherSampleId", "CmoPatientId", "Preservation", "TumorOrNormal", "TumorType", "CollectionYear", "Gender", "SpecimenType", "TissueSource");
@@ -36,12 +34,12 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
     private final String FAILED = "Failed";
     private String error = null;
 
-    // define constructor, what structure of class/object would look like
+    public IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
+
     public IgoOnSavePlugin() {
         setOnSave(true);
     }
-    public IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
-    // defining the method
+
     public PluginResult run() throws ServerException {
         try {
             // returns results in a list if something is changed and save button is clicked
@@ -96,7 +94,6 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
             logError(errMsg);
             return new PluginResult(false);
         }
-        // returns results or returns error if any
         return new PluginResult(error == null, error == null ? new ArrayList<Object>() : Collections.singletonList(error));
     }
 
@@ -231,12 +228,16 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                 seqQcRecords = utils.getSequencingQcRecords(parentSample.get(0), pluginLogger, user, clientCallback);
                 List<DataRecord> seqRequirements = utils.getRecordsOfTypeFromParents(seqQcRecords.get(0),
                         SampleModel.DATA_TYPE_NAME, SeqRequirementModel.DATA_TYPE_NAME, user, pluginLogger);
-                if(seqRequirements.size()==0){
+                if (seqRequirements.size()==0){
                     throw new NotFound(String.format("Cannot find %s DataRecord for Sample with Record Id %d", SeqRequirementModel.DATA_TYPE_NAME, parentSample.get(0).getRecordId()));
                 }
                 DataRecord seqRequirementRecord = seqRequirements.get(0);
                 logInfo("Sequencing requirement record id: " + seqRequirementRecord.getRecordId());
                 Object readsRequested = seqRequirementRecord.getValue(SeqRequirementModel.REQUESTED_READS, user);
+                if (readsRequested == null) {
+                    logInfo("Cannot update remaining reads since reads requested is null.");
+                    return;
+                }
                 logInfo("Requested Reads : " + readsRequested);
                 long totalReadsExamined = getSumSequencingReadsExamined(seqQcRecords, sampleLevelSequencingQc, runName);
                 logInfo("Total reads examined : " + totalReadsExamined);
@@ -325,6 +326,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
     private void validateSampleFields(DataRecord rec, String dataTypeName) {
         try {
             boolean isPoolSample = isPooledSampleType(rec);
+            logInfo("Is Pooled Sample: " + isPoolSample);
             Map<String, Object> fields = rec.getFields(user);
             for (String key : fields.keySet()) {
                 if (SAMPLE_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS.contains(key.trim())) {
