@@ -346,7 +346,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                 Object refCoverage = ref.getValue("Coverage", user);
                 Object refCapturePanel = ref.getValue("CapturePanel", user);
                 Object refSeqRunType = ref.getValue("SequencingRunType", user);
-                Object refHumanTranslatedReadsHuman = ref.getValue("MaxReads", user);
+                Object refHumanTranslatedReadsHuman = ref.getValue("MillionReadsHuman", user);
                 Set<Object> coverageSet = null;
                 Set<Object> capturePanelSet = null;
                 Set<Object> runTypeSet = null;
@@ -387,18 +387,13 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
 
             //}
         }
-//        System.out.println("refRecipeToCoverageMap size: " + refRecipeToCoverageMap.size());
-//        for(Map.Entry<String, Set<Object>> e : refRecipeToCoverageMap.entrySet()) {
-//                System.out.println(e.getKey() + ": " + e.getValue());
-//        }
         //******************************************************************
 //        while(true) {
-//            while(true) {
+            while(true) {
                 while(sampleIter.hasNext()) {
 
                     if(nonSeqRecipes.getEntryList().contains(recipe.toString())) {
-                        System.out.println("At non seq req recipes!");
-                        continue;
+                        break;
                     }
 
                     DataRecord s = (DataRecord)sampleIter.next();
@@ -408,9 +403,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                     Object tumorOrNormal = s.getValue("TumorOrNormal", user);
                     Object reads = null;
                     Object coverage = null;
-                    //******************************************************************
                     Object sequencingReadLength = null;
-                    //******************************************************************
                     Iterator banked = bankedSamples.iterator();
                     DataRecord d;
                     DataRecord seqReq;
@@ -426,12 +419,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                             runType = d.getValue("RunType", user);
                             sequencingReadLength = d.getValue("SequencingReadLength", user);
 
-
-                            System.out.println("reads: " + reads.toString());
-                            System.out.println("sequencingReadLength: " + sequencingReadLength.toString());
-                            System.out.println("runType: " + runType.toString());
-                            System.out.println("Coverage: " + coverage.toString());
-                            System.out.println("Recipe: " + recipe.toString());
                             //******************************************************************
                             if (!Objects.isNull(coverage)) {
                                 coverage = coverage.toString().replace("X", "").replace("x", "").trim();
@@ -496,7 +483,15 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                             }
                                         }
                                     }
+                                    // ShallowWGS, CRISPR
+                                    else if((Objects.isNull(refRecipeToCoverageMap.get(recipe.toString())) ||
+                                            refRecipeToCoverageMap.get(recipe.toString()).size() == 0) &&
+                                            (Objects.isNull(d.getValue("RequestedReads", user)) ||
+                                                    d.getValue("RequestedReads", user).toString().trim().isEmpty())) {
+                                        seqReq.setDataField("RequestedReads", refRecipeToTranslatedReadsHumanMap.
+                                                get(recipe.toString()), user);
 
+                                    }
                                     else if ((Objects.isNull(coverage) || coverage.toString().trim().isEmpty()) &&
                                             (Objects.isNull(seqReq.getValue("RequestedReads", user)) ||
                                                     seqReq.getValue("RequestedReads", user).toString().trim().isEmpty())) {
@@ -521,13 +516,13 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                                 }
                                                 else {
                                                     this.panelName = recipeToCapturePanelMap.get(recipe.toString()).toArray()[0];
-                                                    System.out.println("only 1 capture panel: " + panelName.toString());
+                                                    //System.out.println("only 1 capture panel: " + panelName.toString());
                                                 }
                                             }
 
                                             DataRecord refRecord = CoverageToReadsUtil.getRefRecordFromRecipeAndCapturePanel
                                                     (recipe, this.panelName, tumorOrNormal, coverage, coverageReqRefs, user, this.pluginLogger);
-                                            System.out.println("Coverage is null, after running the util func to assign coverage and requested reads");
+                                            //System.out.println("Coverage is null, after running the util func to assign coverage and requested reads");
                                             if (species.toString().equalsIgnoreCase("Human")) {
                                                 seqReq.setDataField("RequestedReads", refRecord.getValue(
                                                         "MillionReadsHuman", user), user);
@@ -536,7 +531,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                                 seqReq.setDataField("RequestedReads", refRecord.getValue(
                                                         "MillionReadsMouse", user), user);
                                             }
-                                            System.out.println("req reads: " + seqReq.getValue("RequestedReads", user).toString());
+                                            //System.out.println("req reads: " + seqReq.getValue("RequestedReads", user).toString());
                                             if(refRecipeToCoverageMap.get(recipe).size() > 0 &&
                                                     !Objects.isNull(refRecipeToCoverageMap.get(recipe.toString()))) {
                                                 seqReq.setDataField("CoverageTarget", refRecord.getValue(
@@ -595,5 +590,5 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                 return;
             }
         }
-//    }
+    }
 //}
