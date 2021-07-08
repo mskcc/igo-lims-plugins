@@ -4,6 +4,7 @@ import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginLogger;
 import com.velox.api.user.User;
+
 import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
@@ -30,8 +31,8 @@ class CoverageToReadsUtil {
             coverage = "";
         }
         Iterator references = seqReqReferences.iterator();
-        while(references.hasNext()) {
-            DataRecord d = (DataRecord)references.next();
+        while (references.hasNext()) {
+            DataRecord d = (DataRecord) references.next();
             Object dRecipe = d.getValue("PlatformApplication", user);
             Object dPanel = d.getValue("CapturePanel", user);
             Object dRunType = d.getValue("SequencingRunType", user);
@@ -56,7 +57,7 @@ class CoverageToReadsUtil {
         return null;
     }
 
-    public static DataRecord getRefRecordFromRecipeAndCapturePanel(Object recipe, Object panel, Object tumorOrNormal, Object coverage,  List<DataRecord> seqReqReferences, User user, PluginLogger logger) throws NotFound, RemoteException {
+    public static DataRecord getRefRecordFromRecipeAndCapturePanel(Object recipe, Object panel, Object tumorOrNormal, Object coverage, List<DataRecord> seqReqReferences, User user, PluginLogger logger) throws NotFound, RemoteException {
         if (Objects.isNull(recipe)) {
             recipe = "";
         }
@@ -67,8 +68,8 @@ class CoverageToReadsUtil {
             tumorOrNormal = "";
         }
         Iterator references = seqReqReferences.iterator();
-        while(references.hasNext()) {
-            DataRecord d = (DataRecord)references.next();
+        while (references.hasNext()) {
+            DataRecord d = (DataRecord) references.next();
             Object dRecipe = d.getValue("PlatformApplication", user);
             Object dPanel = d.getValue("CapturePanel", user);
             Object dTumorOrNormal = d.getValue("TumorNormal", user);
@@ -78,19 +79,17 @@ class CoverageToReadsUtil {
 //            logger.logInfo("dRecipe = recipe: " + Objects.equals(dRecipe, recipe));
 //            logger.logInfo("dPanel = panel: " + Objects.equals(dPanel, panel));
 //            logger.logInfo("dTumorOrNormal = tumorOrNormal: " + Objects.equals(dTumorOrNormal, tumorOrNormal));
-            if(Objects.isNull(panel) || panel.toString().trim().isEmpty()) {
+            if (Objects.isNull(panel) || panel.toString().trim().isEmpty()) {
                 if (Objects.equals(dRecipe, recipe) && Objects.equals(dTumorOrNormal, tumorOrNormal)
                         && dCoverage.toString().trim().equals(coverage.toString().trim())) {
                     return d;
                 }
-            }
-            else if(Objects.nonNull(dCoverage) && !coverage.toString().trim().isEmpty()) {
+            } else if (Objects.nonNull(dCoverage) && !coverage.toString().trim().isEmpty()) {
                 if (Objects.equals(dRecipe, recipe) && Objects.equals(dPanel, panel) && Objects.equals(dTumorOrNormal, tumorOrNormal)
                         && dCoverage.toString().trim().equals(coverage.toString().trim())) {
                     return d;
                 }
-            }
-            else {
+            } else {
                 if (Objects.equals(dRecipe, recipe) && Objects.equals(dPanel, panel) && Objects.equals(dTumorOrNormal, tumorOrNormal)) {
                     return d;
                 }
