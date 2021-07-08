@@ -78,7 +78,13 @@ class CoverageToReadsUtil {
 //            logger.logInfo("dRecipe = recipe: " + Objects.equals(dRecipe, recipe));
 //            logger.logInfo("dPanel = panel: " + Objects.equals(dPanel, panel));
 //            logger.logInfo("dTumorOrNormal = tumorOrNormal: " + Objects.equals(dTumorOrNormal, tumorOrNormal));
-            if(Objects.nonNull(dCoverage) && !coverage.toString().trim().isEmpty()) {
+            if(Objects.isNull(panel) || panel.toString().trim().isEmpty()) {
+                if (Objects.equals(dRecipe, recipe) && Objects.equals(dTumorOrNormal, tumorOrNormal)
+                        && dCoverage.toString().trim().equals(coverage.toString().trim())) {
+                    return d;
+                }
+            }
+            else if(Objects.nonNull(dCoverage) && !coverage.toString().trim().isEmpty()) {
                 if (Objects.equals(dRecipe, recipe) && Objects.equals(dPanel, panel) && Objects.equals(dTumorOrNormal, tumorOrNormal)
                         && dCoverage.toString().trim().equals(coverage.toString().trim())) {
                     return d;

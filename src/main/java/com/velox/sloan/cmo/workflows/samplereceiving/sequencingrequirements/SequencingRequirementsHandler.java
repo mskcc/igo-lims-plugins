@@ -559,7 +559,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
     //                                                continue;
     //                                            }
                                             }
-                                            else {
+                                            else if(recipeToCapturePanelMap.get(recipe.toString()).size() == 1) {
                                                 this.panelName = recipeToCapturePanelMap.get(recipe.toString());
                                             }
                                         }

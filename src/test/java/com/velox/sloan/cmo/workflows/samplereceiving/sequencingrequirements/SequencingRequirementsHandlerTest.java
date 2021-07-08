@@ -330,22 +330,22 @@ public class SequencingRequirementsHandlerTest {
             e.printStackTrace();
         }
     }
-//
-//    @Test
-//    public void sample05240_AH_1() {
-//        try {
-//            readData(user, dataRecordManager, "('05240_AH_1')");
-//            seqReqHandler.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, user, dataMgmtServer);
-//            if (attachedSamples.get(0).getValue("SampleId", user).toString().equals("05240_AH_1")) {
-//                assertEquals("PE150", seqRequirements.get(0).getValue("SequencingRunType", user).toString());
-//                assertEquals("40", seqRequirements.get(0).getValue("CoverageTarget", user).toString());
-//                assertEquals("600.0", seqRequirements.get(0).getValue("RequestedReads", user).toString());
-//                System.out.println("sample05240_AH_1");
-//            }
-//        }
-//        catch (NotFound | RemoteException | ServerException | IoError | InvalidValue e) {
-//            e.printStackTrace();
-//        }
-//    }
+
+    @Test
+    public void sample05240_AH_1() {
+        try {
+            readData(user, dataRecordManager, "('05240_AH_1')");
+            seqReqHandler.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, user, dataMgmtServer);
+            if (attachedSamples.get(0).getValue("SampleId", user).toString().equals("05240_AH_1")) {
+                assertEquals("PE150", seqRequirements.get(0).getValue("SequencingRunType", user).toString());
+                assertEquals("40", seqRequirements.get(0).getValue("CoverageTarget", user).toString());
+                assertEquals("600.0", seqRequirements.get(0).getValue("RequestedReads", user).toString());
+                System.out.println("sample05240_AH_1");
+            }
+        }
+        catch (NotFound | RemoteException | ServerException | IoError | InvalidValue e) {
+            e.printStackTrace();
+        }
+    }
 }
 
