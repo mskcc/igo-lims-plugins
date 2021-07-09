@@ -31,8 +31,11 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
 
     private final List<String> DLP_UPLOAD_SHEET_EXPECTED_HEADERS = Arrays.asList("Sample", "Row", "Column", "Img_Col", "File_Ch1", "File_Ch2", "Fld_Section", "Fld_Index", "Num_Live", "Num_Dead", "Num_Other",
             "Rev_Live", "Rev_Dead", "Rev_Other", "Rev_Class", "Condition", "Index_I7", "Primer_I7", "Index_I5", "Primer_I5", "Pick_Met", "Spot_Well", "Num_Drops");
-    private final List<String> ROW_NUMBERS_TO_SKIP = Arrays.asList("1", "2", "36", "37", "71", "72", "1.0", "2.0", "36.0", "37.0", "71.0", "72.0"); // these are the row numbers on DLP chip edges that are not spotted with samples and must be skipped.
-    private final List<String> COLUMN_NUMBERS_TO_SKIP = Arrays.asList("1", "2", "37", "38", "39", "71", "72", "1.0", "2.0", "37.0", "38.0", "39.0", "71.0", "72.0"); // these are the column numbers on DLP chip edges, and in middle of the chip, that are not spotted with samples and must be skipped.
+
+    // As of 7/9/21 we are allowing spotting on all coordinates b/c 11881_B & 11881_C required more areas to spot
+    private final List<String> ROW_NUMBERS_TO_SKIP = Arrays.asList(); // these are the row numbers on DLP chip edges that are not spotted with samples and must be skipped.
+    private final List<String> COLUMN_NUMBERS_TO_SKIP = Arrays.asList(); // these are the column numbers on DLP chip edges, and in middle of the chip, that are not spotted with samples and must be skipped.
+
     private final List<String> CELL_TYPES_TO_PROCESS = Arrays.asList("Live", "Dead", "Live/Dead");
     IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
     String recipe = ""; // Recipe to assign to new pool and new child records
