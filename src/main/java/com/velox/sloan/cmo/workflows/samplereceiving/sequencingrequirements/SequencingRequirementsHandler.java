@@ -488,21 +488,21 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                     if (Objects.isNull(this.panelName) || this.panelName.toString().trim().isEmpty()) {
                                         if (!Objects.isNull(recipeToCapturePanelMap.get(recipe.toString()))) {
                                             if (recipeToCapturePanelMap.get(recipe.toString()).size() > 1) {
-                                                //try {
+                                                try {
                                                 Object[] listOfCapturePanels = recipeToCapturePanelMap.get(recipe.toString())
                                                         .toArray(new String[recipeToCapturePanelMap.get(recipe.toString()).size()]);
                                                 String[] stringListOfCapturePanels = new String[listOfCapturePanels.length];
                                                 for (int i = 0; i < listOfCapturePanels.length; i++) {
                                                     stringListOfCapturePanels[i] = listOfCapturePanels[i].toString();
                                                 }
-//                                                    int selectedCapturePanelIndex = clientCallback.showOptionDialog("",
-//                                                            "Please select a capture panel", stringListOfCapturePanels, 0);
+                                                    int selectedCapturePanelIndex = clientCallback.showOptionDialog("",
+                                                            "Please select a capture panel", stringListOfCapturePanels, 0);
                                                 this.panelName = (Object) stringListOfCapturePanels[0];
-//                                                }
-//                                                catch (ServerException se) {
-//                                                    this.logError(String.valueOf(se.getStackTrace()));
-//                                                    continue;
-//                                                }
+                                                }
+                                                catch (ServerException se) {
+                                                    this.logError(String.valueOf(se.getStackTrace()));
+                                                    continue;
+                                                }
                                             } else {
                                                 this.panelName = recipeToCapturePanelMap.get(recipe.toString()).toArray()[0];
                                             }
@@ -529,21 +529,21 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                     // requested coverage has a value
                                     if (!Objects.isNull(recipeToCapturePanelMap.get(recipe.toString()))) {
                                         if (recipeToCapturePanelMap.get(recipe.toString()).size() > 1) {
-                                            //try {
+                                            try {
                                             Object[] listOfCapturePanels = recipeToCapturePanelMap.get(recipe).toArray(
                                                     new String[recipeToCapturePanelMap.get(recipe.toString()).size()]);
                                             String[] stringListOfCapturePanels = new String[listOfCapturePanels.length];
                                             for (int i = 0; i < listOfCapturePanels.length; i++) {
                                                 stringListOfCapturePanels[i] = listOfCapturePanels[i].toString();
                                             }
-                                            //                                                int selectedCapturePanelIndex = clientCallback.showOptionDialog("",
-                                            //                                                        "Please select a capture panel", stringListOfCapturePanels, 0);
+                                                                                            int selectedCapturePanelIndex = clientCallback.showOptionDialog("",
+                                                                                                    "Please select a capture panel", stringListOfCapturePanels, 0);
                                             this.panelName = (Object) stringListOfCapturePanels[0];
-                                            //                                            }
-                                            //                                            catch (ServerException se) {
-                                            //                                                this.logError(String.valueOf(se.getStackTrace()));
-                                            //                                                continue;
-                                            //                                            }
+                                        }
+                                            catch (ServerException se) {
+                                                this.logError(String.valueOf(se.getStackTrace()));
+                                                continue;
+                                            }
                                         } else if (recipeToCapturePanelMap.get(recipe.toString()).size() == 1) {
                                             this.panelName = recipeToCapturePanelMap.get(recipe.toString());
                                         }
