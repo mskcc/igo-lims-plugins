@@ -25,7 +25,8 @@ import java.util.*;
 
 public class CustomFieldsRetriever extends DefaultGenericPlugin {
 
-    private List<String> librarySampleTypes = Arrays.asList("dna library", "cdna library", "protein library", "pooled library");
+    private static List<String> unpooledLibTypes = Collections.unmodifiableSet(Arrays.asList("dna library", "cdna library", "protein library"));
+    private static List<String> pooledLibTypes = Collections.unmodifiableSet(Arrays.asList("pooled library"));
 
     public CustomFieldsRetriever() {
         setTaskEntry(true);
@@ -194,8 +195,8 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
         boolean found = false;
         do {
             List<DataRecord> parentSamples = startingSample.getParentsOfType("Sample", user);
-            if (parentSamples.size() > 0 && (parentSamples.get(0).getStringVal("ExemplarSampleType", user).equalsIgnoreCase(librarySampleTypes.get(0))
-                    || parentSamples.get(0).getStringVal("ExemplarSampleType", user).equalsIgnoreCase(librarySampleTypes.get(1)))) {
+            String sampleType = parentSamples.get(0).getStringVal("ExemplarSampleType", user).toLowerCase();
+            if(parentSamples.size() > 0 && unpooledLibTypes.contains(sampleType)){
                 samplesInPool = parentSamples;
                 found = true;
             } else {
@@ -328,13 +329,11 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
      * @throws InvalidValue
      */
     private String getSequencingRequirementDataType(DataRecord sample) throws NotFound, RemoteException, ServerException, InvalidValue {
-        String sampleType = sample.getStringVal("ExemplarSampleType", user);
-        if ( sampleType.equalsIgnoreCase(librarySampleTypes.get(0)) ||
-             sampleType.equalsIgnoreCase(librarySampleTypes.get(1)) ||
-             sampleType.equalsIgnoreCase(librarySampleTypes.get(2))) {
+        String sampleType = sample.getStringVal("ExemplarSampleType", user).toLowerCase();
+        if ( unpooledLibTypes.contains(sampleType) ){
             return "SeqRequirement";
         }
-        if (sampleType.equalsIgnoreCase(librarySampleTypes.get(3))) {
+        if ( pooledLibTypes.contains(sampleType) ) {
             return "SeqRequirementPooled";
         } else {
             clientCallback.displayError(String.format("Invalid SampleType '%s' for sample '%s'", sampleType, sample.getStringVal("SampleId", user)));
@@ -441,7 +440,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
                 String protocolSampleId = rec.getStringVal("SampleId", user);
                 if (protocolSampleId.equals(sampleId)) {
                     Map<String, Object> fieldValues = new HashMap<>();
-                    if (sampleType.equalsIgnoreCase(librarySampleTypes.get(2))) {
+                    if ( pooledLibTypes.contains(sampleType.toLowerCase()) ){
                         fieldValues.put("IndexId", getIndexIdsForPooledSample(sample));
                         fieldValues.put("IndexTag", getIndexTagsForPooledSample(sample));
                     } else {
