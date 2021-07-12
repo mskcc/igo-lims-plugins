@@ -25,7 +25,7 @@ import java.util.*;
 
 public class CustomFieldsRetriever extends DefaultGenericPlugin {
 
-    private List<String> librarySampleTypes = Arrays.asList("dna library", "cdna library", "pooled library");
+    private List<String> librarySampleTypes = Arrays.asList("dna library", "cdna library", "protein library", "pooled library");
 
     public CustomFieldsRetriever() {
         setTaskEntry(true);
@@ -329,10 +329,12 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
      */
     private String getSequencingRequirementDataType(DataRecord sample) throws NotFound, RemoteException, ServerException, InvalidValue {
         String sampleType = sample.getStringVal("ExemplarSampleType", user);
-        if (sampleType.equalsIgnoreCase(librarySampleTypes.get(0)) || sampleType.equalsIgnoreCase(librarySampleTypes.get(1))) {
+        if ( sampleType.equalsIgnoreCase(librarySampleTypes.get(0)) ||
+             sampleType.equalsIgnoreCase(librarySampleTypes.get(1)) ||
+             sampleType.equalsIgnoreCase(librarySampleTypes.get(2))) {
             return "SeqRequirement";
         }
-        if (sampleType.equalsIgnoreCase(librarySampleTypes.get(2))) {
+        if (sampleType.equalsIgnoreCase(librarySampleTypes.get(3))) {
             return "SeqRequirementPooled";
         } else {
             clientCallback.displayError(String.format("Invalid SampleType '%s' for sample '%s'", sampleType, sample.getStringVal("SampleId", user)));
