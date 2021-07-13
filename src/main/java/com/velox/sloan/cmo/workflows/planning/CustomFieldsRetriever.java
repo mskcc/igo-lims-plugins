@@ -25,8 +25,12 @@ import java.util.*;
 
 public class CustomFieldsRetriever extends DefaultGenericPlugin {
 
-    private static List<String> unpooledLibTypes = Collections.unmodifiableSet(Arrays.asList("dna library", "cdna library", "protein library"));
-    private static List<String> pooledLibTypes = Collections.unmodifiableSet(Arrays.asList("pooled library"));
+    private static Set<String> unpooledLibTypes = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            "dna library", "cdna library", "protein library"
+    )));
+    private static Set<String> pooledLibTypes = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            "pooled library"
+    )));
 
     public CustomFieldsRetriever() {
         setTaskEntry(true);
