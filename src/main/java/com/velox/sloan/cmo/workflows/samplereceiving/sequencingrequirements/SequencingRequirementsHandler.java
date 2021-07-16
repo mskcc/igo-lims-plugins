@@ -87,8 +87,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
             }
 
             List<DataRecord> relatedBankedSampleInfo = this.getBankedSamples(attachedSamples);
-            DataMgmtServer dms = null;
-            this.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, this.user, dms);
+            this.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, this.user, this.dataMgmtServer);
             this.activeTask.getTask().getTaskOptions().put("SEQUENCING REQUIREMENTS UPDATED", "");
         } catch (NotFound | ServerException | IoError | InvalidValue | RemoteException var6) {
             this.logError(String.valueOf(var6.getStackTrace()));
@@ -536,8 +535,8 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                             for (int i = 0; i < listOfCapturePanels.length; i++) {
                                                 stringListOfCapturePanels[i] = listOfCapturePanels[i].toString();
                                             }
-                                                                                            int selectedCapturePanelIndex = clientCallback.showOptionDialog("",
-                                                                                                    "Please select a capture panel", stringListOfCapturePanels, 0);
+                                            int selectedCapturePanelIndex = clientCallback.showOptionDialog("",
+                                                    "Please select a capture panel", stringListOfCapturePanels, 0);
                                             this.panelName = (Object) stringListOfCapturePanels[0];
                                         }
                                             catch (ServerException se) {

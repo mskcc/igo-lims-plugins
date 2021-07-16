@@ -10,6 +10,7 @@ import com.velox.sloan.cmo.recmodels.SampleModel;
 import com.velox.sloan.cmo.recmodels.SeqRequirementModel;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.rmi.RemoteException;
@@ -27,7 +28,6 @@ public class SequencingRequirementsHandlerTest {
     User user;
     DataRecordManager dataRecordManager;
     DataMgmtServer dataMgmtServer;
-    ClientCallbackOperations clientCallbackOps;
     SequencingRequirementsHandler seqReqHandler = new SequencingRequirementsHandler();
     List<DataRecord> coverageReqRefs;
     List<DataRecord> seqRequirements;
@@ -110,7 +110,7 @@ public class SequencingRequirementsHandlerTest {
                 }
             }
             seqReqHandler.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, user, dataMgmtServer);
-            //seqReqHandler.run();
+            
 
             if (!Objects.isNull(seqRequirements.get(0).getValue("RequestedReads", user))) {
                 assertEquals(sample1ReqReads, seqRequirements.get(0).getValue("RequestedReads", user).toString());
@@ -137,7 +137,7 @@ public class SequencingRequirementsHandlerTest {
                 }
             }
             seqReqHandler.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, user, dataMgmtServer);
-            //seqReqHandler.run();
+            
 
             if (!Objects.isNull(seqRequirements.get(0).getValue("RequestedReads", user))) {
                 assertEquals(sample2ReqReads, seqRequirements.get(0).getValue("RequestedReads", user).toString());
@@ -164,7 +164,7 @@ public class SequencingRequirementsHandlerTest {
                 }
             }
             seqReqHandler.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, user, dataMgmtServer);
-            //seqReqHandler.run();
+            
 
             if (!Objects.isNull(seqRequirements.get(0).getValue("RequestedReads", user))) {
                 assertEquals(sample3ReqReads, seqRequirements.get(0).getValue("RequestedReads", user).toString());
@@ -191,7 +191,7 @@ public class SequencingRequirementsHandlerTest {
                 }
 
                 seqReqHandler.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, user, dataMgmtServer);
-                //seqReqHandler.run();
+                
                 if (!Objects.isNull(seqRequirements.get(0).getValue("RequestedReads", user))) {
                     assertEquals(sample4ReqReads, seqRequirements.get(0).getValue("RequestedReads", user).toString());
                 }
@@ -210,7 +210,7 @@ public class SequencingRequirementsHandlerTest {
         try {
             readData(user, dataRecordManager, "('07340_B_53')");
             seqReqHandler.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, user, dataMgmtServer);
-            //seqReqHandler.run();
+            
             if (attachedSamples.get(0).getValue("SampleId", user).toString().equals("07340_B_53")) {
                 assertEquals("156/0/0/12", seqRequirements.get(0).getValue("SequencingRunType", user).toString());
             }
@@ -219,12 +219,12 @@ public class SequencingRequirementsHandlerTest {
         }
     }
 
-    @Test
+   @Test
     public void problem1Test() {
         try {
             readData(user, dataRecordManager, "('05538_AD_2')");
             seqReqHandler.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, user, dataMgmtServer);
-            //seqReqHandler.run();
+            
             if (attachedSamples.get(0).getValue("SampleId", user).toString().equals("05538_AD_2")) {
                 assertEquals("PE100", seqRequirements.get(0).getValue("SequencingRunType", user).toString());
                 assertEquals("30.0", seqRequirements.get(0).getValue("MinimumReads", user).toString());
@@ -240,7 +240,7 @@ public class SequencingRequirementsHandlerTest {
         try {
             readData(user, dataRecordManager, "('06000_IW_3')");
             seqReqHandler.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, user, dataMgmtServer);
-            //seqReqHandler.run();
+            
             if (attachedSamples.get(0).getValue("SampleId", user).toString().equals("06000_IW_3")) {
                 assertEquals("PE50", seqRequirements.get(0).getValue("SequencingRunType", user).toString());
                 assertEquals("10.0", seqRequirements.get(0).getValue("RequestedReads", user).toString());
@@ -256,7 +256,6 @@ public class SequencingRequirementsHandlerTest {
         try {
             readData(user, dataRecordManager, "('04553_L_1')");
             seqReqHandler.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, user, dataMgmtServer);
-            //seqReqHandler.run();
             if (attachedSamples.get(0).getValue("SampleId", user).toString().equals("04553_L_1")) {
                 assertEquals("PE100", seqRequirements.get(0).getValue("SequencingRunType", user).toString());
                 assertEquals("500", seqRequirements.get(0).getValue("CoverageTarget", user).toString());
@@ -272,7 +271,6 @@ public class SequencingRequirementsHandlerTest {
         try {
             readData(user, dataRecordManager, "('05257_CT_1')");
             seqReqHandler.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, user, dataMgmtServer);
-            //seqReqHandler.run();
             if (attachedSamples.get(0).getValue("SampleId", user).toString().equals("05257_CT_1")) {
                 assertEquals("PE100", seqRequirements.get(0).getValue("SequencingRunType", user).toString());
                 assertEquals("1000", seqRequirements.get(0).getValue("CoverageTarget", user).toString());
@@ -283,6 +281,7 @@ public class SequencingRequirementsHandlerTest {
         }
     }
 
+    //LIMS user selects the capture panel
 //    @Test
 //    public void sample04553_M_1() {
 //        try {
@@ -304,7 +303,6 @@ public class SequencingRequirementsHandlerTest {
         try {
             readData(user, dataRecordManager, "('09025_E_1')");
             seqReqHandler.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, user, dataMgmtServer);
-            //seqReqHandler.run();
             if (attachedSamples.get(0).getValue("SampleId", user).toString().equals("09025_E_1")) {
                 assertEquals("PE100", seqRequirements.get(0).getValue("SequencingRunType", user).toString());
                 assertEquals("10.0", seqRequirements.get(0).getValue("RequestedReads", user).toString());
@@ -320,7 +318,6 @@ public class SequencingRequirementsHandlerTest {
         try {
             readData(user, dataRecordManager, "('09037_B_1')");
             seqReqHandler.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, user, dataMgmtServer);
-            //seqReqHandler.run();
             if (attachedSamples.get(0).getValue("SampleId", user).toString().equals("09037_B_1")) {
                 assertEquals("PE100", seqRequirements.get(0).getValue("SequencingRunType", user).toString());
                 assertEquals("0.1", seqRequirements.get(0).getValue("RequestedReads", user).toString());
@@ -335,7 +332,6 @@ public class SequencingRequirementsHandlerTest {
         try {
             readData(user, dataRecordManager, "('05240_AH_1')");
             seqReqHandler.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, user, dataMgmtServer);
-            //seqReqHandler.run();
             if (attachedSamples.get(0).getValue("SampleId", user).toString().equals("05240_AH_1")) {
                 assertEquals("PE150", seqRequirements.get(0).getValue("SequencingRunType", user).toString());
                 assertEquals("40", seqRequirements.get(0).getValue("CoverageTarget", user).toString());
