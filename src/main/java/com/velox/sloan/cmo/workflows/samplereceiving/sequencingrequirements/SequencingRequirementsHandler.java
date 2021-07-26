@@ -96,41 +96,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
         return new PluginResult(true);
     }
 
-
-    /**
-     * Method to get SampleIds.
-     *
-     * @param attachedSamples
-     * @return
-     */
-    private List<Object> getSampleIds(List<DataRecord> attachedSamples) {
-        return attachedSamples.stream().map((s) -> {
-            try {
-                return s.getValue("OtherSampleId", this.user);
-            } catch (RemoteException | NotFound var3) {
-                var3.printStackTrace();
-                return null;
-            }
-        }).collect(Collectors.toList());
-    }
-
-    /**
-     * Method to get requestIds.
-     *
-     * @param attachedSamples
-     * */
-    private List<Object> getRequestIds(List<DataRecord> attachedSamples) {
-        return attachedSamples.stream().map((s) -> {
-            try {
-                return s.getValue("RequestId", this.user);
-            } catch (RemoteException | NotFound var3) {
-                var3.printStackTrace();
-                return null;
-            }
-        }).collect(Collectors.toList());
-    }
-
-
     /**
      * Method to get banked samples related to samples attached to the task.
      *
@@ -145,8 +110,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
         for (int i = 0; i < attachedSamples.size(); i++) {
             Object requestId = ((DataRecord) attachedSamples.get(i)).getValue("RequestId", this.user);
             Object userSampleId = ((DataRecord) attachedSamples.get(i)).getValue("UserSampleID", this.user);
-            List<Object> sampleIds = this.getSampleIds(attachedSamples);
-            List<Object> requestIds = this.getRequestIds(attachedSamples);
             //this.logInfo("RequestId: " + requestId);
             String whereClause = String.format("%s=%s AND %s=%s", "UserSampleID", userSampleId, "RequestId", requestId);
             //this.logInfo("WHERE CLAUSE: " + whereClause);
@@ -180,18 +143,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
         return new ArrayList(recipes);
     }
 
-
-    /**
-     * Method to check if a Recipe requires Sequencing Coverage.
-     *
-     * @param coverageRecipes
-     * @return
-     */
-    private boolean isCoverageBasedApplication(List<String> coverageRecipes) {
-        return coverageRecipes.contains(recipe);
-    }
-
-
     /**
      * Method to get the runTypes for a Recipe from the 'ApplicationReadCoverageRef' table in LIMS.
      *
@@ -213,48 +164,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
         }
         return new ArrayList(runTypes);
     }
-
-
-    /**
-     * Method to get RunType
-     *
-     * @param bankedSamples
-     * @return
-     * @throws NotFound
-     * @throws RemoteException
-     * @throws ServerException
-     */
-    private Object getRunType(List<DataRecord> bankedSamples, List<DataRecord> refs) throws NotFound, RemoteException, ServerException {
-        Object runTypeVal = null;
-        Iterator banked = bankedSamples.iterator();
-        do {
-            if (!banked.hasNext()) {
-                //this.logInfo("Run type after checking on banked samples: " + runTypeVal);
-                if (Objects.isNull(runTypeVal) || StringUtils.isBlank((String) runTypeVal)) {
-                    //this.logInfo("Prompting user for run type.");
-                    List<String> sequencingRunTypes = this.getRunTypeValues(refs);
-                    // if only one RunType value for Recipe, return the RunType and skip the user prompt.
-                    if (sequencingRunTypes.size() == 1) {
-                        return sequencingRunTypes.get(0);
-                    }
-                    List runTypes = this.clientCallback.showListDialog("Select Sequencing Run Type", sequencingRunTypes, false, this.user);
-                    //this.logInfo("user selected run type: " + runTypes.toString());
-                    if (runTypes.size() > 0) {
-                        return runTypes.get(0);
-                    }
-                    this.clientCallback.displayError("Run Type is a required field. User did not select a valid Run Type.");
-                    throw new NullPointerException("Run Type is a required field. User did not select a valid Run Type.");
-                }
-                return null;
-            }
-            DataRecord d = (DataRecord) banked.next();
-            runTypeVal = d.getValue("RunType", this.user);
-            //this.logInfo("Run Type on banked Sample: " + runTypeVal);
-        } while (Objects.isNull(runTypeVal) || !StringUtils.isNotBlank((String) runTypeVal));
-        //this.logInfo("Banked Sample run type: " + runTypeVal);
-        return runTypeVal;
-    }
-
 
     /**
      * Method to get PanelNames from 'ApplicationReadCoverageRef' table in LIMS.
@@ -278,49 +187,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
         return new ArrayList(panels);
     }
 
-
-    /**
-     * Method to get PanelName value from user
-     *
-     * @param referenceValues
-     * @return
-     * @throws NotFound
-     * @throws RemoteException
-     * @throws ServerException
-     */
-    private Object getPanelName(List<DataRecord> referenceValues) throws NotFound, RemoteException, ServerException {
-        Iterator references = referenceValues.iterator();
-        while (true) {
-            Object dRecipe;
-            Object dPanel;
-            do {
-                if (!references.hasNext()) {
-                    return "";
-                }
-                DataRecord d = (DataRecord) references.next();
-                dRecipe = d.getValue("PlatformApplication", this.user);
-                dPanel = d.getValue("CapturePanel", this.user);
-            } while (!Objects.isNull(this.panelName) && !StringUtils.isBlank(this.panelName.toString().trim()));
-
-            if (Objects.nonNull(dPanel) && !StringUtils.isBlank(dPanel.toString()) && Objects.equals(recipe, dRecipe)) {
-                List<String> capturePanels = this.getCapturePanelValues(referenceValues);
-                // if there is only one capture panel for recipe then return the capture panel and skip user prompt.
-                if (capturePanels.size() == 1) {
-                    return capturePanels.get(0);
-                }
-                String msg = String.format("Recipe '%s' should have a 'CapturePanel' value. Missing 'CapturePanel' value may result in failure to update RequestedReads/RequestedCoverage. Select 'YES' to pick CapturePanel value.", recipe);
-                boolean selectPanel = this.clientCallback.showYesNoDialog(String.format("Missing 'Capture Panel' value for Recipe '%s'.", recipe), msg);
-                if (selectPanel) {
-                    List panelSelected = this.clientCallback.showListDialog("Select CapturePanel/Baitset from the list", capturePanels, false, this.user);
-                    if (panelSelected.size() > 0) {
-                        return panelSelected.get(0);
-                    }
-                }
-            }
-        }
-    }
-
-
     /**
      * Method to update SequencingRequirements from 'ApplicationReadCoverageRef' values.
      *
@@ -340,11 +206,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
 
         recipe = samples.get(0).getValue(SampleModel.RECIPE, user);
         Iterator sampleIter = samples.iterator();
-        //this.logInfo("samples size:" + samples.size());
-        //this.logInfo("banked samples size:" + bankedSamples.size());
-        //this.logInfo("banked sample elements: " + bankedSamples.get(0).getValue("RecordId", user).toString());
-        //this.logInfo("banked sample elements: " + bankedSamples.get(1).getValue("RecordId", user).toString());
-        //this.logInfo("banked sample elements: " + bankedSamples.get(2).getValue("RecordId", user).toString());
+
         // Fetching the NonSequencingRecipes from its pick list
         PickListConfig nonSeqRecipes = null;
         try {
