@@ -90,11 +90,12 @@ class CoverageToReadsUtil {
                     return d;
                 }
             } else {
-                if (Objects.equals(dRecipe, recipe) && Objects.equals(dPanel, panel) && Objects.equals(dTumorOrNormal, tumorOrNormal)) {
+                if (Objects.equals(dRecipe, recipe)/* && Objects.equals(dPanel, panel)*/ && Objects.equals(dTumorOrNormal, tumorOrNormal)) {
                     return d;
                 }
             }
         }
+        //logger.logInfo("returning null!!");
         return null;
     }
 }
