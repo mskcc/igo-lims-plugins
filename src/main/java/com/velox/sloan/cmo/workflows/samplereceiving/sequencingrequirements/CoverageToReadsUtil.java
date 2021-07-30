@@ -85,8 +85,13 @@ class CoverageToReadsUtil {
                     return d;
                 }
             } else if (Objects.nonNull(dCoverage) && !coverage.toString().trim().isEmpty()) {
-                if (Objects.equals(dRecipe, recipe) && Objects.equals(dPanel, panel) && Objects.equals(dTumorOrNormal, tumorOrNormal)
-                        && dCoverage.toString().trim().equals(coverage.toString().trim())) {
+                if (Objects.equals(dRecipe, recipe) && Objects.equals(dPanel, panel) &&
+                        dCoverage.toString().trim().equals(coverage.toString().trim())) {
+                    if(Objects.nonNull(dTumorOrNormal)) {
+                        if(Objects.equals(dTumorOrNormal, tumorOrNormal)) {
+                            return d;
+                        }
+                    }
                     return d;
                 }
             } else {
