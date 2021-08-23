@@ -9,6 +9,7 @@ import java.rmi.RemoteException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.logging.Logger;
 
 class CoverageToReadsUtil {
     CoverageToReadsUtil() {
@@ -74,16 +75,26 @@ class CoverageToReadsUtil {
             Object dPanel = d.getValue("CapturePanel", user);
             Object dTumorOrNormal = d.getValue("TumorNormal", user);
             Object dCoverage = d.getValue("Coverage", user);
-//            logger.logInfo(String.format("Given values: Recipe: %s, Panel: %s, TumorOrNormal: %s", recipe, panel, tumorOrNormal));
-//            logger.logInfo(String.format("Reference values: Recipe: %s, Panel: %s, TumorOrNormal: %s, RequestedCoverage: %s", dRecipe, dPanel, dTumorOrNormal, dCoverage));
-//            logger.logInfo("dRecipe = recipe: " + Objects.equals(dRecipe, recipe));
-//            logger.logInfo("dPanel = panel: " + Objects.equals(dPanel, panel));
-//            logger.logInfo("dTumorOrNormal = tumorOrNormal: " + Objects.equals(dTumorOrNormal, tumorOrNormal));
+            logger.logInfo(String.format("Given values: Recipe: %s, Panel: %s, TumorOrNormal: %s, Coverage: %s ", recipe, panel, tumorOrNormal, coverage));
+            logger.logInfo(String.format("Reference values: Recipe: %s, Panel: %s, TumorOrNormal: %s, RequestedCoverage: %s", dRecipe, dPanel, dTumorOrNormal, dCoverage));
+            logger.logInfo("dRecipe = recipe: " + Objects.equals(dRecipe, recipe));
+            logger.logInfo("dPanel = panel: " + Objects.equals(dPanel, panel));
+            logger.logInfo("dTumorOrNormal = tumorOrNormal: " + Objects.equals(dTumorOrNormal, tumorOrNormal));
+            logger.logInfo("dCoverage = coverage: " + Objects.equals(dCoverage, coverage));
+
+
             if (Objects.isNull(panel) || panel.toString().trim().isEmpty()) {
-                if (Objects.equals(dRecipe, recipe) && Objects.equals(dTumorOrNormal, tumorOrNormal)
+                if (Objects.equals(dRecipe, recipe) && (Objects.nonNull(tumorOrNormal) || !tumorOrNormal.toString().trim()
+                        .isEmpty()) && Objects.equals(dTumorOrNormal, tumorOrNormal)
                         && dCoverage.toString().trim().equals(coverage.toString().trim())) {
                     return d;
                 }
+                else if((Objects.isNull(dTumorOrNormal) || dTumorOrNormal.toString().trim().isEmpty())) {
+                    if (Objects.equals(dRecipe, recipe) && dCoverage.toString().trim().equals(coverage.toString().trim())) {
+                        return d;
+                    }
+                }
+
             } else if (Objects.nonNull(dCoverage) && !coverage.toString().trim().isEmpty()) {
                 if (Objects.equals(dRecipe, recipe) && Objects.equals(dPanel, panel) &&
                         dCoverage.toString().trim().equals(coverage.toString().trim())) {
@@ -100,7 +111,6 @@ class CoverageToReadsUtil {
                 }
             }
         }
-        //logger.logInfo("returning null!!");
         return null;
     }
 }

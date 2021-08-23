@@ -199,6 +199,35 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
         }
 
         Iterator sampleIter = samples.iterator();
+        Set<String> batchRecipes = new HashSet<>();
+        while(sampleIter.hasNext()) {
+            DataRecord s = (DataRecord) sampleIter.next();
+            recipe = s.getValue(SampleModel.RECIPE, user);
+            batchRecipes.add(recipe.toString());
+        }
+
+        for(String recipe : batchRecipes) {
+            if (recipeToCapturePanelMap.get(recipe).size() > 1) {
+                try {
+                    this.logInfo("More than 1 capture panel");
+                    Object[] listOfCapturePanels = recipeToCapturePanelMap.get(recipe).toArray(
+                            new String[recipeToCapturePanelMap.get(recipe).size()]);
+                    String[] stringListOfCapturePanels = new String[listOfCapturePanels.length];
+                    for (int i = 0; i < listOfCapturePanels.length; i++) {
+                        stringListOfCapturePanels[i] = listOfCapturePanels[i].toString();
+                    }
+                    int selectedCapturePanelIndex = clientCallback.showOptionDialog("",
+                            "Please select a capture panel for recipe: " + recipe, stringListOfCapturePanels, 0);
+                    this.panelName = (Object) stringListOfCapturePanels[selectedCapturePanelIndex];
+                } catch (ServerException se) {
+                    this.logError(String.valueOf(se.getStackTrace()));
+                    //continue;
+                }
+            }
+
+        }
+
+
         while(true) {
             while (true) {
                 while (sampleIter.hasNext()) {
@@ -306,7 +335,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                         (Objects.isNull(reads) || reads.toString().trim().isEmpty())) {
                                     this.logInfo("I thought it's ShallowWGS or CRISPR");
                                     this.logInfo("ref recipe to translated reads for shallowES: " + refRecipeToTranslatedReadsHumanMap.
-                                    get("ShallowWGS"));
+                                            get("ShallowWGS"));
                                     this.logInfo("!!!Recipe: " + recipe.toString());
                                     seqReq.setDataField("RequestedReads", refRecipeToTranslatedReadsHumanMap.
                                             get(recipe.toString()), user);
@@ -320,25 +349,25 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                     if (Objects.isNull(this.panelName) || this.panelName.toString().trim().isEmpty()) {
                                         if (!Objects.isNull(recipeToCapturePanelMap.get(recipe.toString()))) {
                                             this.logInfo("recipe to capture panel was NOT null!");
-                                            if (recipeToCapturePanelMap.get(recipe.toString()).size() > 1) {
-                                                try {
-                                                    this.logInfo("More than 1 capture panel");
-                                                    Object[] listOfCapturePanels = recipeToCapturePanelMap.get(recipe.toString())
-                                                            .toArray(new String[recipeToCapturePanelMap.get(recipe.toString()).size()]);
-                                                    String[] stringListOfCapturePanels = new String[listOfCapturePanels.length];
-                                                    for (int i = 0; i < listOfCapturePanels.length; i++) {
-                                                        stringListOfCapturePanels[i] = listOfCapturePanels[i].toString();
-                                                    }
-                                                    int selectedCapturePanelIndex = clientCallback.showOptionDialog("",
-                                                            "Please select a capture panel", stringListOfCapturePanels, 0);
-                                                    this.panelName = (Object) stringListOfCapturePanels[selectedCapturePanelIndex];
-                                                } catch (ServerException se) {
-                                                    this.logError(String.valueOf(se.getStackTrace()));
-                                                    //continue;
-                                                }
-                                            } else {
+//                                            if (recipeToCapturePanelMap.get(recipe.toString()).size() > 1) {
+//                                                try {
+//                                                    this.logInfo("More than 1 capture panel");
+//                                                    Object[] listOfCapturePanels = recipeToCapturePanelMap.get(recipe.toString())
+//                                                            .toArray(new String[recipeToCapturePanelMap.get(recipe.toString()).size()]);
+//                                                    String[] stringListOfCapturePanels = new String[listOfCapturePanels.length];
+//                                                    for (int i = 0; i < listOfCapturePanels.length; i++) {
+//                                                        stringListOfCapturePanels[i] = listOfCapturePanels[i].toString();
+//                                                    }
+//                                                    int selectedCapturePanelIndex = clientCallback.showOptionDialog("",
+//                                                            "Please select a capture panel", stringListOfCapturePanels, 0);
+//                                                    this.panelName = (Object) stringListOfCapturePanels[selectedCapturePanelIndex];
+//                                                } catch (ServerException se) {
+//                                                    this.logError(String.valueOf(se.getStackTrace()));
+//                                                    //continue;
+//                                                }
+//                                            } else {
                                                 this.panelName = recipeToCapturePanelMap.get(recipe.toString()).toArray()[0];
-                                            }
+                                            //}
                                         }
                                     }
                                     this.logInfo("finding ref corresponding record..");
@@ -357,8 +386,16 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                         seqReq.setDataField("RequestedReads", refRecord.getValue(
                                                 "MillionReadsHuman", user), user);
                                     } else if (species.toString().equalsIgnoreCase("Mouse")) {
-                                        seqReq.setDataField("RequestedReads", refRecord.getValue(
-                                                "MillionReadsMouse", user), user);
+                                        if (Objects.nonNull(refRecord.getValue(
+                                                "MillionReadsMouse", user)) && !refRecord.getValue(
+                                                "MillionReadsMouse", user).toString().trim().isEmpty()) {
+                                            seqReq.setDataField("RequestedReads", refRecord.getValue(
+                                                    "MillionReadsMouse", user), user);
+                                        } else {
+                                            seqReq.setDataField("RequestedReads", refRecord.getValue(
+                                                    "MillionReadsHuman", user), user);
+                                        }
+
                                     }
                                     if (refRecipeToCoverageMap.get(recipe).size() > 0 &&
                                             !Objects.isNull(refRecipeToCoverageMap.get(recipe.toString()))) {
@@ -371,24 +408,26 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                     this.logInfo("Coverage is NOT null..");
                                     if (!Objects.isNull(recipeToCapturePanelMap.get(recipe.toString()))) {
                                         this.logInfo("recipe to capture panel was NOT null!");
-                                        if (recipeToCapturePanelMap.get(recipe.toString()).size() > 1) {
-                                            try {
-                                                this.logInfo("More than 1 capture panel");
-                                                Object[] listOfCapturePanels = recipeToCapturePanelMap.get(recipe).toArray(
-                                                        new String[recipeToCapturePanelMap.get(recipe.toString()).size()]);
-                                                String[] stringListOfCapturePanels = new String[listOfCapturePanels.length];
-                                                for (int i = 0; i < listOfCapturePanels.length; i++) {
-                                                    stringListOfCapturePanels[i] = listOfCapturePanels[i].toString();
-                                                }
-                                                int selectedCapturePanelIndex = clientCallback.showOptionDialog("",
-                                                        "Please select a capture panel", stringListOfCapturePanels, 0);
-                                                this.panelName = (Object) stringListOfCapturePanels[selectedCapturePanelIndex];
-                                            } catch (ServerException se) {
-                                                this.logError(String.valueOf(se.getStackTrace()));
-                                                //continue;
-                                            }
-                                        } else if (recipeToCapturePanelMap.get(recipe.toString()).size() == 1) {
+//                                        if (recipeToCapturePanelMap.get(recipe.toString()).size() > 1) {
+//                                            try {
+//                                                this.logInfo("More than 1 capture panel");
+//                                                Object[] listOfCapturePanels = recipeToCapturePanelMap.get(recipe).toArray(
+//                                                        new String[recipeToCapturePanelMap.get(recipe.toString()).size()]);
+//                                                String[] stringListOfCapturePanels = new String[listOfCapturePanels.length];
+//                                                for (int i = 0; i < listOfCapturePanels.length; i++) {
+//                                                    stringListOfCapturePanels[i] = listOfCapturePanels[i].toString();
+//                                                }
+//                                                int selectedCapturePanelIndex = clientCallback.showOptionDialog("",
+//                                                        "Please select a capture panel for sample: " + sampleId, stringListOfCapturePanels, 0);
+//                                                this.panelName = (Object) stringListOfCapturePanels[selectedCapturePanelIndex];
+//                                            } catch (ServerException se) {
+//                                                this.logError(String.valueOf(se.getStackTrace()));
+//                                                //continue;
+//                                            }
+//                                        } else
+                                        if (recipeToCapturePanelMap.get(recipe.toString()).size() == 1) {
                                             this.panelName = recipeToCapturePanelMap.get(recipe.toString());
+                                            this.logInfo("sample:" + s.getValue("OtherSampleId", user) + " the only panel is: " + this.panelName);
                                         }
                                     }
                                     this.logInfo("new panel: " + this.panelName);
@@ -408,8 +447,16 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                         seqReq.setDataField("RequestedReads", refRecord.getValue(
                                                 "MillionReadsHuman", user), user);
                                     } else if (species.toString().equalsIgnoreCase("Mouse")) {
-                                        seqReq.setDataField("RequestedReads", refRecord.getValue(
-                                                "MillionReadsMouse", user), user);
+                                        if (Objects.nonNull(refRecord.getValue(
+                                                "MillionReadsMouse", user)) && !refRecord.getValue(
+                                                "MillionReadsMouse", user).toString().trim().isEmpty()) {
+                                            seqReq.setDataField("RequestedReads", refRecord.getValue(
+                                                    "MillionReadsMouse", user), user);
+                                        } else {
+                                            seqReq.setDataField("RequestedReads", refRecord.getValue(
+                                                    "MillionReadsHuman", user), user);
+                                        }
+
                                     }
                                     if (refRecipeToCoverageMap.get(recipe).size() > 0 &&
                                             !Objects.isNull(refRecipeToCoverageMap.get(recipe))) {
