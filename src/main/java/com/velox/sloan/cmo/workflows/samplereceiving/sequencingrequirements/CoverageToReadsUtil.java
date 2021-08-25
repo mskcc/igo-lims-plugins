@@ -83,7 +83,7 @@ class CoverageToReadsUtil {
             logger.logInfo("dCoverage = coverage: " + Objects.equals(dCoverage, coverage));
 
 
-            if (Objects.isNull(panel) || panel.toString().trim().isEmpty()) {
+            if (Objects.isNull(dPanel) || dPanel.toString().trim().isEmpty()) {
                 if (Objects.equals(dRecipe, recipe) && (Objects.nonNull(tumorOrNormal) || !tumorOrNormal.toString().trim()
                         .isEmpty()) && Objects.equals(dTumorOrNormal, tumorOrNormal)
                         && dCoverage.toString().trim().equals(coverage.toString().trim())) {
