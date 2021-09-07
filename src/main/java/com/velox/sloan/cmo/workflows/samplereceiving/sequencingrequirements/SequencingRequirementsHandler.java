@@ -245,7 +245,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                         Object tumorOrNormal = s.getValue("TumorOrNormal", user);
                         Object reads = null;
                         Object coverage = null;
-                        Object sequencingReadLength = null;
+                        //Object sequencingReadLength = null;
                         Iterator banked = bankedSamples.iterator();
                         Iterator seqReqs1 = seqRequirements.iterator();
                         DataRecord d = null;
@@ -258,7 +258,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                 reads = d.getValue("RequestedReads", user);
                                 coverage = d.getValue("RequestedCoverage", user);
                                 runType = d.getValue("RunType", user);
-                                sequencingReadLength = d.getValue("SequencingReadLength", user);
+                                //sequencingReadLength = d.getValue("SequencingReadLength", user);
                                 if (!Objects.isNull(coverage)) {
                                     coverage = coverage.toString().replace("X", "").replace("x",
                                             "").trim();
@@ -296,9 +296,9 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                     seqReq.setDataField("SequencingRunType", recipeToSequencingRunTypeMap
                                             .get(recipe.toString()), user);
                                 }
-                                if (!Objects.isNull(reads) && !reads.toString().trim().isEmpty()) {
-                                    if (!Objects.isNull(sequencingReadLength) && !sequencingReadLength.toString()
-                                            .trim().isEmpty()) {
+
+                                if (Objects.nonNull(reads) && !reads.toString().trim().isEmpty()) {
+                                    if (Objects.nonNull(runType) && !runType.toString().trim().isEmpty()) {
                                         String minMaxRead = reads.toString().split(" ")[0];
                                         Object[] minMax = new Object[2];
                                         if (minMaxRead.contains("-")) {
@@ -319,7 +319,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                         } else { // no range
                                             seqReq.setDataField("RequestedReads", minMaxRead, user);
                                         }
-                                        //this.logInfo("Here at read parsing I am..");
+                                        this.logInfo("Here at read parsing I am..");
                                     }
                                 }
 
