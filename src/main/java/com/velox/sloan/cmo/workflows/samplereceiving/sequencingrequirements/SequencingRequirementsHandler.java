@@ -76,12 +76,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
 
-            // If user submitted pooled libraries, do not run the plugin.
-            if (sampleType.toString().toLowerCase().equals("pooled library")) {
-                logInfo("Skipping coverage to reads conversion for user submitted pools");
-                return new PluginResult(true);
-            }
-
             if (seqRequirements.isEmpty()) {
                 this.clientCallback.displayError("Sample 'SequencingRequirements' not attached to this task.");
                 return new PluginResult(false);
