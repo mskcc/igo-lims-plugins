@@ -15,11 +15,15 @@ repositories {
 
 
 dependencies {
-    compile 'com.velox.internalproducts:accessionservice:LIMS10.6.1'
-    compile 'com.velox.internalproducts:sapio-commons:15.1.0-LIMS10.6.1'
+    //compile 'com.velox.internalproducts:accessionservice:LIMS10.6.1'
     compile 'com.velox.internalproducts:sapiogeneric:15.1.0-LIMS10.6.1'
     compile 'com.velox.internalproducts:sapioutils:15.1.0-LIMS10.6.1'
-    compile 'com.velox.sloan.cmo:sloancmo:2.21.1-LIMS10.6.1_b84'
+    compile 'com.velox.internalproducts:sapio-commons:15.1.0-LIMS10.6.1'
+//    compile 'com.velox.internalproducts:sapiogeneric:15.0.0-LIMS10.6.1'
+//    compile 'com.velox.internalproducts:sapioutils:15.0.0-LIMS10.6.1'
+//    compile 'com.velox.internalproducts:sapio-commons:15.0.0-LIMS10.6.1'
+    //compile 'com.velox.sloan.cmo:sloancmo:2.21.1-LIMS10.6.1_b84'
+    compile 'com.velox.sloan.cmo:sloancmo:2.21.1-LIMS10.6.1_b777'
     compile 'com.velox.internalproducts:veloxapi:10.6.1-b777'
 
     compile ('org.apache.poi:poi-ooxml:3.17')
