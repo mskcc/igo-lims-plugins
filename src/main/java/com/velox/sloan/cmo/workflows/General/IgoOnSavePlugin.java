@@ -47,14 +47,14 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
 
             for (DataRecord rec: theSavedRecords){
                 String dtTypeName = rec.getDataTypeName();
-                logInfo("Saved DataRecord's DataType: " + dtTypeName);
+                //logInfo("Saved DataRecord's DataType: " + dtTypeName);
                 if (trackableDataTypes.contains(dtTypeName)) {
                     // set DateModified to current time
                     rec.setDataField("DateModified", System.currentTimeMillis(), user);
                 }
                 // update 'RemainingReads' to be sequenced on SeqRequirements when a SeqAnalysisSampleQC record is saved.
                 if (dtTypeName.equalsIgnoreCase(SeqAnalysisSampleQCModel.DATA_TYPE_NAME) && !utils.isControlSample(rec, pluginLogger, user)){
-                    logInfo("Started updating RemainingReads for SeqAnalysisSampleQC with Record Id: " + rec.getRecordId());
+                    //logInfo("Started updating RemainingReads for SeqAnalysisSampleQC with Record Id: " + rec.getRecordId());
                     updateRemainingReadsToSequence(rec);
                 }
                 //set Human Percentage on QcReportDna DataRecords when Saving DdPcrAssayResults and HumanPercentageValues are present
@@ -63,12 +63,12 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                 }
                 //validate fields for special characters on Sample Datatype
                 if (dtTypeName.equalsIgnoreCase(SampleModel.DATA_TYPE_NAME)) {
-                    logInfo("Checking for Special Characters in Sample Record with RecordId: " + rec.getRecordId());
+                    //logInfo("Checking for Special Characters in Sample Record with RecordId: " + rec.getRecordId());
                     validateSampleFields(rec, dtTypeName);
                 }
                 // validate fields for special characters on SampleCMOInfoRecords DataType
                 if (dtTypeName.equalsIgnoreCase(SampleCMOInfoRecordsModel.DATA_TYPE_NAME)) {
-                    logInfo("Checking for Special Characters in SampleCMOInfoRecords Record with RecordId: " + rec.getRecordId());
+                    //logInfo("Checking for Special Characters in SampleCMOInfoRecords Record with RecordId: " + rec.getRecordId());
                     validateCmoInfoDataTypeFields(rec, dtTypeName);
                 }
             }
@@ -161,16 +161,16 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
      * @return
      */
     private long getSumSequencingReadsExamined(List<DataRecord>seqAnalysisSampleQcRecords, DataRecord savedSequencingQcRecord, Object runName){
-        logInfo("Total SeqAnalysis records: " + seqAnalysisSampleQcRecords.size());
+        //logInfo("Total SeqAnalysis records: " + seqAnalysisSampleQcRecords.size());
         long sumReadsExamined = 0;
         boolean isPairedEnd = isPairedEndRun(runName);
-        logInfo("Is Paired End Run: " + isPairedEnd);
+        //logInfo("Is Paired End Run: " + isPairedEnd);
         try{
             // this plugin is run before changes are committed changes to db. If the record being saved is new record,
             // it might not be in the db and therefore not part of SeqAnalysisSampleQcRecords returned by LIMS. Check
             // and add it's reads towards the sum of reads calculated in this method
             if (!utils.isIncludedInRecords(seqAnalysisSampleQcRecords, savedSequencingQcRecord, pluginLogger)){
-                logInfo("Seq Qc Record Id: " + savedSequencingQcRecord.getRecordId());
+                //logInfo("Seq Qc Record Id: " + savedSequencingQcRecord.getRecordId());
                 Object readsExamined = getReadsExamined(savedSequencingQcRecord, isPairedEnd);
                 Object seqQcStatus = savedSequencingQcRecord.getValue(SeqAnalysisSampleQCModel.SEQ_QCSTATUS, user);
                 if (readsExamined != null && !seqQcStatus.toString().equalsIgnoreCase(FAILED)){
@@ -178,9 +178,9 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                 }
             }
             for (DataRecord rec : seqAnalysisSampleQcRecords){
-                logInfo("Seq Qc Record Id: " + rec.getRecordId());
+                //logInfo("Seq Qc Record Id: " + rec.getRecordId());
                 Object readsExamined = getReadsExamined(rec, isPairedEnd);
-                logInfo("Reads examined: " + readsExamined);
+                //logInfo("Reads examined: " + readsExamined);
                 Object seqQcStatus = rec.getValue(SeqAnalysisSampleQCModel.SEQ_QCSTATUS, user);
                 if (readsExamined != null && !seqQcStatus.toString().equalsIgnoreCase(FAILED)){
                     sumReadsExamined += (long)readsExamined;
@@ -232,15 +232,15 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                     throw new NotFound(String.format("Cannot find %s DataRecord for Sample with Record Id %d", SeqRequirementModel.DATA_TYPE_NAME, parentSample.get(0).getRecordId()));
                 }
                 DataRecord seqRequirementRecord = seqRequirements.get(0);
-                logInfo("Sequencing requirement record id: " + seqRequirementRecord.getRecordId());
+                //logInfo("Sequencing requirement record id: " + seqRequirementRecord.getRecordId());
                 Object readsRequested = seqRequirementRecord.getValue(SeqRequirementModel.REQUESTED_READS, user);
                 if (readsRequested == null) {
                     logInfo("Cannot update remaining reads since reads requested is null.");
                     return;
                 }
-                logInfo("Requested Reads : " + readsRequested);
+                //logInfo("Requested Reads : " + readsRequested);
                 long totalReadsExamined = getSumSequencingReadsExamined(seqQcRecords, sampleLevelSequencingQc, runName);
-                logInfo("Total reads examined : " + totalReadsExamined);
+                //logInfo("Total reads examined : " + totalReadsExamined);
                 assert readsRequested != null;
                 long remainingReads = 0L;
                 if((Math.floor((double)readsRequested) * 1000000L) > totalReadsExamined){
@@ -250,7 +250,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                 seqRequirementRecord.setDataField(SeqRequirementModel.READ_TOTAL, totalReadsExamined, user);
                 String msg = String.format("Updated 'RemainingReads' and 'ReadTotal'on %s related to %s record with Record Id: %d",
                         SeqRequirementModel.DATA_TYPE_NAME, SeqAnalysisSampleQCModel.DATA_TYPE_NAME, sampleLevelSequencingQc.getRecordId());
-                logInfo(msg);
+                //logInfo(msg);
             }
         } catch (IoError | RemoteException | NotFound | InvalidValue e) {
             logError(String.format("%s => Error while updating Remaining Reads to Sequence on %s related to %s " +
@@ -273,7 +273,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                 return altIds.toString().split(",").length>1;
             }
             if (sampleType != null) {
-                logInfo("Sample Type: " + sampleType.toString());
+                //logInfo("Sample Type: " + sampleType.toString());
                 return "Pooled Library".equalsIgnoreCase(sampleType.toString().trim());
             }
         } catch (NotFound | RemoteException e) {
@@ -326,7 +326,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
     private void validateSampleFields(DataRecord rec, String dataTypeName) {
         try {
             boolean isPoolSample = isPooledSampleType(rec);
-            logInfo("Is Pooled Sample: " + isPoolSample);
+            //logInfo("Is Pooled Sample: " + isPoolSample);
             Map<String, Object> fields = rec.getFields(user);
             for (String key : fields.keySet()) {
                 if (SAMPLE_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS.contains(key.trim())) {
@@ -355,7 +355,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
     private boolean isDuplicateCmoId(Object cmoId, Object recordId) {
         try {
             List<DataRecord> cmoInfoRecords = dataRecordManager.queryDataRecords("SampleCMOInfoRecords", "CorrectedCMOID = '" + cmoId + "' AND RecordId != " + recordId, user);
-            logInfo("Total CmoInfo records: " + cmoInfoRecords.size());
+            //logInfo("Total CmoInfo records: " + cmoInfoRecords.size());
             return cmoId !=null && !StringUtils.isBlank(cmoId.toString()) && cmoInfoRecords.size() > 0;
         } catch (RemoteException | IoError | NotFound e) {
             e.printStackTrace();
@@ -372,7 +372,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
         try{
             List<DataRecord> seqRun = dataRecordManager.queryDataRecords(IlluminaSeqExperimentModel.DATA_TYPE_NAME, IlluminaSeqExperimentModel.SEQUENCER_RUN_FOLDER + " LIKE '%" + runName + "%'", user);
             if (seqRun.size() > 0){
-                logInfo("Sequender Run Folder: " + seqRun.get(0).getValue(IlluminaSeqExperimentModel.SEQUENCER_RUN_FOLDER, user));
+                //logInfo("Sequender Run Folder: " + seqRun.get(0).getValue(IlluminaSeqExperimentModel.SEQUENCER_RUN_FOLDER, user));
                 Object readLength = seqRun.get(0).getValue("ReadLength", user);
                 if(readLength != null){
                     return readLength.toString();
@@ -391,9 +391,9 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
      * @return
      */
     private boolean isPairedEndRun(Object runName){
-        logInfo(String.format("Run name: %s", runName));
+        //logInfo(String.format("Run name: %s", runName));
         String readLength = getReadLength(runName);
-        logInfo("Read Length: " + readLength);
+        //logInfo("Read Length: " + readLength);
         if (!StringUtils.isEmpty(readLength)){
             String [] readLengthVals = readLength.split("/");
             return readLengthVals.length > 2;
