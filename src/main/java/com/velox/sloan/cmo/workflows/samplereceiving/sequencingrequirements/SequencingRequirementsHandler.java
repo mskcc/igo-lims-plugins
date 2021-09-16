@@ -213,7 +213,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                         }
                         int selectedCapturePanelIndex = clientCallback.showOptionDialog("Selecting Capture Panel",
                                 "Please select a capture panel for recipe: " + recipe, stringListOfCapturePanels, 0);
-                        //this.panelName = (Object) stringListOfCapturePanels[selectedCapturePanelIndex];
                         recipeToSelectedCapturePanel.put(recipe, (Object) stringListOfCapturePanels[selectedCapturePanelIndex]);
                     } catch (ServerException se) {
                         this.logError(String.valueOf(se.getStackTrace()));
@@ -324,7 +323,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                     this.logInfo("I thought it's ShallowWGS or CRISPR");
                                     //this.logInfo("ref recipe to translated reads for shallowES: " + refRecipeToTranslatedReadsHumanMap.
                                             //get("ShallowWGS"));
-                                    //this.logInfo("!!!Recipe: " + recipe.toString());
                                     seqReq.setDataField("RequestedReads", refRecipeToTranslatedReadsHumanMap.
                                             get(recipe.toString()), user);
 
@@ -391,11 +389,9 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                           }
                                         else if (recipeToCapturePanelMap.get(recipe.toString()).size() == 1) {
                                             this.panelName = recipeToCapturePanelMap.get(recipe.toString()).toArray()[0];
-                                            //this.logInfo("sample:" + s.getValue("OtherSampleId", user) + " the only panel is: " + this.panelName);
                                         }
                                     }
-                                    //this.logInfo("new panel: " + this.panelName);
-                                    //this.logInfo("finding ref corresponding record..");
+                                   
                                     DataRecord refRecord = CoverageToReadsUtil.getRefRecordFromRecipeAndCapturePanel(
                                             recipe, this.panelName, tumorOrNormal, coverage, coverageReqRefs, user, this.pluginLogger);
                                     if (Objects.isNull(refRecord)) {
