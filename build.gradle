@@ -5,50 +5,45 @@ apply plugin: 'java'
 
 sourceCompatibility = 1.8
 
+
 repositories {
     mavenCentral()
     jcenter()
     mavenLocal()
-    maven { url "${nexusUrlReleases}" }
-    maven { url "${nexusUrlSnapshots}" }
+    maven { url "${nexusUrlReleases}"
+        allowInsecureProtocol = true}
+    maven { url "${nexusUrlSnapshots}"
+        allowInsecureProtocol = true}
 }
 
-
 dependencies {
-    //compile 'com.velox.internalproducts:accessionservice:LIMS10.6.1'
-    compile 'com.velox.internalproducts:sapiogeneric:15.1.0-LIMS10.6.1'
-    compile 'com.velox.internalproducts:sapioutils:15.1.0-LIMS10.6.1'
-    compile 'com.velox.internalproducts:sapio-commons:15.1.0-LIMS10.6.1'
-//    compile 'com.velox.internalproducts:sapiogeneric:15.0.0-LIMS10.6.1'
-//    compile 'com.velox.internalproducts:sapioutils:15.0.0-LIMS10.6.1'
-//    compile 'com.velox.internalproducts:sapio-commons:15.0.0-LIMS10.6.1'
-    //compile 'com.velox.sloan.cmo:sloancmo:2.21.1-LIMS10.6.1_b84'
-    compile 'com.velox.sloan.cmo:sloancmo:2.21.1-LIMS10.6.1_b777'
-    compile 'com.velox.internalproducts:veloxapi:10.6.1-b777'
-
-    compile ('org.apache.poi:poi-ooxml:3.17')
-    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.7'
-    compile group: 'org.apache.httpcomponents', name: 'httpcore', version: '4.3.2'
-    compile 'org.apache.httpcomponents:httpclient:4.5.11'
-    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.0.1'
-    compile group: 'com.google.code.gson', name: 'gson', version: '2.7'
-    compile group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.13.3'
-    testCompile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.13.3'
-    compile ('junit:junit:4.12') {
+    implementation 'com.velox.internalproducts:sapiogeneric:15.1.0-LIMS10.6.1'
+    implementation 'com.velox.internalproducts:sapioutils:15.1.0-LIMS10.6.1'
+    implementation 'com.velox.internalproducts:sapio-commons:15.1.0-LIMS10.6.1'
+    implementation 'com.velox.sloan.cmo:sloancmo:2.21.1-LIMS10.6.1_b777'
+    implementation 'com.velox.internalproducts:veloxapi:10.6.1-b777'
+    implementation ('org.apache.poi:poi-ooxml:3.17')
+    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.7'
+    implementation group: 'org.apache.httpcomponents', name: 'httpcore', version: '4.3.2'
+    implementation 'org.apache.httpcomponents:httpclient:4.5.11'
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.0.1'
+    implementation group: 'com.google.code.gson', name: 'gson', version: '2.7'
+    implementation group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.13.3'
+    testImplementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.13.3'
+    implementation ('junit:junit:4.12') {
         exclude group: 'org.hamcrest'
     }
-    compile ('org.mockito:mockito-all:1.10.19') {
+    implementation ('org.mockito:mockito-all:1.10.19') {
         exclude group: 'org.hamcrest'
     }
-    testCompile 'org.assertj:assertj-core:3.9.0'
+    testImplementation 'org.assertj:assertj-core:3.9.0'
 }
 
 jar {
     manifest {
         attributes("Implementation-Title": "Lims Plugin",
                 "Implementation-Version": version,
-                'Class-Path': configurations.compile.collect { '../lib/' + it.getName() }.join(' ')
-        )
+                'Class-Path': configurations.compileClasspath.collect { '../lib/' + it.getName() }.join(' '))
     }
 }
