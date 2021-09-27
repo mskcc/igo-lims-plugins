@@ -11,6 +11,7 @@ import com.velox.sapioutils.shared.enums.PluginOrder;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
+import javax.xml.crypto.Data;
 import java.rmi.RemoteException;
 import java.util.*;
 
@@ -547,6 +548,10 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 qcRecord.put("TumorOrNormal", sample.getStringVal("TumorOrNormal", user));
                 qcRecord.put("Preservation", sample.getStringVal("Preservation", user));
                 qcRecord.put("Recipe", sample.getStringVal("Recipe", user));
+                List<DataRecord> listOfSamplesAncestors = sample.getAncestorsOfType("Sample", user);
+                if(listOfSamplesAncestors != null && listOfSamplesAncestors.size() > 0) {
+                    qcRecord.put("SourceSampleId", listOfSamplesAncestors.get(listOfSamplesAncestors.size()));
+                }
                 Double dinValue = getDinValueFromQcRecord(sampleId, qcDataRecords);
                 String igoRecommendation = getIgoRecommendationValue(sampleId, qcProtocolRecords);
                 String comments = getQcCommentsValue(sampleId, qcProtocolRecords);
@@ -603,6 +608,10 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 qcRecord.put("TotalMass", sample.getDoubleVal("TotalMass", user));
                 qcRecord.put("Preservation", sample.getStringVal("Preservation", user));
                 qcRecord.put("Recipe", sample.getStringVal("Recipe", user));
+                List<DataRecord> listOfSamplesAncestors = sample.getAncestorsOfType("Sample", user);
+                if(listOfSamplesAncestors != null && listOfSamplesAncestors.size() > 0) {
+                    qcRecord.put("SourceSampleId", listOfSamplesAncestors.get(listOfSamplesAncestors.size()));
+                }
                 String rinValue = getRinValueFromQcRecord(sampleId, qcRecords);
                 Double dv200Value = getDv200ValueFromQcRecord(sampleId, qcRecords);
                 Double rqnValue = getRqnValueFromQcRecord(sampleId, qcRecords);
@@ -660,6 +669,10 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 qcRecord.put("Concentration", sample.getDoubleVal("Concentration", user));
                 qcRecord.put("ConcentrationUnits", sample.getStringVal("ConcentrationUnits", user));
                 qcRecord.put("Volume", sample.getDoubleVal("Volume", user));
+                List<DataRecord> listOfSamplesAncestors = sample.getAncestorsOfType("Sample", user);
+                if(listOfSamplesAncestors != null && listOfSamplesAncestors.size() > 0) {
+                    qcRecord.put("SourceSampleId", listOfSamplesAncestors.get(listOfSamplesAncestors.size()));
+                }
                 if (sample.getStringVal("ConcentrationUnits", user).trim().equalsIgnoreCase("ng/uL")) {
                     qcRecord.put("TotalMass", sample.getDoubleVal("Concentration", user) * sample.getDoubleVal("Volume", user));
                 } else {
