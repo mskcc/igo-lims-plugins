@@ -550,7 +550,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 qcRecord.put("Recipe", sample.getStringVal("Recipe", user));
                 List<DataRecord> listOfSamplesAncestors = sample.getAncestorsOfType("Sample", user);
                 if(listOfSamplesAncestors != null && listOfSamplesAncestors.size() > 0) {
-                    qcRecord.put("SourceSampleId", listOfSamplesAncestors.get(listOfSamplesAncestors.size()));
+                    qcRecord.put("SourceSampleId", listOfSamplesAncestors.get(listOfSamplesAncestors.size()).getValue("SampleId", user));
                 }
                 Double dinValue = getDinValueFromQcRecord(sampleId, qcDataRecords);
                 String igoRecommendation = getIgoRecommendationValue(sampleId, qcProtocolRecords);
@@ -610,7 +610,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 qcRecord.put("Recipe", sample.getStringVal("Recipe", user));
                 List<DataRecord> listOfSamplesAncestors = sample.getAncestorsOfType("Sample", user);
                 if(listOfSamplesAncestors != null && listOfSamplesAncestors.size() > 0) {
-                    qcRecord.put("SourceSampleId", listOfSamplesAncestors.get(listOfSamplesAncestors.size()));
+                    qcRecord.put("SourceSampleId", listOfSamplesAncestors.get(listOfSamplesAncestors.size()).getValue("SampleId", user));
                 }
                 String rinValue = getRinValueFromQcRecord(sampleId, qcRecords);
                 Double dv200Value = getDv200ValueFromQcRecord(sampleId, qcRecords);
@@ -671,7 +671,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 qcRecord.put("Volume", sample.getDoubleVal("Volume", user));
                 List<DataRecord> listOfSamplesAncestors = sample.getAncestorsOfType("Sample", user);
                 if(listOfSamplesAncestors != null && listOfSamplesAncestors.size() > 0) {
-                    qcRecord.put("SourceSampleId", listOfSamplesAncestors.get(listOfSamplesAncestors.size()));
+                    qcRecord.put("SourceSampleId", listOfSamplesAncestors.get(listOfSamplesAncestors.size()).getValue("SampleId", user));
                 }
                 if (sample.getStringVal("ConcentrationUnits", user).trim().equalsIgnoreCase("ng/uL")) {
                     qcRecord.put("TotalMass", sample.getDoubleVal("Concentration", user) * sample.getDoubleVal("Volume", user));
