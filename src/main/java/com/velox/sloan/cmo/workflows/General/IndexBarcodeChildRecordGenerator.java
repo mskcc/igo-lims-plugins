@@ -33,7 +33,7 @@ public class IndexBarcodeChildRecordGenerator extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException{
+    public PluginResult run() throws ServerException, RemoteException {
         String dataFile = clientCallback.showFileDialog("Upload csv file with Index Barcode Information", null);
         try {
             byte[] byteData = clientCallback.readBytes(dataFile);

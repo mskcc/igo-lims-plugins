@@ -9,6 +9,7 @@ import com.velox.sapio.commons.exemplar.context.ManagerBase;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
+import java.rmi.RemoteException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -41,7 +42,8 @@ class TapeStationResultParser extends ManagerBase {
      * @return
      * @throws ServerException
      */
-    private Map<String, List<QualityControlData>> groupQualityControlDataBySampleId(List<String> tapeStationFileData) throws ServerException {
+    private Map<String, List<QualityControlData>> groupQualityControlDataBySampleId(List<String> tapeStationFileData)
+            throws ServerException, RemoteException {
         Map<String, List<QualityControlData>> groupedData = new HashMap<>();
         String SAMPLE_DESCRIPTION = "Sample Description";
         String TO_BP = "To [bp]";
@@ -79,7 +81,8 @@ class TapeStationResultParser extends ManagerBase {
      * @return
      * @throws ServerException
      */
-    private List<QualityControlData> getDataSortedByFromBpAsc(List<QualityControlData> QualityControlDataVals) throws ServerException {
+    private List<QualityControlData> getDataSortedByFromBpAsc(List<QualityControlData> QualityControlDataVals) throws
+            ServerException, RemoteException {
         try {
             return QualityControlDataVals.stream()
                     .sorted(Comparator.comparing(QualityControlData::getFromBp))
@@ -102,7 +105,8 @@ class TapeStationResultParser extends ManagerBase {
      * @return
      * @throws ServerException
      */
-    private double getConcentrationSumForUpto1kb(List<QualityControlData> QualityControlDataVals) throws ServerException {
+    private double getConcentrationSumForUpto1kb(List<QualityControlData> QualityControlDataVals) throws ServerException
+    , RemoteException {
         double sum = 0.0;
         try {
             for (QualityControlData data : QualityControlDataVals) {
@@ -126,7 +130,8 @@ class TapeStationResultParser extends ManagerBase {
      * @return
      * @throws ServerException
      */
-    private double getConcentrationSumForGreaterThan1kb(List<QualityControlData> QualityControlDataVals) throws ServerException {
+    private double getConcentrationSumForGreaterThan1kb(List<QualityControlData> QualityControlDataVals) throws
+            ServerException, RemoteException {
         double sum = 0.0;
         try {
             for (QualityControlData data : QualityControlDataVals) {
@@ -150,7 +155,8 @@ class TapeStationResultParser extends ManagerBase {
      * @return
      * @throws ServerException
      */
-    private double calculateAdapterPercentage(List<QualityControlData> QualityControlDataVals, double sumConcentration) throws ServerException {
+    private double calculateAdapterPercentage(List<QualityControlData> QualityControlDataVals, double sumConcentration)
+            throws ServerException, RemoteException {
         double adapterPercentage = 0.0;
         try {
             double adapterConcSum = 0.0;
@@ -179,7 +185,8 @@ class TapeStationResultParser extends ManagerBase {
      * @return
      * @throws ServerException
      */
-    private double calculatePercentageFragmentsUpto1kb(List<QualityControlData> QualityControlDataVals, double sumConc) throws ServerException {
+    private double calculatePercentageFragmentsUpto1kb(List<QualityControlData> QualityControlDataVals, double sumConc)
+            throws ServerException, RemoteException {
         double percentageFragmentsUpto1kb = 0.0;
         try {
             double concSumfragmentUpto1Kbp = 0.0;
@@ -206,7 +213,8 @@ class TapeStationResultParser extends ManagerBase {
      * @return
      * @throws ServerException
      */
-    private double calculatePercentageFragmentsGreaterThan1kb(List<QualityControlData> QualityControlDataVals, double sumConc) throws ServerException {
+    private double calculatePercentageFragmentsGreaterThan1kb(List<QualityControlData> QualityControlDataVals, double sumConc)
+            throws ServerException, RemoteException {
         double percentageFragmentsUpto1kb = 0.0;
         try {
             double concSumfragmentLargerThan1Kbp = 0.0;
@@ -228,7 +236,8 @@ class TapeStationResultParser extends ManagerBase {
     /**
      * Method to create QualityControlData objects
      */
-    private List<SampleQcResult> getQualityControlData(Map<String, List<QualityControlData>> groupedData, List<DataRecord> attachedSamples) throws ServerException {
+    private List<SampleQcResult> getQualityControlData(Map<String, List<QualityControlData>> groupedData, List<DataRecord>
+            attachedSamples) throws ServerException, RemoteException {
         List<SampleQcResult> qcResults = new ArrayList<>();
         try{
             for (String key : groupedData.keySet()) {
@@ -271,7 +280,7 @@ class TapeStationResultParser extends ManagerBase {
      * @return
      * @throws ServerException
      */
-    List<SampleQcResult> parseData(List<DataRecord> attachedSamples) throws ServerException {
+    List<SampleQcResult> parseData(List<DataRecord> attachedSamples) throws ServerException, RemoteException {
         List<SampleQcResult> qcResults = new ArrayList<>();
         try {
             Map<String, List<QualityControlData>> groupedData = groupQualityControlDataBySampleId(this.fileData);

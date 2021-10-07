@@ -39,7 +39,7 @@ public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
         return dataTypeName.equals(INDEX_ASSIGNMENT_CONFIG_DATATYPE);
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             String csvFilePath = clientCallback.showFileDialog("Upload File with Index Assignment configurations", null);
             if (StringUtils.isBlank(csvFilePath)) {
@@ -95,7 +95,7 @@ public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
      * @return Boolean
      * @throws ServerException
      */
-    private boolean isValidCsvFile(String filepath) throws ServerException {
+    private boolean isValidCsvFile(String filepath) throws ServerException, RemoteException {
         if (!utils.isCsvFile(filepath)) {
             clientCallback.displayError(String.format("File '%s' is not a valid csv file. File must be csv with valid .csv extension", filepath));
             logError(String.format("File '%s' is not a valid csv file. File must be csv with valid .csv extension", filepath));
@@ -112,7 +112,7 @@ public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
      * @return Boolean
      * @throws ServerException
      */
-    private boolean fileHasData(List<String> fileRowData, String filePath) throws ServerException {
+    private boolean fileHasData(List<String> fileRowData, String filePath) throws ServerException, RemoteException {
         if (!utils.csvFileHasData(fileRowData)) {
             clientCallback.displayError(String.format("File '%s' is empty. Please load a csv file with data.", filePath));
             logError(String.format("File '%s' is empty. Please load a csv file with data.", filePath));
@@ -130,7 +130,8 @@ public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
      * @return Boolean
      * @throws ServerException
      */
-    private boolean fileHasValidHeader(List<String> fileRowData, List<String> expectedHeader, String filePath) throws ServerException {
+    private boolean fileHasValidHeader(List<String> fileRowData, List<String> expectedHeader, String filePath) throws
+            ServerException, RemoteException {
         if (!utils.csvFileHasValidHeader(fileRowData, expectedHeader)) {
             clientCallback.displayError(String.format("File '%s' does not contain valid headers. File must have following header values: %s.", filePath, utils.convertListToString(expectedHeader)));
             logError(String.format("File '%s' does not contain valid headers. File must have following header values: %s.", filePath, utils.convertListToString(expectedHeader)));
@@ -148,7 +149,8 @@ public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
      * @return Boolean
      * @throws ServerException
      */
-    private boolean allRowsHaveData(List<String> fileRowData, List<String> expectedHeader, String filePath) throws ServerException {
+    private boolean allRowsHaveData(List<String> fileRowData, List<String> expectedHeader, String filePath) throws
+            ServerException, RemoteException {
         if (!utils.allRowsInCsvFileHasValidData(fileRowData, expectedHeader)) {
             clientCallback.displayError(String.format("Some rows in File '%s' has missing data. Please make sure all rows has data for all columns", filePath));
             logError(String.format("Some rows in File '%s' has missing data. Please make sure all rows has data for all columns", filePath));

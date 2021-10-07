@@ -1,6 +1,7 @@
 package com.velox.sloan.cmo.workflows.General;
 
 import com.velox.api.datarecord.*;
+import com.velox.api.exception.recoverability.serverexception.UnrecoverableServerException;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
@@ -40,7 +41,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
         setOnSave(true);
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             // returns results in a list if something is changed and save button is clicked
             List<DataRecord> theSavedRecords = dataRecordList;
@@ -107,7 +108,8 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private List<DataRecord> getQcReportRecords(DataRecord sample, String requestId) throws IoError, RemoteException, NotFound {
+    private List<DataRecord> getQcReportRecords(DataRecord sample, String requestId) throws IoError, RemoteException,
+            NotFound, UnrecoverableServerException, ServerException {
         if (sample.getChildrenOfType("QcReportDna", user).length > 0) {
             return Arrays.asList(sample.getChildrenOfType("QcReportDna", user));
         }
@@ -138,7 +140,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
      * @throws InvalidValue
      * @throws ServerException
      */
-    private void mapHumanPercentageFromDdpcrResultsToDnaQcReport(List<DataRecord> savedRecords) throws IoError, RemoteException, NotFound, InvalidValue {
+    private void mapHumanPercentageFromDdpcrResultsToDnaQcReport(List<DataRecord> savedRecords) throws IoError, RemoteException, NotFound, InvalidValue, ServerException {
         for (DataRecord rec : savedRecords) {
             if (rec.getDataTypeName().equalsIgnoreCase("DdPcrAssayResults") && rec.getValue("HumanPercentage", user) != null) {
                 List<DataRecord> parentSamples = rec.getParentsOfType("Sample", user);
@@ -252,7 +254,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                         SeqRequirementModel.DATA_TYPE_NAME, SeqAnalysisSampleQCModel.DATA_TYPE_NAME, sampleLevelSequencingQc.getRecordId());
                 //logInfo(msg);
             }
-        } catch (IoError | RemoteException | NotFound | InvalidValue e) {
+        } catch (IoError | RemoteException | NotFound | InvalidValue | ServerException e) {
             logError(String.format("%s => Error while updating Remaining Reads to Sequence on %s related to %s " +
                     "Record with Record Id: %d\n%s", ExceptionUtils.getRootCauseMessage(e), SeqRequirementModel.DATA_TYPE_NAME, SeqAnalysisSampleQCModel.DATA_TYPE_NAME, sampleLevelSequencingQc.getRecordId(),
                     ExceptionUtils.getStackTrace(e)));
@@ -357,7 +359,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
             List<DataRecord> cmoInfoRecords = dataRecordManager.queryDataRecords("SampleCMOInfoRecords", "CorrectedCMOID = '" + cmoId + "' AND RecordId != " + recordId, user);
             //logInfo("Total CmoInfo records: " + cmoInfoRecords.size());
             return cmoId !=null && !StringUtils.isBlank(cmoId.toString()) && cmoInfoRecords.size() > 0;
-        } catch (RemoteException | IoError | NotFound e) {
+        } catch (RemoteException | IoError | NotFound | ServerException e) {
             e.printStackTrace();
         }
         return false;
@@ -378,7 +380,7 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                     return readLength.toString();
                 }
             }
-        } catch (RemoteException | IoError | NotFound e) {
+        } catch (RemoteException | IoError | NotFound | ServerException e) {
             logError(String.format("%s => Error while getting RunType for run: %s\n%s", ExceptionUtils.getRootCauseMessage(e),
                     runName, ExceptionUtils.getStackTrace(e)));
         }

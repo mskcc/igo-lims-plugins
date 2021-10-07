@@ -5,6 +5,7 @@ import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginDirective;
 import com.velox.api.plugin.PluginResult;
+import com.velox.api.plugin.directive.ActiveWorkflowDirective;
 import com.velox.api.util.ServerException;
 import com.velox.api.workflow.ActiveTask;
 import com.velox.api.workflow.ActiveWorkflow;
@@ -87,7 +88,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
             logError(errMsg);
             return new PluginResult(false);
         }
-        return new PluginResult(true, new PluginDirective(PluginDirective.Action.RUN_ACTIVE_WORKFLOW, activeWebFormReceivingWorkflow));
+        return new PluginResult(true, new ActiveWorkflowDirective(activeWebFormReceivingWorkflow));
     }
 
     /**

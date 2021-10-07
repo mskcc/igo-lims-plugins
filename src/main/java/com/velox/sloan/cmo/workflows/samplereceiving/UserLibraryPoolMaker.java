@@ -46,7 +46,7 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
                 && !activeTask.getTask().getTaskOptions().containsKey("USER POOLS CREATED");
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
             if (attachedSamples.size() == 0) {
@@ -268,6 +268,8 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
             logError(String.format("NotFound Exception -> Error while reading '%s' for sample with recordId %d:\n%s", SampleModel.REQUEST_ID, sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
         } catch (ServerException e) {
             logError(String.format("ServerException -> Error while reading '%s' for sample with recordId %d:\n%s", SampleModel.REQUEST_ID, sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+        } catch (IoError io) {
+            logError(String.format("IoError -> Error while reading '%s' for sample with recordId %d:\n%s", SampleModel.REQUEST_ID, sample.getRecordId(), ExceptionUtils.getStackTrace(io)));
         }
         return requestId;
     }
@@ -340,6 +342,8 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
             logError(String.format("NotFound Exception -> Error while getting '%s' for sample with recordId %d:\n%s", SeqRequirementModel.SEQUENCING_RUN_TYPE, firstSample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
         } catch (ServerException e) {
             logError(String.format("ServerException -> Error while getting '%s' for sample with recordId %d:\n%s", SeqRequirementModel.SEQUENCING_RUN_TYPE, firstSample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+        } catch (IoError io) {
+            logError(String.format("IoError -> Error while getting '%s' for sample with recordId %d:\n%s", SeqRequirementModel.SEQUENCING_RUN_TYPE, firstSample.getRecordId(), ExceptionUtils.getStackTrace(io)));
         }
         return sequencingRunType;
     }
@@ -370,6 +374,8 @@ public class UserLibraryPoolMaker extends DefaultGenericPlugin {
                 logError(String.format("NotFound Exception -> Error while getting '%s' for sample with recordId %d:\n%s", SeqRequirementModel.REQUESTED_READS, sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
             } catch (ServerException e) {
                 logError(String.format("ServerException -> Error while getting '%s' for sample with recordId %d:\n%s", SeqRequirementModel.REQUESTED_READS, sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+            } catch (IoError io) {
+                logError(String.format("IoError -> Error while reading '%s' for sample with recordId %d:\n%s", SampleModel.REQUEST_ID, sample.getRecordId(), ExceptionUtils.getStackTrace(io)));
             }
         }
         return totalReads;

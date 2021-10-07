@@ -40,7 +40,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
         return activeTask.getStatus() != activeTask.COMPLETE && activeTask.getTask().getTaskOptions().containsKey("PARSE DDPCR RESULTS");
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<String> filesWithDigitalPcrRawData = clientCallback.showMultiFileDialog("Please upload Raw Data files", null);
             if (filesWithDigitalPcrRawData.size()==0) {
@@ -110,7 +110,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private boolean isValidFile(List<String> fileNames, List<String> fileData) throws ServerException {
+    private boolean isValidFile(List<String> fileNames, List<String> fileData) throws ServerException, RemoteException {
         for (String name : fileNames) {
             if (!igoUtils.isCsvFile(name)) {
                 clientCallback.displayError(String.format("Uploaded file '%s' is not a '.csv' file", name));

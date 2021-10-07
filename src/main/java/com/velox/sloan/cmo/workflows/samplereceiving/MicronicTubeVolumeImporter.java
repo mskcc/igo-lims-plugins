@@ -49,7 +49,7 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
         return false;
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             String fileWithMicronicTubeData = clientCallback.showFileDialog("Please upload micronic file", null);
             if (StringUtils.isEmpty(fileWithMicronicTubeData)) {
@@ -85,7 +85,7 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private boolean isValidCsvFile(String fileName) throws ServerException {
+    private boolean isValidCsvFile(String fileName) throws ServerException, RemoteException {
         if (!excelFileValidator.isCsvFile(fileName)) {
             clientCallback.displayError(String.format("Uploaded file '%s' is not a '.csv' file", fileName));
             logError(String.format("Uploaded file '%s' is not a '.csv' file", fileName));
@@ -102,7 +102,7 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private boolean fileHasData(String[] fileData, String fileName) throws ServerException {
+    private boolean fileHasData(String[] fileData, String fileName) throws ServerException, RemoteException {
         if (!excelFileValidator.dataFileHasValidData(fileData)) {
             clientCallback.displayError(String.format("Uploaded file '%s' is empty. Please check the file.", fileName));
             logError(String.format("Uploaded file '%s' is empty. Please check the file.", fileName));
@@ -119,7 +119,7 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private boolean fileHasValidHeader(String[] fileData, String fileName) throws ServerException {
+    private boolean fileHasValidHeader(String[] fileData, String fileName) throws ServerException, RemoteException {
         if (!excelFileValidator.dataFileHasValidHeader(fileData)) {
             clientCallback.displayError(String.format("Uploaded file '%s' has incorrect header. Please check the file", fileName));
             logError(String.format("Uploaded file '%s' has incorrect header. Please check the file", fileName));
@@ -146,7 +146,7 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private boolean allRowsHaveValidValues(String[] fileData, String fileName) throws ServerException {
+    private boolean allRowsHaveValidValues(String[] fileData, String fileName) throws ServerException, RemoteException {
         if (!volumeDataReader.allRowsHaveValidData(fileData)) {
             clientCallback.displayError(String.format("Invalid row values in '%s'. Please make sure that all rows have values" +
                     "and Weight values are > 0.0.", fileName));
@@ -165,7 +165,7 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private boolean isValidFile(String[] fileData, String fileName) throws ServerException {
+    private boolean isValidFile(String[] fileData, String fileName) throws ServerException, RemoteException {
         return isValidCsvFile(fileName) && fileHasData(fileData, fileName) && fileHasValidHeader(fileData, fileName) && allRowsHaveValidValues(fileData, fileName);
     }
 
@@ -261,7 +261,8 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private double getNewVolume(double weightWithSampleVolume, double tubeTareWeight, String tubeBarcode) throws ServerException {
+    private double getNewVolume(double weightWithSampleVolume, double tubeTareWeight, String tubeBarcode) throws
+            ServerException, RemoteException {
         if (tubeTareWeight < 0) {
             weightWithSampleVolume = 0;
         }
@@ -285,7 +286,8 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws RemoteException
      */
-    private Map<String, Object> getTubeValueMapFromFileRowData(String row, Map<String, Integer> header, List<DataRecord> micronicTubeRecordsInLims) throws ServerException {
+    private Map<String, Object> getTubeValueMapFromFileRowData(String row, Map<String, Integer> header, List<DataRecord>
+            micronicTubeRecordsInLims) throws ServerException, RemoteException {
         Map<String, Object> tubeValuesMap = new HashMap<>();
         String storageLocationBarcode = row.split(",")[header.get("Rack")];
         char tubeRowPosition = row.split(",")[header.get("Tube")].charAt(0);
@@ -315,7 +317,7 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws RemoteException
      */
-    private List<Map<String, Object>> readMicronicInfoFromFileData(String[] fileData, List<DataRecord> micronicTubeRecordsInLims, List<DataRecord> Samples) throws ServerException {
+    private List<Map<String, Object>> readMicronicInfoFromFileData(String[] fileData, List<DataRecord> micronicTubeRecordsInLims, List<DataRecord> Samples) throws ServerException, RemoteException {
         List<String> sampleMicronicBarcodes = getMicronicBarcodesFromRecordsInLims(Samples);
         Map<String, Integer> header = parseFileHeader(fileData);
         List<Map<String, Object>> micronicTubeData = new ArrayList<>();
@@ -364,7 +366,8 @@ public class MicronicTubeVolumeImporter extends DefaultGenericPlugin {
         return false;
     }
 
-    private void setMicronicTubeAsAssignedInLims(String tubeBarcode, List<DataRecord> micronicTubeRecordsInLims) throws NotFound, RemoteException, IoError, InvalidValue {
+    private void setMicronicTubeAsAssignedInLims(String tubeBarcode, List<DataRecord> micronicTubeRecordsInLims) throws
+            NotFound, RemoteException, IoError, InvalidValue, ServerException {
         for (DataRecord micronicRecord : micronicTubeRecordsInLims) {
             if (Objects.equals(micronicRecord.getStringVal("MicronicTubeBarcode", user), tubeBarcode)) {
                 micronicRecord.setDataField("AssignedToSample", true, user);

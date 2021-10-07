@@ -47,7 +47,7 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             String poolingFileName = clientCallback.showFileDialog("Upload Pooling Sheet", ".csv");
             if (StringUtils.isBlank(poolingFileName)) {
@@ -94,7 +94,8 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
      * @return true/false
      * @throws ServerException
      */
-    private Boolean isValidCsvFile(String filePath, List<String> fileData, List<String> requiredHeaderVals) throws ServerException {
+    private Boolean isValidCsvFile(String filePath, List<String> fileData, List<String> requiredHeaderVals) throws
+            ServerException, RemoteException {
         if (!util.isCsvFile(filePath)) {
             clientCallback.displayError(String.format("The uploaded file %s is not a valid .csv file", filePath));
             return false;
@@ -158,7 +159,7 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
      * @return true/false
      * @throws ServerException
      */
-    private Boolean isValidColumnNameForHeader(String headerName) throws ServerException {
+    private Boolean isValidColumnNameForHeader(String headerName) throws ServerException, RemoteException {
         if (headerName.equals(String.valueOf(acceptableHeaderValuesEnum.SOURCE_MASS_TO_USE)) && StringUtils.isBlank(sourceMassToUseFieldName)) {
             clientCallback.displayError(String.format("Missing tag '%s' on DataType attached to this step.", AliquotingTags.ALIQUOT_TARGET_MASS));
             return false;
@@ -218,7 +219,8 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
      * @throws IoError
      * @throws NotFound
      */
-    private Map<String, Object> getUpdatedFieldValues(String row, DataRecord rec, Map<String, Integer> headerValueMap) throws ServerException {
+    private Map<String, Object> getUpdatedFieldValues(String row, DataRecord rec, Map<String, Integer> headerValueMap)
+            throws ServerException, RemoteException {
         List<String> rowValues = Arrays.asList(row.split(",|\n"));
         List<String> fileHeaders = new ArrayList<>(headerValueMap.keySet());
         Integer headerSize = headerValueMap.size();

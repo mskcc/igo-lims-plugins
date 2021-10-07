@@ -49,7 +49,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws com.velox.api.util.ServerException {
+    public PluginResult run() throws com.velox.api.util.ServerException, RemoteException {
         try {
             List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
             String taskOptionValue = activeTask.getTask().getTaskOptions().get("SORT AND ASSIGN SAMPLES TO PLATE");
@@ -144,7 +144,7 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * @return boolean
      * @throws com.velox.api.util.ServerException
      */
-    private boolean hasValidTaskOptionValueForPlugin(String taskOption) throws com.velox.api.util.ServerException {
+    private boolean hasValidTaskOptionValueForPlugin(String taskOption) throws com.velox.api.util.ServerException, RemoteException {
         if (StringUtils.isEmpty(taskOption) || taskOption.split("\\|").length != 3) {
             clientCallback.displayError("Invalid task option values for 'SORT AND ASSIGN SAMPLES TO PLATE' option." +
                     "\nValid values should be 'AliquotProtocolRecordName | DestinationPlateIdFieldName | DestinationWellFieldName' as in the attached dataType");
@@ -303,10 +303,16 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * @return String
      */
     private String getPlateSizeFromUser(List<String> platesizes) {
-        List plateDim = clientCallback.showListDialog("Please Select the Destination Plate size", platesizes, false, user);
-        if (plateDim == null) {
-            return "";
+        List plateDim = null;
+        try {
+            plateDim = clientCallback.showListDialog("Please Select the Destination Plate size", platesizes, false, user);
+            if (plateDim == null) {
+                return "";
+            }
+        } catch (ServerException | RemoteException e) {
+            logError(e.getMessage());
         }
+
         return plateDim.get(0).toString();
     }
 
@@ -462,7 +468,8 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * @return List<String>
      * @throws com.velox.api.util.ServerException
      */
-    private List<String> extractPlateIdsFromUserInputFor96To96Transfer(List<Map<String, Object>> plateIdValues, int numberOfNewPlates) throws com.velox.api.util.ServerException {
+    private List<String> extractPlateIdsFromUserInputFor96To96Transfer(List<Map<String, Object>> plateIdValues, int numberOfNewPlates)
+            throws com.velox.api.util.ServerException, RemoteException {
         List<String> plateIds = new ArrayList<>();
         for (int i = 1; i <= numberOfNewPlates; i++) {
             for (Map map : plateIdValues) {
@@ -545,7 +552,8 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * @return boolean
      * @throws com.velox.api.util.ServerException
      */
-    private boolean isValidQuadrantValues(List<Map<String, Object>> quadrantValues) throws com.velox.api.util.ServerException {
+    private boolean isValidQuadrantValues(List<Map<String, Object>> quadrantValues) throws
+            com.velox.api.util.ServerException, RemoteException {
         Set<String> quadrantVal = new HashSet<>();
         if (quadrantValues == null || quadrantValues.isEmpty()) {
             clientCallback.displayError("Process canceled by the user");
@@ -573,7 +581,8 @@ public class SampleToPlateAutoAssigner extends DefaultGenericPlugin {
      * @throws InvalidValue
      * @throws com.velox.api.util.ServerException
      */
-    private String getNewPlateIdsFromUserFor96To384Transfer() throws InvalidValue, com.velox.api.util.ServerException {
+    private String getNewPlateIdsFromUserFor96To384Transfer() throws InvalidValue, com.velox.api.util.ServerException,
+    RemoteException {
         String plateId384 = clientCallback.showInputDialog("Enter the Plate ID for new 384 well Plate");
         if (StringUtils.isBlank(plateId384)) {
             throw new InvalidValue("Invalid value: " + plateId384);

@@ -35,7 +35,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
         return activeTask.getTask().getTaskOptions().containsKey("UPDATE INDEX VOLUMES POST MANUAL INDEX ASSIGNMENT") && !activeTask.getTask().getTaskOptions().containsKey("_UPDATE_INDEX_VOLUMES_POST_MANUAL_INDEX_ASSIGNMENT");
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         autohelper = new AutoIndexAssignmentHelper();
         try {
             List<DataRecord> attachedSamplesList = activeTask.getAttachedDataRecords("Sample", user);

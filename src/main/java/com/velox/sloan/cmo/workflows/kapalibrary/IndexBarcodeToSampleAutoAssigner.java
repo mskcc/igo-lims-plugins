@@ -43,7 +43,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         return activeTask.getTask().getTaskOptions().containsKey("AUTOASSIGN INDEX BARCODES") && !activeTask.getTask().getTaskOptions().containsKey("_INDEXES_AUTO_ASIGNED");
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         autoHelper = new AutoIndexAssignmentHelper();
         try {
             List<DataRecord> attachedSamplesList = activeTask.getAttachedDataRecords("Sample", user);

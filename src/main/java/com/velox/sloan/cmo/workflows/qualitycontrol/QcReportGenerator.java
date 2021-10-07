@@ -59,7 +59,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return false;
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> samples = activeTask.getAttachedDataRecords("Sample", user);
             if (samples.size() == 0) {

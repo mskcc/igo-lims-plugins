@@ -94,7 +94,7 @@ public class SequencingRequirementsHandlerTest {
                 whereClause = String.format("%s='%s' AND %s='%s'", "UserSampleID", userSampleId, "RequestId", requestId);
                 relatedBankedSampleInfo.add(this.dataRecordManager.queryDataRecords("BankedSample", whereClause, this.user).get(0));
             }
-        } catch (NotFound | IoError | RemoteException ex) {
+        } catch (NotFound | IoError | RemoteException | ServerException ex) {
             ex.printStackTrace();
         }
     }

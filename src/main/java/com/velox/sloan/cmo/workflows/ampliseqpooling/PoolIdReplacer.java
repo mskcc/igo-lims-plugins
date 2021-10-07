@@ -12,6 +12,7 @@ import com.velox.sloan.cmo.recmodels.SampleModel;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -37,7 +38,7 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
             logInfo("running PoolId Replacer Plugin.");
@@ -83,6 +84,8 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
             logError(String.format("IoError Exception -> Error while getting Existing Aliquots for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(ioError)));
         } catch (NotFound notFound) {
             logError(String.format("NotFound Exception -> Error while getting Existing Aliquots for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
+        } catch (ServerException se) {
+            logError(String.format("NotFound Exception -> Error while getting Existing Aliquots for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(se)));
         }
         return existingSampleAliquots;
     }
@@ -128,6 +131,8 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
             logError(String.format("IoError Exception -> Error while getting parent samples for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(ioError)));
         } catch (RemoteException e) {
             logError(String.format("RemoteException Exception -> Error while getting parent samples for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+        } catch (ServerException se) {
+            logError(String.format("ServerException Exception -> Error while getting parent samples for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(se)));
         }
         List<DataRecord> existingSampleAliquots = getExistingSampleAliquots(parentSamples.get(0));
         List<String> existingSampleIds = getSortedSampleIds(existingSampleAliquots);
@@ -153,6 +158,8 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
             logError(String.format("RemoteException Exception -> Error while getting ExemplarSampleType value for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
         } catch (IoError ioError) {
             logError(String.format("IoError Exception -> Error while getting ExemplarSampleType value for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(ioError)));
+        } catch (ServerException se) {
+            logError(String.format("ServerException Exception -> Error while getting parent samples for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(se)));
         }
         return sampleType;
     }

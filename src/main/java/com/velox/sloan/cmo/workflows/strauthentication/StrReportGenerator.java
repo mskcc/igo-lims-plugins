@@ -84,7 +84,7 @@ public class StrReportGenerator extends DefaultGenericPlugin {
         return false;
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             String uploadedFile = clientCallback.showFileDialog("Upload Raw data file", ".csv");
             if (StringUtils.isBlank(uploadedFile)) {
@@ -155,7 +155,7 @@ public class StrReportGenerator extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws IOException
      */
-    private boolean isValidFile(String uploadedFile) throws ServerException {
+    private boolean isValidFile(String uploadedFile) throws ServerException, RemoteException {
         if (!utils.isCsvFile(uploadedFile)) {
             clientCallback.displayError(String.format("Not a valid csv file\n%s", uploadedFile));
             return false;
@@ -171,7 +171,7 @@ public class StrReportGenerator extends DefaultGenericPlugin {
      * @return true/false
      * @throws ServerException
      */
-    private boolean fileHasData(List<String> fileData, String uploadedFile) throws ServerException {
+    private boolean fileHasData(List<String> fileData, String uploadedFile) throws ServerException, RemoteException {
         if (!utils.csvFileHasData(fileData)) {
             clientCallback.displayError(String.format("The uploaded file does not contain data\n%s", uploadedFile));
             return false;
@@ -218,7 +218,8 @@ public class StrReportGenerator extends DefaultGenericPlugin {
         return markers;
     }
 
-    private boolean isValidRawDataFile(List<String> fileData, Map<String, Integer> headerValueMap, String species) throws ServerException {
+    private boolean isValidRawDataFile(List<String> fileData, Map<String, Integer> headerValueMap, String species) throws
+            ServerException, RemoteException {
         List<String> markersInFile = getMarkersFromRawDataFile(fileData, headerValueMap);
         if (species.equalsIgnoreCase("mouse")) {
             assert markers != null;

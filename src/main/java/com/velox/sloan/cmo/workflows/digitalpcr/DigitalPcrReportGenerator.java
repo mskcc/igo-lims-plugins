@@ -66,7 +66,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
         return onTaskToolbar(activeWorkflow, activeTask);
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> ddPcrResults = activeTask.getAttachedDataRecords("DdPcrAssayResults", user);
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
@@ -124,6 +124,8 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
             logError(String.format("IoError Exception -> Error getting MicronitTubeBarcode from parent sample on active task:\n%s", ExceptionUtils.getStackTrace(ioError)));
         } catch (NotFound notFound) {
             logError(String.format("NotFound Exception -> Error getting MicronitTubeBarcode from parent sample on active task:\n%s", ExceptionUtils.getStackTrace(notFound)));
+        } catch (ServerException se) {
+            logError(String.format("ServerException Exception -> Error getting MicronitTubeBarcode from parent sample on active task:\n%s", ExceptionUtils.getStackTrace(se)));
         }
         return "";
     }
@@ -178,7 +180,16 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      * @return Report Type
      */
     private String getReportTypeFromUser() {
-        List plateDim = clientCallback.showListDialog("Please Select the Type of ddPCR Report to Generate:", ddPCRReportTypes, false, user);
+        List plateDim = null;
+        try {
+            plateDim = clientCallback.showListDialog("Please Select the Type of ddPCR Report to Generate:", ddPCRReportTypes, false, user);
+        }
+        catch(ServerException se) {
+            logError(String.format("ServerException Exception -> Error getting MicronitTubeBarcode from parent sample on active task:\n%s", ExceptionUtils.getStackTrace(se)));
+        } catch (RemoteException re) {
+            logError(String.format("RemoteException Exception -> Error getting MicronitTubeBarcode from parent sample on active task:\n%s", ExceptionUtils.getStackTrace(re)));
+
+        }
         return plateDim.get(0).toString();
     }
 
@@ -353,6 +364,8 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
             logError(String.format("IoError Exception -> Error getting Parent RequestId for Sample with recordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(ioError)));
         } catch (NotFound notFound) {
             logError(String.format("NotFound Exception -> Error getting Parent RequestId for Sample with recordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
+        } catch (ServerException e) {
+            logError(String.format("RemoteException -> Error while exporting DdPcr report:\n%s",ExceptionUtils.getStackTrace(e)));
         }
         return "";
     }

@@ -1,12 +1,14 @@
 package com.velox.sloan.cmo.workflows.General;
 
 import com.velox.api.datarecord.*;
+import com.velox.api.exception.recoverability.serverexception.UnrecoverableServerException;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -34,7 +36,7 @@ public class SampleFieldUpdater extends DefaultGenericPlugin {
         return dataTypeName.equals("Sample");
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> records = dataRecordList;
             String dataFieldToUpdate = clientCallback.showInputDialog("Please enter the DataFieldName to update for the samples in this table: eg: 'OtherSampleId'");
@@ -86,7 +88,7 @@ public class SampleFieldUpdater extends DefaultGenericPlugin {
      * @return Boolean
      * @throws ServerException
      */
-    private boolean isValidOtherSampleId(Object otherSampleId, String sampleType) throws ServerException {
+    private boolean isValidOtherSampleId(Object otherSampleId, String sampleType) throws ServerException, RemoteException {
         String sampleName = String.valueOf(otherSampleId).toLowerCase();
         Pattern mrnpattern = Pattern.compile(".*\\d{9}.*"); // to match 9 digit string in sample name
         Matcher mrnMatcher = mrnpattern.matcher(sampleName);
@@ -182,7 +184,7 @@ public class SampleFieldUpdater extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private String getPrevousAssignedValueForOtherSampleId(DataRecord sample, String newValue, String fieldName) throws IoError, RemoteException, NotFound {
+    private String getPrevousAssignedValueForOtherSampleId(DataRecord sample, String newValue, String fieldName) throws IoError, RemoteException, NotFound, UnrecoverableServerException {
         DataRecord[] childSamples = sample.getChildrenOfType("Sample", user);
         if (childSamples.length > 0) {
             if (fieldName.equals("OtherSampleId") && childSamples[0].getValue("ExemplarSampleType", user) != null && !childSamples[0].getStringVal("ExemplarSampleType", user).equalsIgnoreCase("Pooled Library")) {
@@ -210,7 +212,7 @@ public class SampleFieldUpdater extends DefaultGenericPlugin {
      * @throws IoError
      * @throws RemoteException
      */
-    private List<String> getDescendentDataTypeNames(DataRecord sample) throws IoError, RemoteException {
+    private List<String> getDescendentDataTypeNames(DataRecord sample) throws IoError, RemoteException, ServerException {
         DataRecordAttributes[] attributesList = sample.getChildAttributesList(user);
         List<String> descendentDataTypeNames = new ArrayList<>(); //Except Sample Descendant type.
         for (DataRecordAttributes att : attributesList) {
