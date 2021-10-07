@@ -103,7 +103,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private boolean isValidFileData(List<String> fileData, Map<String, Integer> headerValuesMap) throws ServerException {
+    private boolean isValidFileData(List<String> fileData, Map<String, Integer> headerValuesMap) throws ServerException, RemoteException {
         Set<String> accessionNums = new HashSet<>();
         for (int i=1; i<fileData.size(); i++){
             List<String> rowVals = Arrays.asList(fileData.get(i).trim().split(","));
@@ -209,7 +209,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
                         try {
                             clientCallback.displayWarning(warning);
                             logError(warning);
-                        } catch (ServerException e){
+                        } catch (ServerException | RemoteException e){
                             logError(String.format("Server Exception error:\n%s",ExceptionUtils.getStackTrace(e)));
                         }
                     }

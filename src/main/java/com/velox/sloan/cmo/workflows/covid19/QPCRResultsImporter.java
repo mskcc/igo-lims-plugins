@@ -21,6 +21,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,7 +65,7 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
         }
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             String csvFilePath = clientCallback.showFileDialog("Upload the csv file with qPCR results.", null);
             if (csvFilePath == null) {
@@ -130,7 +131,7 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
      * @param fileData
      * @return
      */
-    private List<String> getQpcrResults(List<String> fileData, String fileName) throws ServerException {
+    private List<String> getQpcrResults(List<String> fileData, String fileName) throws ServerException, RemoteException {
         List<String> data = helper.getQpcrResults(fileData);
         if (data.size() < 2) {
             clientCallback.displayError(String.format("uploaded file '%s' does not contain data", fileName));
@@ -147,7 +148,7 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
      * @return true/false
      * @throws ServerException
      */
-    private boolean isValidCsvFile(String fileName) throws ServerException {
+    private boolean isValidCsvFile(String fileName) throws ServerException, RemoteException {
         if (!fileName.toLowerCase().endsWith(".csv")) {
             String errMsg = String.format("File '%s' is invalid file type. Only csv files with the extension .csv are accepted.", fileName);
             logError(errMsg);
@@ -449,7 +450,7 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws IOException
      */
-    private void exportReport(List<Map<String, Object>> analyzedData) throws ServerException {
+    private void exportReport(List<Map<String, Object>> analyzedData) throws ServerException, RemoteException {
         try {
             XSSFWorkbook workbook = new XSSFWorkbook();
             List<List<String>> completeReport = getQPCRCompleteReport(analyzedData);

@@ -37,7 +37,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         String iLabsRequestId = clientCallback.showInputDialog("Please enter iLabs Request ID.");
         ActiveWorkflow activeWebFormReceivingWorkflow;
         try {
@@ -109,7 +109,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
                 clientCallback.displayError(String.format("LIMS RequestID NOT FOUND for this iLabs Request: %s", iLabsRequestId));
                 return false;
             }
-        }catch (ServerException se) {
+        }catch (ServerException |RemoteException se) {
             String errMsg = String.format("InvalidValue Exception while validating Ilab Request ID %s:\n%s", iLabsRequestId, ExceptionUtils.getStackTrace(se));
             logError(errMsg);
         }
@@ -123,7 +123,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private boolean shouldLaunchWorkflow(List<DataRecord> promotedBankedSamples, List<String> limsRequestIdForPromotedSamples) throws ServerException {
+    private boolean shouldLaunchWorkflow(List<DataRecord> promotedBankedSamples, List<String> limsRequestIdForPromotedSamples) throws ServerException, RemoteException {
         clientCallback.displayInfo(String.format("LIMS Request ID for %d Promoted Samples:\n%s",
                 promotedBankedSamples.size(), convertListToString(limsRequestIdForPromotedSamples)));
         String dialogBoxTitle = "Launch Sample Receiving Workflow";
