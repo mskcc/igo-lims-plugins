@@ -33,7 +33,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             "TapeStation D1000 Compact Region Table, TapeStation D1000 HiSense Compact Region Table, Bioanalyzer DNA High Sens Region Table";
     private final List<String> DNA_SAMPLE_TYPES = Arrays.asList("cdna", "cfdna", "dna");
     private final List<String> RNA_SAMPLE_TYPES = Arrays.asList("rna");
-    private final List<String> LIBRARY_SAMPLE_TYPES = Arrays.asList("dna library", "pooled library", "cdna library");
+    private final List<String> LIBRARY_SAMPLE_TYPES = Arrays.asList("dna library", "pooled library", "cdna library", "protein library");
     private final double NANOMOLAR_TO_FEMTOMOLAR_CONVERSION_FACTOR = 1000000.00;
 
     public QcReportGenerator() {
@@ -671,7 +671,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 qcRecord.put("Volume", sample.getDoubleVal("Volume", user));
                 String attachedSampleTypes = samples.get(0).getStringVal("ExemplarSampleType", user);
                 List<DataRecord> listOfSamplesAncestors = sample.getAncestorsOfType("Sample", user);
-                if(listOfSamplesAncestors != null && listOfSamplesAncestors.size() > 0 && !attachedSampleTypes.equals("pooled library")) {
+                if(listOfSamplesAncestors != null && listOfSamplesAncestors.size() > 0 && !attachedSampleTypes.toLowerCase().equals("pooled library")) {
                     qcRecord.put("SourceSampleId", listOfSamplesAncestors.get(0).getValue("SampleId", user));
                 }
                 if (sample.getStringVal("ConcentrationUnits", user).trim().equalsIgnoreCase("ng/uL")) {
