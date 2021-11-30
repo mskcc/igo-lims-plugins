@@ -35,6 +35,8 @@ import java.util.stream.Collectors;
  */
 public class IgoLimsPluginUtils{
 
+    protected ClientCallbackOperations clientCallback;
+    protected PluginLogger pluginLogger = null;
 
     private final Pattern SPECIAL_CHARACTER_REGEX = Pattern.compile("^[a-zA-Z0-9_-]*$");
     private final Pattern SPECIAL_CHARACTER_REGEX_FOR_POOLS = Pattern.compile("^[a-zA-Z0-9,_-]*$");
@@ -270,6 +272,43 @@ public class IgoLimsPluginUtils{
     }
 
     /**
+     * Method to validate file has valid header values.
+     *
+     * @param dataRows
+     * @param expectedHeaderValues
+     * @param fileName
+     * @return boolean true/false
+     * @throws ServerException
+     */
+    public boolean hasValidHeader(List<Row> dataRows, List<String> expectedHeaderValues, String fileName) throws ServerException {
+        boolean isValidHeader = excelFileHasValidHeader(dataRows, expectedHeaderValues);
+        if (!isValidHeader) {
+            clientCallback.displayError(String.format("Uploaded file '%s' does not have a valid header. Valid file Headers are\n'%s'", fileName, this.convertListToString(expectedHeaderValues)));
+            pluginLogger.logError(String.format("Uploaded file '%s' does not have a valid header.Valid file Headers are\n'%s'", fileName, this.convertListToString(expectedHeaderValues)));
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Method to validate file has data.
+     *
+     * @param fileData
+     * @param fileName
+     * @return boolean true/false
+     * @throws ServerException
+     */
+    public boolean fileHasData(List<Row> fileData, String fileName) throws ServerException {
+        boolean hasData = this.excelFileHasData(fileData);
+        if (!hasData) {
+            clientCallback.displayError(String.format("Uploaded file '%s' is Empty", fileName));
+            pluginLogger.logError(String.format("Uploaded file '%s' is Empty", fileName));
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Method to create HashMap of Header values as key and their index as value.
      *
      * @param rowData
@@ -323,6 +362,31 @@ public class IgoLimsPluginUtils{
         return dataRows.size() > 1;
     }
 
+    /**
+     * The first thing in the method to do is to divide
+     *
+     * @param samples
+     * @param rows
+     * @param headerValuesMap
+     * @return HashMap with sample as Key and List of samples as Key Value
+     * @throws NotFound
+     * @throws RemoteException
+     */
+    public Map<String, List<Row>> getRowsBySample(List<DataRecord> samples, List<Row> rows, HashMap<String, Integer> headerValuesMap, User user) throws NotFound, RemoteException {
+        Map<String, List<Row>> rowDataSeparatedBySampleMap = new HashMap<>();
+        for (DataRecord sample : samples) {
+            String sampleId = sample.getStringVal("SampleId", user);
+            rowDataSeparatedBySampleMap.putIfAbsent(sampleId, new ArrayList<>());
+        }
+        for (int i = 1; i < rows.size(); i++) {
+            rows.get(i).getCell(headerValuesMap.get("Sample")).setCellType(CellType.STRING);
+            String sampleId = rows.get(i).getCell(headerValuesMap.get("Sample")).getStringCellValue();
+            if (rowDataSeparatedBySampleMap.containsKey(sampleId)) {
+                rowDataSeparatedBySampleMap.get(sampleId).add(rows.get(i));
+            }
+        }
+        return rowDataSeparatedBySampleMap;
+    }
 
 
     /**
