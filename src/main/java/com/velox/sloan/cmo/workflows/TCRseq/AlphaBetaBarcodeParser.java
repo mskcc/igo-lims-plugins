@@ -60,23 +60,20 @@ public class AlphaBetaBarcodeParser extends DefaultGenericPlugin {
 
 
             //populate a new table with map values
-            Object recipe = samplesAttachedToTask.get(0).getValue(SampleModel.RECIPE, user);
-            Object dlpRequestedReads = getDlpRequestedReads(recipe);
-            Map<String, List<Row>> rowsSeparatedBySampleMap = utils.getRowsBySample(samplesAttachedToTask, rowData, headerValuesMap, user);
-            Map<String, List<DataRecord>> newAlphaBetaBarcodes = createDlpSamplesAndProtocolRecords(rowsSeparatedBySampleMap, headerValuesMap, samplesAttachedToTask, cellTypeToProcess);
-            createPools(newAlphaBetaBarcodes, (Double) dlpRequestedReads);
+
         }
-        catch (IoError e) {
-            String errMsg = String.format("IoError Exception while parsing the TCRseq spotting file:\n%s", ExceptionUtils.getStackTrace(e));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
-        } catch (InvalidValue e) {
-            String errMsg = String.format("IoError Exception while parsing the TCRseq spotting file:\n%s", ExceptionUtils.getStackTrace(e));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
-        } catch (InvalidFormatException e) {
+//        catch (IoError e) {
+//            String errMsg = String.format("IoError Exception while parsing the TCRseq spotting file:\n%s", ExceptionUtils.getStackTrace(e));
+//            clientCallback.displayError(errMsg);
+//            logError(errMsg);
+//            return new PluginResult(false);
+//        } catch (InvalidValue e) {
+//            String errMsg = String.format("IoError Exception while parsing the TCRseq spotting file:\n%s", ExceptionUtils.getStackTrace(e));
+//            clientCallback.displayError(errMsg);
+//            logError(errMsg);
+//            return new PluginResult(false);
+//        }
+        catch (InvalidFormatException e) {
             String errMsg = String.format("InvalidFormat Exception while parsing the TCRseq spotting file:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
