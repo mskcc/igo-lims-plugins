@@ -1,9 +1,11 @@
 package com.velox.sloan.cmo.workflows.digitalpcr;
 
 import com.velox.api.datarecord.DataRecord;
+import com.velox.api.datarecord.InvalidValue;
 import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
+import com.velox.api.util.ClientCallbackRMI;
 import com.velox.api.util.ServerException;
 import com.velox.api.workflow.ActiveTask;
 import com.velox.api.workflow.ActiveWorkflow;
@@ -85,12 +87,31 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
                 logError("ddPCR Report type not provided by user. Dialog canceled.");
                 return new PluginResult(false);
             }
+            //set Human Percentage on QcReportDna DataRecords when Saving DdPcrAssayResults and HumanPercentageValues are present
+            mapHumanPercentageFromDdpcrResultsToDnaQcReport(ddPcrResults);
+            logInfo("mapHumanPercentageFromDdpcrResultsToDnaQcReport is called!");
             List<String> headerForReport = getHeaderBasedOnReportType(reportType);
             XSSFWorkbook workbook = new XSSFWorkbook();
             List<Map<String, Object>> valuesForReport = setFieldsForReport(ddPcrResults);
             generateExcelDataWorkbook(headerForReport, valuesForReport, workbook);
             String fileName = generateFileNameFromRequestIds(attachedSamples);
             exportReport(workbook, fileName);
+        } catch (IoError io) {
+            String errMsg = String.format("Remote Exception Error while mapping human percentage from DDPCR results to DNA QC Report:\n%s", ExceptionUtils.getStackTrace(io));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+
+        } catch (InvalidValue iv) {
+            String errMsg = String.format("Remote Exception Error while mapping human percentage from DDPCR results to DNA QC Report:\n%s", ExceptionUtils.getStackTrace(iv));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
+        } catch (NotFound nf) {
+            String errMsg = String.format("Remote Exception Error while mapping human percentage from DDPCR results to DNA QC Report:\n%s", ExceptionUtils.getStackTrace(nf));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
         } catch (RemoteException e) {
             String errMsg = String.format("Remote Exception Error while generating DDPCR Report:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
@@ -388,6 +409,64 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
             }
         }
 
+    }
+
+    /**
+     * Method to map Human Percentage values from DdPcrAssayResults to QCReport records.
+     *
+     * @param savedRecords
+     * @throws IoError
+     * @throws RemoteException
+     * @throws NotFound
+     * @throws InvalidValue
+     * @throws ServerException
+     */
+    private void mapHumanPercentageFromDdpcrResultsToDnaQcReport(List<DataRecord> savedRecords) throws IoError, RemoteException, NotFound, InvalidValue {
+        for (DataRecord rec : savedRecords) {
+            if (rec.getDataTypeName().equalsIgnoreCase("DdPcrAssayResults") && rec.getValue("HumanPercentage", user) != null) {
+                List<DataRecord> parentSamples = rec.getParentsOfType("Sample", user);
+                Double humanPercentage = rec.getDoubleVal("HumanPercentage", user);
+                if (parentSamples.size() > 0) {
+                    DataRecord parentSample = parentSamples.get(0);
+                    String requestId = parentSample.getStringVal("RequestId", user);
+                    List<DataRecord> qcReports = getQcReportRecords(parentSample, requestId);
+                    for (DataRecord qr : qcReports) {
+                        qr.setDataField("HumanPercentage", humanPercentage, user);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Method to get QcReport records for Sample.
+     *
+     * @param sample
+     * @param requestId
+     * @return
+     * @throws IoError
+     * @throws RemoteException
+     * @throws NotFound
+     */
+    private List<DataRecord> getQcReportRecords(DataRecord sample, String requestId) throws IoError, RemoteException, NotFound {
+        if (sample.getChildrenOfType("QcReportDna", user).length > 0) {
+            return Arrays.asList(sample.getChildrenOfType("QcReportDna", user));
+        }
+        List<DataRecord> qcReports = new ArrayList<>();
+        Stack<DataRecord> sampleStack = new Stack<>();
+        sampleStack.add(sample);
+        while (sampleStack.size() > 0) {
+            DataRecord nextSample = sampleStack.pop();
+            if (requestId.equalsIgnoreCase(nextSample.getStringVal("RequestId", user)) && nextSample.getChildrenOfType("QcReportDna", user).length > 0) {
+                return Arrays.asList(nextSample.getChildrenOfType("QcReportDna", user));
+            }
+            List<DataRecord> parentSamples = nextSample.getParentsOfType("Sample", user);
+            if (parentSamples.size() > 0 && parentSamples.get(0).getValue("RequestId", user) != null
+                    && parentSamples.get(0).getStringVal("RequestId", user).equals(requestId)) {
+                sampleStack.addAll(parentSamples);
+            }
+        }
+        return qcReports;
     }
 }
 

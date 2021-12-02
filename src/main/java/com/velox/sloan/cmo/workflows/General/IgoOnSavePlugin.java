@@ -54,16 +54,6 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
                 Long sampleDate = rec.getDateVal("DateCreated", user);
                 logInfo("Saved DataRecord's DataType: " + dtTypeName);
 
-                // update 'RemainingReads' to be sequenced on SeqRequirements when a SeqAnalysisSampleQC record is saved.
-                if (dtTypeName.equalsIgnoreCase(SeqAnalysisSampleQCModel.DATA_TYPE_NAME) && !utils.isControlSample(rec, pluginLogger, user)){
-                    logInfo("Started updating RemainingReads for SeqAnalysisSampleQC with Record Id: " + rec.getRecordId());
-                    updateRemainingReadsToSequence(rec);
-                }
-                //set Human Percentage on QcReportDna DataRecords when Saving DdPcrAssayResults and HumanPercentageValues are present
-                if (dtTypeName.equalsIgnoreCase(DdPcrAssayResultsModel.DATA_TYPE_NAME)) {
-                    logInfo("mapHumanPercentageFromDdpcrResultsToDnaQcReport is called!");
-                    mapHumanPercentageFromDdpcrResultsToDnaQcReport(theSavedRecords);
-                }
                 //validate fields for special characters on Sample Datatype
                 if (dtTypeName.equalsIgnoreCase(SampleModel.DATA_TYPE_NAME)) {
                     logInfo("Checking for Special Characters in Sample Record with RecordId: " + rec.getRecordId());
@@ -79,18 +69,6 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
             return new PluginResult(false);
         } catch (RemoteException e) {
             String errMsg = String.format("Remote Exception while saving data:\n%s", ExceptionUtils.getStackTrace(e));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
-        }
-        catch (InvalidValue e) {
-            String errMsg = String.format("InvalidValue Exception while saving data:\n%s", ExceptionUtils.getStackTrace(e));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
-        }
-        catch (IoError e) {
-            String errMsg = String.format("IoError Exception while saving data:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
