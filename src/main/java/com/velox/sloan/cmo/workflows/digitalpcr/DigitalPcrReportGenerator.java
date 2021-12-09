@@ -87,31 +87,14 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
                 logError("ddPCR Report type not provided by user. Dialog canceled.");
                 return new PluginResult(false);
             }
-            //set Human Percentage on QcReportDna DataRecords when Saving DdPcrAssayResults and HumanPercentageValues are present
-            mapHumanPercentageFromDdpcrResultsToDnaQcReport(ddPcrResults);
-            logInfo("mapHumanPercentageFromDdpcrResultsToDnaQcReport is called!");
+
             List<String> headerForReport = getHeaderBasedOnReportType(reportType);
             XSSFWorkbook workbook = new XSSFWorkbook();
             List<Map<String, Object>> valuesForReport = setFieldsForReport(ddPcrResults);
             generateExcelDataWorkbook(headerForReport, valuesForReport, workbook);
             String fileName = generateFileNameFromRequestIds(attachedSamples);
             exportReport(workbook, fileName);
-        } catch (IoError io) {
-            String errMsg = String.format("Remote Exception Error while mapping human percentage from DDPCR results to DNA QC Report:\n%s", ExceptionUtils.getStackTrace(io));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
 
-        } catch (InvalidValue iv) {
-            String errMsg = String.format("Remote Exception Error while mapping human percentage from DDPCR results to DNA QC Report:\n%s", ExceptionUtils.getStackTrace(iv));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
-        } catch (NotFound nf) {
-            String errMsg = String.format("Remote Exception Error while mapping human percentage from DDPCR results to DNA QC Report:\n%s", ExceptionUtils.getStackTrace(nf));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
         } catch (RemoteException e) {
             String errMsg = String.format("Remote Exception Error while generating DDPCR Report:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
