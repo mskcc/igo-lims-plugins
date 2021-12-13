@@ -41,39 +41,28 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
     }
 
     public PluginResult run() throws ServerException {
+        long startTime = System.currentTimeMillis();
         try {
             // returns results in a list if something is changed and save button is clicked
             List<DataRecord> theSavedRecords = dataRecordList;
+            for(DataRecord dr: theSavedRecords) {
+                logInfo("Saved record's data type name is: " + dr.getDataTypeName() + " the record ID is:" + dr.getValue("RecordId", user).toString());
+            }
 
             for (DataRecord rec: theSavedRecords){
                 String dtTypeName = rec.getDataTypeName();
-                //logInfo("Saved DataRecord's DataType: " + dtTypeName);
-                if (trackableDataTypes.contains(dtTypeName)) {
-                    // set DateModified to current time
-                    rec.setDataField("DateModified", System.currentTimeMillis(), user);
-                }
-                // update 'RemainingReads' to be sequenced on SeqRequirements when a SeqAnalysisSampleQC record is saved.
-                if (dtTypeName.equalsIgnoreCase(SeqAnalysisSampleQCModel.DATA_TYPE_NAME) && !utils.isControlSample(rec, pluginLogger, user)){
-                    //logInfo("Started updating RemainingReads for SeqAnalysisSampleQC with Record Id: " + rec.getRecordId());
-                    updateRemainingReadsToSequence(rec);
-                }
-                //set Human Percentage on QcReportDna DataRecords when Saving DdPcrAssayResults and HumanPercentageValues are present
-                if (dtTypeName.equalsIgnoreCase(DdPcrAssayResultsModel.DATA_TYPE_NAME)) {
-                    mapHumanPercentageFromDdpcrResultsToDnaQcReport(theSavedRecords);
-                }
+                Long sampleDate = rec.getDateVal("DateCreated", user);
+                logInfo("Saved DataRecord's DataType: " + dtTypeName);
+
                 //validate fields for special characters on Sample Datatype
                 if (dtTypeName.equalsIgnoreCase(SampleModel.DATA_TYPE_NAME)) {
-                    //logInfo("Checking for Special Characters in Sample Record with RecordId: " + rec.getRecordId());
+                    logInfo("Checking for Special Characters in Sample Record with RecordId: " + rec.getRecordId());
                     validateSampleFields(rec, dtTypeName);
-                }
-                // validate fields for special characters on SampleCMOInfoRecords DataType
-                if (dtTypeName.equalsIgnoreCase(SampleCMOInfoRecordsModel.DATA_TYPE_NAME)) {
-                    //logInfo("Checking for Special Characters in SampleCMOInfoRecords Record with RecordId: " + rec.getRecordId());
-                    validateCmoInfoDataTypeFields(rec, dtTypeName);
                 }
             }
             // if there's an error
-        }  catch (NotFound e) {
+        }
+        catch (NotFound e) {
             String errMsg = String.format("NotFound Exception while saving data:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
@@ -83,17 +72,10 @@ public class IgoOnSavePlugin extends DefaultGenericPlugin {
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
-        } catch (InvalidValue e) {
-            String errMsg = String.format("InvalidValue Exception while saving data:\n%s", ExceptionUtils.getStackTrace(e));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
-        } catch (IoError e) {
-            String errMsg = String.format("IoError Exception while saving data:\n%s", ExceptionUtils.getStackTrace(e));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
         }
+        long endTime = System.currentTimeMillis();
+        long executionTime = endTime - startTime;
+        logInfo("IgoOnSavePlugin execution time: " + String.valueOf(executionTime));
         return new PluginResult(error == null, error == null ? new ArrayList<Object>() : Collections.singletonList(error));
     }
 
