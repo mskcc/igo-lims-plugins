@@ -119,6 +119,12 @@ public class ValidateSampleFieldsPlugin extends DefaultGenericPlugin {
                                 "Special characters except '_' '-' ',' (comma only for Pooled Library Samples) are not allowed for this Field. " +
                                 "Please check for whitespaces in between/beginning/trailing the entered field values or dropdown field values you are using.", fieldValue.toString(), dataTypeName, key);
                         logError(error);
+                        try {
+                            this.clientCallback.displayError(error);
+                        } catch (ServerException se) {
+                            String errMsg = String.format("Server Exception while saving data:\n%s", ExceptionUtils.getStackTrace(se));
+                            logError(errMsg);
+                        }
                     }
                 }
             }
