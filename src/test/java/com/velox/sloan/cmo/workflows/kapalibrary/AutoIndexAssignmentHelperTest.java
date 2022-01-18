@@ -16,8 +16,8 @@ public class AutoIndexAssignmentHelperTest {
         Integer plateSize = 96;
         Integer plateSize2 = 384;
 
-        assertTrue(autoHelper.getMinAdapterVolumeRequired(plateSize) == 7.50);
-        assertTrue(autoHelper.getMinAdapterVolumeRequired(plateSize2) == 3.00);
+        assertTrue(autoHelper.getMinAdapterVolumeRequired(plateSize, false) == 7.50);
+        assertTrue(autoHelper.getMinAdapterVolumeRequired(plateSize2, false) == 3.00);
     }
 
     @Test
