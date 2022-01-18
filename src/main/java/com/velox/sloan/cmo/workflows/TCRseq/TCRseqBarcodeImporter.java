@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class AlphaBetaBarcodeParser extends DefaultGenericPlugin {
+public class TCRseqBarcodeParserManual extends DefaultGenericPlugin {
 
     private final List<String> TCRSEQ_BARCODE_SHEET_EXPECTED_HEADERS = Arrays.asList("");
     IgoLimsPluginUtils utils = new IgoLimsPluginUtils();

@@ -24,7 +24,10 @@ public class AutoIndexAssignmentHelper extends ManagerBase {
      * @param plateSize
      * @return Double volume
      */
-    public Double getMinAdapterVolumeRequired(Integer plateSize) {
+    public Double getMinAdapterVolumeRequired(Integer plateSize, boolean isTCRseq) {
+        if(isTCRseq) {
+            return 5.5;
+        }
         if (plateSize == 96) {
             return 7.50;
         } else {

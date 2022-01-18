@@ -23,6 +23,7 @@ import java.util.List;
  */
 public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
     private final String INDEX_ASSIGNMENT_CONFIG_DATATYPE = "AutoIndexAssignmentConfig";
+    private boolean isTCRseq = false;
     AutoIndexAssignmentHelper autohelper;
 
     public ManualIndexAssignmentHandler() {
@@ -58,7 +59,11 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
             }
             Integer plateSize = getPlateSize(attachedSamplesList);
             String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
-            Double minAdapterVolInPlate = autohelper.getMinAdapterVolumeRequired(plateSize);
+            String recipe = attachedSamplesList.get(0).getStringVal("Recipe", user);
+            if(recipe.toLowerCase().equals("tcrseq-igo")) {
+                isTCRseq = true;
+            }
+            Double minAdapterVolInPlate = autohelper.getMinAdapterVolumeRequired(plateSize, isTCRseq);
             Double maxPlateVolume = autohelper.getMaxVolumeLimit(plateSize);
             setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords, minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType);
             checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
