@@ -23,8 +23,8 @@ import java.util.List;
  */
 public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
     private final String INDEX_ASSIGNMENT_CONFIG_DATATYPE = "AutoIndexAssignmentConfig";
-    private boolean isTCRseq = false;
     AutoIndexAssignmentHelper autohelper;
+    private boolean isTCRseq = false;
 
     public ManualIndexAssignmentHandler() {
         setTaskEntry(true);
