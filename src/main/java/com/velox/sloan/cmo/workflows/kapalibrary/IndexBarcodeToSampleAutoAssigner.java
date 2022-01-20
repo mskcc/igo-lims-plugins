@@ -53,8 +53,8 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
             List<DataRecord> attachedTCRseqBarcodeRecords = activeTask.getAttachedDataRecords("TCRseq-IGO", user);
             List<Object> uniquePlates = getAllUniquesPlates(attachedSamplesList);
 
-            for(Object plate: uniquePlates) {
-                if(activeTask.getTask().getTaskOptions().containsKey("tcrseq")) {
+            for (Object plate : uniquePlates) {
+                if (activeTask.getTask().getTaskOptions().containsKey("tcrseq")) {
                     isTCRseq = true;
                 }
                 if (attachedIndexBarcodeRecords.isEmpty()) {
@@ -164,18 +164,15 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         if (!isCrisprOrAmpliconSeq) {
             logInfo("Library samples do not have recipe values Crispr or AmpliconSeq, reserved indexes in set5 will not be used.");
             return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + "AND IsActive=1 AND SetId!=5", user);
-        }
-        else if(indexTypes.toLowerCase().contains("tcrseq-igo")) {
+        } else if (indexTypes.toLowerCase().contains("tcrseq-igo")) {
             logInfo("Library samples have recipe values TCRseq-IGO, reserved indexes in set5 will not be used.");
-            if(species.compareToIgnoreCase("mouse") == 0) {
+            if (species.compareToIgnoreCase("mouse") == 0) {
                 return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + "AND IsActive=1 AND SetId!=5 AND IndexTag like 'm%'", user);
-            }
-            else {
+            } else {
                 return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + "AND IsActive=1 AND SetId!=5 AND IndexTag like 'h%'", user);
 
             }
-        }
-        else {
+        } else {
             logInfo("Recipe on Library samples is Crispr or AmpliconSeq, reserved indexes in set5 will be used.");
             return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType='DUAL_IDT_LIB' AND SetId=5 and IsActive=1", user);
         }
@@ -493,11 +490,10 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
      */
     private List<Object> getAllUniquesPlates(List<DataRecord> attachedSamples) {
         List<Object> plates = new LinkedList<>();
-        for(DataRecord s: attachedSamples) {
+        for (DataRecord s : attachedSamples) {
             try {
                 plates.add(s.getAncestorsOfType("Plate", user));
-            }
-            catch (RemoteException re) {
+            } catch (RemoteException re) {
                 logError("Remote exception happened while finding all unique plates for the attached samples", re);
             }
         }

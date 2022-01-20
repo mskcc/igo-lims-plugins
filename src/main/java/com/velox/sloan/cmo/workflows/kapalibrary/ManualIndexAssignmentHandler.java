@@ -60,7 +60,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
             Integer plateSize = getPlateSize(attachedSamplesList);
             String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
             String recipe = attachedSamplesList.get(0).getStringVal("Recipe", user);
-            if(recipe.toLowerCase().equals("tcrseq-igo")) {
+            if (recipe.toLowerCase().equals("tcrseq-igo")) {
                 isTCRseq = true;
             }
             Double minAdapterVolInPlate = autohelper.getMinAdapterVolumeRequired(plateSize, isTCRseq);
