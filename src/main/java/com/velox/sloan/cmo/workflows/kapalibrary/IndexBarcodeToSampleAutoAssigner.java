@@ -41,8 +41,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
 
     @Override
     protected boolean shouldRun() throws Throwable {
-        return (activeTask.getTask().getTaskOptions().containsKey("AUTOASSIGN INDEX BARCODES") && !activeTask.getTask().getTaskOptions().containsKey("_INDEXES_AUTO_ASIGNED"))
-                || (activeTask.getTask().getTaskOptions().containsKey("TCRseq-IGO"));
+        return (activeTask.getTask().getTaskOptions().containsKey("AUTOASSIGN INDEX BARCODES") && !activeTask.getTask().getTaskOptions().containsKey("_INDEXES_AUTO_ASIGNED"));
     }
 
     public PluginResult run() throws ServerException {
@@ -50,13 +49,22 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         try {
             List<DataRecord> attachedSamplesList = activeTask.getAttachedDataRecords("Sample", user);
             List<DataRecord> attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IndexBarcode", user);
-            List<DataRecord> attachedTCRseqBarcodeRecords = activeTask.getAttachedDataRecords("TCRseq-IGO", user);
-            List<Object> uniquePlates = getAllUniquesPlates(attachedSamplesList);
-
+            Set<Object> uniquePlates = new HashSet<>();
+            for(DataRecord sample: attachedSamplesList) {
+                uniquePlates.add(sample.getParentsOfType("Plate", user));
+            }
+            List<DataRecord> attachedTCRseqBarcodeRecords = new LinkedList<>();
             for (Object plate : uniquePlates) {
                 if (activeTask.getTask().getTaskOptions().containsKey("tcrseq")) {
+                    attachedTCRseqBarcodeRecords = activeTask.getAttachedDataRecords("TCRseq-IGO", user);
                     isTCRseq = true;
                 }
+                if(isTCRseq && attachedTCRseqBarcodeRecords.isEmpty()) {
+                    clientCallback.displayError(String.format("Could not find any TCRseq Barcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
+                    logError(String.format("Could not find any TCRseq Barcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
+                    return new PluginResult(false);
+                }
+
                 if (attachedIndexBarcodeRecords.isEmpty()) {
                     clientCallback.displayError(String.format("Could not find any IndexBarcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
                     logError(String.format("Could not find any IndexBarcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
@@ -84,11 +92,18 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                     logError(String.format("Could not find 'AutoIndexAssignmentConfig' for Recipes '%s' for samples and TASK OPTION VALUE '%s' for Index Types given to Option 'AUTOASSIGN INDEX BARCODES", utils.convertListToString(recipes), indexTypeToProcess));
                     return new PluginResult(false);
                 }
-                List<DataRecord> sortedProtocolRecords = getSampleProtocolRecordsSortedByWellPositionColumnWise(attachedIndexBarcodeRecords);
+                List<DataRecord> sortedProtocolRecords;
+                if(isTCRseq) {
+                    sortedProtocolRecords = getSampleProtocolRecordsSortedByWellPositionColumnWise(attachedTCRseqBarcodeRecords);
+                }
+                else {
+                    sortedProtocolRecords = getSampleProtocolRecordsSortedByWellPositionColumnWise(attachedIndexBarcodeRecords);
+                }
+
                 Integer plateSize = getPlateSize(attachedSamplesList);
                 Double minAdapterVol = autoHelper.getMinAdapterVolumeRequired(plateSize, isTCRseq);
                 String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
-                String sampleSpecies = attachedSamplesList.get(0).getStringVal("Species", user);
+                //String sampleSpecies = attachedSamplesList.get(0).getStringVal("Species", user);
                 if (plateSize == 96) {
                     assignIndicesToSamples(sortedProtocolRecords, indexConfigsToUse, minAdapterVol, plateSize, sampleType);
                 } else if (plateSize == 384) {
