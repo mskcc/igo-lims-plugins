@@ -48,18 +48,22 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         autoHelper = new AutoIndexAssignmentHelper();
         try {
             List<DataRecord> attachedSamplesList = activeTask.getAttachedDataRecords("Sample", user);
-            List<DataRecord> attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IndexBarcode", user);
+            List<DataRecord> attachedIndexBarcodeRecords = new LinkedList<>();
             Set<Object> uniquePlates = new HashSet<>();
             for(DataRecord sample: attachedSamplesList) {
                 uniquePlates.add(sample.getParentsOfType("Plate", user));
             }
-            List<DataRecord> attachedTCRseqBarcodeRecords = new LinkedList<>();
+
             for (Object plate : uniquePlates) {
-                if (activeTask.getTask().getTaskOptions().containsKey("tcrseq")) {
-                    attachedTCRseqBarcodeRecords = activeTask.getAttachedDataRecords("TCRseq-IGO", user);
+                if (activeTask.getTask().getTaskOptions().get("AUTOASSIGN INDEX BARCODES").toLowerCase().contains("tcrseq")) {
                     isTCRseq = true;
+                    attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IgoTcrSeqIndexBarcode", user);
                 }
-                if(isTCRseq && attachedTCRseqBarcodeRecords.isEmpty()) {
+                else {
+                    attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IndexBarcode", user);
+                }
+
+                if(isTCRseq && attachedIndexBarcodeRecords.isEmpty()) {
                     clientCallback.displayError(String.format("Could not find any TCRseq Barcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
                     logError(String.format("Could not find any TCRseq Barcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
                     return new PluginResult(false);
@@ -87,18 +91,13 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
 
                 String indexTypeToProcess = getIndexTypesToUse(taskOptionValueForIndexAssignment);
                 List<DataRecord> indexConfigsToUse = getIndexAssignmentConfigsForIndexType(indexTypeToProcess, recipes, attachedSamplesList);
+
                 if (indexConfigsToUse.isEmpty()) {
                     clientCallback.displayError(String.format("Could not find 'AutoIndexAssignmentConfig' for Recipes/IndexTypes values '%s/%s' given to plugin 'AUTOASSIGN INDEX BARCODES", utils.convertListToString(recipes), indexTypeToProcess));
                     logError(String.format("Could not find 'AutoIndexAssignmentConfig' for Recipes '%s' for samples and TASK OPTION VALUE '%s' for Index Types given to Option 'AUTOASSIGN INDEX BARCODES", utils.convertListToString(recipes), indexTypeToProcess));
                     return new PluginResult(false);
                 }
-                List<DataRecord> sortedProtocolRecords;
-                if(isTCRseq) {
-                    sortedProtocolRecords = getSampleProtocolRecordsSortedByWellPositionColumnWise(attachedTCRseqBarcodeRecords);
-                }
-                else {
-                    sortedProtocolRecords = getSampleProtocolRecordsSortedByWellPositionColumnWise(attachedIndexBarcodeRecords);
-                }
+                List<DataRecord> sortedProtocolRecords = getSampleProtocolRecordsSortedByWellPositionColumnWise(attachedIndexBarcodeRecords);
 
                 Integer plateSize = getPlateSize(attachedSamplesList);
                 Double minAdapterVol = autoHelper.getMinAdapterVolumeRequired(plateSize, isTCRseq);
@@ -176,21 +175,37 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         String INDEX_ASSIGNMENT_CONFIG_DATATYPE = "AutoIndexAssignmentConfig";
         String species = attachedSamplesList.get(0).getStringVal("Species", user);
 
-        if (!isCrisprOrAmpliconSeq) {
-            logInfo("Library samples do not have recipe values Crispr or AmpliconSeq, reserved indexes in set5 will not be used.");
-            return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + "AND IsActive=1 AND SetId!=5", user);
-        } else if (indexTypes.toLowerCase().contains("tcrseq-igo")) {
+        if (indexTypes.toLowerCase().contains("tcrseq-igo")) {
             logInfo("Library samples have recipe values TCRseq-IGO, reserved indexes in set5 will not be used.");
-            if (species.compareToIgnoreCase("mouse") == 0) {
-                return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + "AND IsActive=1 AND SetId!=5 AND IndexTag like 'm%'", user);
-            } else {
-                return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + "AND IsActive=1 AND SetId!=5 AND IndexTag like 'h%'", user);
+            boolean isAlph = recipes.get(0).toLowerCase().contains("alpha");
+            boolean isBeta = recipes.get(0).toLowerCase().contains("beta");
 
+            if (species.compareToIgnoreCase("mouse") == 0) {
+                if (isAlph) {
+                    return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + " AND IsActive=1 AND SetId!=5 AND IndexId like 'M%' AND IndexId like '%acj%'", user);
+                }
+                else if (isBeta) {
+                    return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + " AND IsActive=1 AND SetId!=5 AND IndexId like 'M%' AND IndexId like '%bcj%'", user);
+                }
             }
-        } else {
+            else { // species: human
+                if (isAlph) {
+                    return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + " AND IsActive=1 AND SetId!=5 AND IndexId like 'H%' AND IndexId like '%acj%'", user);
+                }
+                else if (isBeta) {
+                    return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + " AND IsActive=1 AND SetId!=5 AND IndexId like 'H%' AND IndexId like '%bcj%'", user);
+                }
+            }
+        } else if (isCrisprOrAmpliconSeq) {
             logInfo("Recipe on Library samples is Crispr or AmpliconSeq, reserved indexes in set5 will be used.");
             return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType='DUAL_IDT_LIB' AND SetId=5 and IsActive=1", user);
+
+        } else {
+            logInfo("Library samples do not have recipe values Crispr or AmpliconSeq, reserved indexes in set5 will not be used.");
+            return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + "AND IsActive=1 AND SetId!=5", user);
+
         }
+        return new LinkedList<DataRecord>();
     }
 
     /**

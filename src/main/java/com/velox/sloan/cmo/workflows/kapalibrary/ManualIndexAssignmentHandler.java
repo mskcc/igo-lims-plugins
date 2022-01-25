@@ -11,6 +11,7 @@ import com.velox.sapioutils.shared.enums.PluginOrder;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -40,7 +41,16 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
         autohelper = new AutoIndexAssignmentHelper();
         try {
             List<DataRecord> attachedSamplesList = activeTask.getAttachedDataRecords("Sample", user);
-            List<DataRecord> attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IndexBarcode", user);
+            List<DataRecord> attachedIndexBarcodeRecords = new LinkedList<>();
+            String recipe = attachedSamplesList.get(0).getStringVal("Recipe", user);
+            if(activeWorkflow.getWorkflow().getFullName().toLowerCase().contains("tcrseq") && recipe.toLowerCase().equals("tcrseq-igo")) {
+                isTCRseq = true;
+                attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IgoTcrSeqIndexBarcode", user);
+            }
+            else {
+                attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IndexBarcode", user);
+            }
+
             if (attachedIndexBarcodeRecords.isEmpty()) {
                 clientCallback.displayError(String.format("Could not find any IndexBarcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
                 logError(String.format("Could not find any IndexBarcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
@@ -59,10 +69,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
             }
             Integer plateSize = getPlateSize(attachedSamplesList);
             String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
-            String recipe = attachedSamplesList.get(0).getStringVal("Recipe", user);
-            if (recipe.toLowerCase().equals("tcrseq-igo")) {
-                isTCRseq = true;
-            }
+
             Double minAdapterVolInPlate = autohelper.getMinAdapterVolumeRequired(plateSize, isTCRseq);
             Double maxPlateVolume = autohelper.getMaxVolumeLimit(plateSize);
             setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords, minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType);
