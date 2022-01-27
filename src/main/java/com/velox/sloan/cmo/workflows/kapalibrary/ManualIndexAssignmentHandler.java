@@ -11,8 +11,7 @@ import com.velox.sapioutils.shared.enums.PluginOrder;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 /**
  * This is the plugin class is designed to update the values for 'AutoIndexAssignmentConfig' records based on the 'IndexBarcode' DataRecord values manually assigned by the Users. This will help to track the
@@ -43,7 +42,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
             List<DataRecord> attachedSamplesList = activeTask.getAttachedDataRecords("Sample", user);
             List<DataRecord> attachedIndexBarcodeRecords = new LinkedList<>();
             String recipe = attachedSamplesList.get(0).getStringVal("Recipe", user);
-            if(activeWorkflow.getWorkflow().getFullName().toLowerCase().contains("tcrseq") && recipe.toLowerCase().equals("tcrseq-igo")) {
+            if(activeWorkflow.getWorkflow().getFullName().toLowerCase().contains("tcrseq") && recipe.toLowerCase().contains("tcrseq")) {
                 isTCRseq = true;
                 attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IgoTcrSeqIndexBarcode", user);
             }
@@ -67,13 +66,20 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                 logError("Could not find any active 'AutoIndexAssignmentConfig'");
                 return new PluginResult(false);
             }
-            Integer plateSize = getPlateSize(attachedSamplesList);
-            String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
+            Set<Object> uniquePlates = new HashSet<>();
+            for(DataRecord sample: attachedSamplesList) {
+                uniquePlates.add(sample.getParentsOfType("Plate", user));
+            }
+            for(Object plate: uniquePlates) {
+                Integer plateSize = getPlateSize(attachedSamplesList);
+                String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
 
-            Double minAdapterVolInPlate = autohelper.getMinAdapterVolumeRequired(plateSize, isTCRseq);
-            Double maxPlateVolume = autohelper.getMaxVolumeLimit(plateSize);
-            setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords, minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType);
-            checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
+                Double minAdapterVolInPlate = autohelper.getMinAdapterVolumeRequired(plateSize, isTCRseq);
+                Double maxPlateVolume = autohelper.getMaxVolumeLimit(plateSize);
+                setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords, minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType);
+                checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
+            }
+
         } catch (NotFound e) {
             String errMsg = String.format("NotFound Exception while manual index assignment:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);

@@ -13,6 +13,7 @@ import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
+import javax.xml.crypto.Data;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -49,60 +50,69 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         try {
             List<DataRecord> attachedSamplesList = activeTask.getAttachedDataRecords("Sample", user);
             List<DataRecord> attachedIndexBarcodeRecords = new LinkedList<>();
-            Set<Object> uniquePlates = new HashSet<>();
+            Set<DataRecord> uniquePlates = new HashSet<>();
             for(DataRecord sample: attachedSamplesList) {
-                uniquePlates.add(sample.getParentsOfType("Plate", user));
+                List<DataRecord> listOfParentPlates = sample.getParentsOfType("Plate", user);
+                uniquePlates.add(listOfParentPlates.get(listOfParentPlates.size() - 1));
             }
 
-            for (Object plate : uniquePlates) {
-                if (activeTask.getTask().getTaskOptions().get("AUTOASSIGN INDEX BARCODES").toLowerCase().contains("tcrseq")) {
-                    isTCRseq = true;
-                    attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IgoTcrSeqIndexBarcode", user);
-                }
-                else {
-                    attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IndexBarcode", user);
-                }
+            if (activeTask.getTask().getTaskOptions().get("AUTOASSIGN INDEX BARCODES").toLowerCase().contains("tcrseq")) {
+                isTCRseq = true;
+                attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IgoTcrSeqIndexBarcode", user);
+            }
+            else {
+                attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IndexBarcode", user);
+            }
 
-                if(isTCRseq && attachedIndexBarcodeRecords.isEmpty()) {
-                    clientCallback.displayError(String.format("Could not find any TCRseq Barcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
-                    logError(String.format("Could not find any TCRseq Barcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
-                    return new PluginResult(false);
-                }
+            if(isTCRseq && attachedIndexBarcodeRecords.isEmpty()) {
+                clientCallback.displayError(String.format("Could not find any TCRseq Barcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
+                logError(String.format("Could not find any TCRseq Barcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
+                return new PluginResult(false);
+            }
 
-                if (attachedIndexBarcodeRecords.isEmpty()) {
-                    clientCallback.displayError(String.format("Could not find any IndexBarcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
-                    logError(String.format("Could not find any IndexBarcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
-                    return new PluginResult(false);
-                }
-                if (attachedSamplesList.isEmpty()) {
-                    clientCallback.displayError("No Samples found attached to this task.");
-                    logError("No Samples found attached to this task.");
-                    return new PluginResult(false);
-                }
-                if (StringUtils.isBlank(activeTask.getTask().getTaskOptions().get("AUTOASSIGN INDEX BARCODES")) &&
-                        !activeTask.getTask().getTaskOptions().get("AUTOASSIGN INDEX BARCODES").contains("INDEX TYPE")) {
-                    clientCallback.displayError("Task Option 'VALIDATE UNIQUE SAMPLE RECIPE' is missing valid value. Please double check. Valid values should be in format 'INDEX TYPE (IDT | TruSeq)'");
-                    logError("Task Option 'VALIDATE UNIQUE SAMPLE RECIPE' is missing valid value. Please double check. Valid values should be in format 'INDEX TYPE (IDT | TruSeq)'");
-                    return new PluginResult(false);
+            if (attachedIndexBarcodeRecords.isEmpty()) {
+                clientCallback.displayError(String.format("Could not find any IndexBarcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
+                logError(String.format("Could not find any IndexBarcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
+                return new PluginResult(false);
+            }
+            if (attachedSamplesList.isEmpty()) {
+                clientCallback.displayError("No Samples found attached to this task.");
+                logError("No Samples found attached to this task.");
+                return new PluginResult(false);
+            }
+            if (StringUtils.isBlank(activeTask.getTask().getTaskOptions().get("AUTOASSIGN INDEX BARCODES")) &&
+                    !activeTask.getTask().getTaskOptions().get("AUTOASSIGN INDEX BARCODES").contains("INDEX TYPE")) {
+                clientCallback.displayError("Task Option 'VALIDATE UNIQUE SAMPLE RECIPE' is missing valid value. Please double check. Valid values should be in format 'INDEX TYPE (IDT | TruSeq)'");
+                logError("Task Option 'VALIDATE UNIQUE SAMPLE RECIPE' is missing valid value. Please double check. Valid values should be in format 'INDEX TYPE (IDT | TruSeq)'");
+                return new PluginResult(false);
+            }
+            List<DataRecord> IndexBarcodeRecordsForThisPlate = new LinkedList<>();
+            for (DataRecord plate : uniquePlates) {
+                DataRecord samplesInThePlate[] = plate.getChildrenOfType("Sample", user);
+                for(DataRecord barcode: attachedIndexBarcodeRecords) {
+                    for(DataRecord currentSample: samplesInThePlate) {
+                        if(currentSample.getDataField("SampleId", user).toString().equals(barcode.getDataField("SampleId", user))) {
+                            IndexBarcodeRecordsForThisPlate.add(barcode);
+                        }
+                    }
                 }
 
                 String taskOptionValueForIndexAssignment = activeTask.getTask().getTaskOptions().get("AUTOASSIGN INDEX BARCODES");
-                List<String> recipes = getUniqueSampleRecipes(attachedSamplesList);
+                List<String> recipes = getUniqueSampleRecipes(Arrays.asList(samplesInThePlate));
 
                 String indexTypeToProcess = getIndexTypesToUse(taskOptionValueForIndexAssignment);
-                List<DataRecord> indexConfigsToUse = getIndexAssignmentConfigsForIndexType(indexTypeToProcess, recipes, attachedSamplesList);
+                List<DataRecord> indexConfigsToUse = getIndexAssignmentConfigsForIndexType(indexTypeToProcess, recipes, Arrays.asList(samplesInThePlate));
 
                 if (indexConfigsToUse.isEmpty()) {
                     clientCallback.displayError(String.format("Could not find 'AutoIndexAssignmentConfig' for Recipes/IndexTypes values '%s/%s' given to plugin 'AUTOASSIGN INDEX BARCODES", utils.convertListToString(recipes), indexTypeToProcess));
                     logError(String.format("Could not find 'AutoIndexAssignmentConfig' for Recipes '%s' for samples and TASK OPTION VALUE '%s' for Index Types given to Option 'AUTOASSIGN INDEX BARCODES", utils.convertListToString(recipes), indexTypeToProcess));
                     return new PluginResult(false);
                 }
-                List<DataRecord> sortedProtocolRecords = getSampleProtocolRecordsSortedByWellPositionColumnWise(attachedIndexBarcodeRecords);
+                List<DataRecord> sortedProtocolRecords = getSampleProtocolRecordsSortedByWellPositionColumnWise(IndexBarcodeRecordsForThisPlate);
 
                 Integer plateSize = getPlateSize(attachedSamplesList);
                 Double minAdapterVol = autoHelper.getMinAdapterVolumeRequired(plateSize, isTCRseq);
                 String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
-                //String sampleSpecies = attachedSamplesList.get(0).getStringVal("Species", user);
                 if (plateSize == 96) {
                     assignIndicesToSamples(sortedProtocolRecords, indexConfigsToUse, minAdapterVol, plateSize, sampleType);
                 } else if (plateSize == 384) {
