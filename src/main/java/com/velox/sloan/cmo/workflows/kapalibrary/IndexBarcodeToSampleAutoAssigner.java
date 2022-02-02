@@ -86,12 +86,15 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                 logError("Task Option 'VALIDATE UNIQUE SAMPLE RECIPE' is missing valid value. Please double check. Valid values should be in format 'INDEX TYPE (IDT | TruSeq)'");
                 return new PluginResult(false);
             }
-            List<DataRecord> IndexBarcodeRecordsForThisPlate = new LinkedList<>();
+
             for (DataRecord plate : uniquePlates) {
+                List<DataRecord> IndexBarcodeRecordsForThisPlate = new LinkedList<>();
+                logInfo("plate is: " + plate.getDataField("PlateId", user));
                 DataRecord samplesInThePlate[] = plate.getChildrenOfType("Sample", user);
                 for(DataRecord barcode: attachedIndexBarcodeRecords) {
                     for(DataRecord currentSample: samplesInThePlate) {
                         if(currentSample.getDataField("SampleId", user).toString().equals(barcode.getDataField("SampleId", user))) {
+                            logInfo("current sample is:" + currentSample.getDataField("SampleId", user).toString());
                             IndexBarcodeRecordsForThisPlate.add(barcode);
                         }
                     }
@@ -109,7 +112,9 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                     return new PluginResult(false);
                 }
                 List<DataRecord> sortedProtocolRecords = getSampleProtocolRecordsSortedByWellPositionColumnWise(IndexBarcodeRecordsForThisPlate);
-
+                for(DataRecord sorted: sortedProtocolRecords) {
+                    logInfo("sample id of sorted protocol records: " + sorted.getStringVal("SampleId", user));
+                }
                 Integer plateSize = getPlateSize(attachedSamplesList);
                 Double minAdapterVol = autoHelper.getMinAdapterVolumeRequired(plateSize, isTCRseq);
                 String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
