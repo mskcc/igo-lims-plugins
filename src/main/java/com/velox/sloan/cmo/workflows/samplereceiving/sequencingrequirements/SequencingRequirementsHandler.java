@@ -12,6 +12,7 @@ import com.velox.api.user.User;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
+import com.velox.sloan.cmo.recmodels.BankedSampleModel;
 import com.velox.sloan.cmo.recmodels.SampleModel;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 
@@ -193,6 +194,29 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
         }
         //******************End of maps creation**************
 
+        //******************Map of recipe to capture panel(s) from banked sample**************
+        Iterator bankedSampleIter = bankedSamples.iterator();
+        Map<String, TreeSet<Object>> bankedSampleRecipeToCapturePanelMap = new HashMap<>();
+        while(bankedSampleIter.hasNext()) {
+            DataRecord bs = (DataRecord) bankedSampleIter.next();
+            panelName = bs.getValue("CapturePanel", user);
+            recipe = bs.getValue(BankedSampleModel.RECIPE, user);
+            if(!bankedSampleRecipeToCapturePanelMap.containsKey(recipe)) {
+                TreeSet<Object> capturePanelSet = new TreeSet<>();
+                if (!Objects.isNull(panelName) && !panelName.toString().trim().isEmpty()) {
+                    capturePanelSet.add(panelName);
+                    bankedSampleRecipeToCapturePanelMap.put(recipe.toString(), capturePanelSet);
+                }
+
+            } else {
+                if (!Objects.isNull(panelName) && !panelName.toString().trim().isEmpty()) {
+                    bankedSampleRecipeToCapturePanelMap.get(recipe.toString()).add(panelName);
+                }
+            }
+        }
+        //*********************************************************************************
+
+
         Iterator sampleIter = samples.iterator();
         Set<String> batchRecipes = new HashSet<>();
         while(sampleIter.hasNext()) {
@@ -202,6 +226,18 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
         }
         Map<String, Object> recipeToSelectedCapturePanel = new HashMap<>();
         for(String recipe : batchRecipes) {
+
+            // added
+
+            if(bankedSampleRecipeToCapturePanelMap.get(recipe) != null && bankedSampleRecipeToCapturePanelMap.get(recipe)
+                    .size() == 1) {
+                //Don't ask!!
+                recipeToSelectedCapturePanel.put(recipe, bankedSampleRecipeToCapturePanelMap.get(recipe).first());
+                break;
+            }
+            // end
+
+
             if (!Objects.isNull(recipeToCapturePanelMap.get(recipe))) {
                 if (recipeToCapturePanelMap.get(recipe).size() > 1) {
                     try {
