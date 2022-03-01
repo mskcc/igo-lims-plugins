@@ -12,6 +12,7 @@ import com.velox.api.user.User;
 import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
+import com.velox.sloan.cmo.recmodels.BankedSampleModel;
 import com.velox.sloan.cmo.recmodels.SampleModel;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 
@@ -108,8 +109,8 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
             Object userSampleId = ((DataRecord) attachedSamples.get(i)).getValue("UserSampleID", this.user);
             //this.logInfo("RequestId: " + requestId);
             String whereClause = String.format("%s='%s' AND %s='%s'", "UserSampleID", userSampleId, "RequestId", requestId);
-            this.logInfo("WHERE CLAUSE: " + whereClause);
-            this.logInfo("I am in get banked sample query");
+//            this.logInfo("WHERE CLAUSE: " + whereClause);
+//            this.logInfo("I am in get banked sample query");
             bankedSamples.add(this.dataRecordManager.queryDataRecords("BankedSample", whereClause, this.user).get(0));
         }
         return bankedSamples;
@@ -191,7 +192,29 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                 recipeToSequencingRunTypeMap.put(refRecipe, refSeqRunType);
             }
         }
-        //******************End of maps creation**************
+
+        //******************Map of recipe to capture panel(s) from banked sample**************
+        Iterator bankedSampleIter = bankedSamples.iterator();
+        Map<String, TreeSet<Object>> bankedSampleRecipeToCapturePanelMap = new HashMap<>();
+        while(bankedSampleIter.hasNext()) {
+            DataRecord bs = (DataRecord) bankedSampleIter.next();
+            panelName = bs.getValue("CapturePanel", user);
+            recipe = bs.getValue(BankedSampleModel.RECIPE, user);
+            if(!bankedSampleRecipeToCapturePanelMap.containsKey(recipe)) {
+                TreeSet<Object> capturePanelSet = new TreeSet<>();
+                if (!Objects.isNull(panelName) && !panelName.toString().trim().isEmpty()) {
+                    capturePanelSet.add(panelName);
+                    bankedSampleRecipeToCapturePanelMap.put(recipe.toString(), capturePanelSet);
+                }
+
+            } else {
+                if (!Objects.isNull(panelName) && !panelName.toString().trim().isEmpty()) {
+                    bankedSampleRecipeToCapturePanelMap.get(recipe.toString()).add(panelName);
+                }
+            }
+        }
+        //*********************************************************************************
+
 
         Iterator sampleIter = samples.iterator();
         Set<String> batchRecipes = new HashSet<>();
@@ -202,6 +225,18 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
         }
         Map<String, Object> recipeToSelectedCapturePanel = new HashMap<>();
         for(String recipe : batchRecipes) {
+
+            // added
+
+            if(bankedSampleRecipeToCapturePanelMap.get(recipe) != null && bankedSampleRecipeToCapturePanelMap.get(recipe)
+                    .size() == 1) {
+                //Don't ask!!
+                recipeToSelectedCapturePanel.put(recipe, bankedSampleRecipeToCapturePanelMap.get(recipe).first());
+                break;
+            }
+            // end
+
+
             if (!Objects.isNull(recipeToCapturePanelMap.get(recipe))) {
                 if (recipeToCapturePanelMap.get(recipe).size() > 1) {
                     try {
@@ -312,7 +347,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                         } else { // no range
                                             seqReq.setDataField("RequestedReads", minMaxRead, user);
                                         }
-                                        this.logInfo("Here at read parsing I am..");
+                                        //this.logInfo("Here at read parsing I am..");
                                     }
                                 }
 
@@ -404,7 +439,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                         continue;
                                     }
                                     else {
-                                        this.logInfo("returned ref record: " + refRecord.toString());
+                                        //this.logInfo("returned ref record: " + refRecord.toString());
                                         if (species.toString().equalsIgnoreCase("Human")) {
                                             seqReq.setDataField("RequestedReads", refRecord.getValue(
                                                     "MillionReadsHuman", user), user);
