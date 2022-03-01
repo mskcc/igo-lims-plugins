@@ -149,7 +149,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                     String adapterSourceCol = autohelper.getAdapterColPosition(wellPosition);
                     Double adapterStartConc = indexConfig.getDoubleVal("AdapterConcentration", user);
                     Double targetAdapterConc = autohelper.getCalculatedTargetAdapterConcentration(dnaInputAmount, plateSize, sampleType);
-                    Double adapterVolume = autohelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType);
+                    Double adapterVolume = autohelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType, isTCRseq);
                     Double waterVolume = autohelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume, sampleType);
                     Double actualTargetAdapterConc = adapterStartConc / ((waterVolume + adapterVolume) / adapterVolume);
                     //Double adapterConcentration = autohelper.getAdapterConcentration(indexConfig, adapterVolume, waterVolume);
