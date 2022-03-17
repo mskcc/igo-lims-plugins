@@ -33,10 +33,11 @@ import java.util.*;
 
 public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
 
-    private List<String> ddPCRReportTypes = Arrays.asList("GEX", "RED", "CNV");
-    private List<String> gexReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet # gene", "Droplet # Ref", "Ratio ([GOI]/[Ref])", "Accepted Droplets", "Micronic Tube Barcode");
-    private List<String> cnvReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count Mu", "Droplet Count WT", "Ratio ([Mu]/[WT])", "Accepted Droplets", "Micronic Tube Barcode");
-    private List<String> redReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count Mu", "Droplet Count WT", "Ratio ([Mu]/[WT])", "Accepted Droplets", "Micronic Tube Barcode", "Human %");
+    private List<String> ddPCRReportTypes = Arrays.asList("GEX", "RED", "CNV", "LAB MEDICINE");
+    private List<String> gexReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count MethyFam", "Droplet Count MethyHex", "Ratio ([MethyFam]/[MethyHex])", "Accepted Droplets", "Micronic Tube Barcode");
+    private List<String> cnvReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count MethyFam", "Droplet Count MethyHex", "Ratio ([MethyFam]/[MethyHex])", "Accepted Droplets", "Micronic Tube Barcode");
+    private List<String> redReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count MethyFam", "Droplet Count MethyHex", "Ratio ([MethyFam]/[MethyHex])", "Accepted Droplets", "Micronic Tube Barcode", "Human %");
+    private List<String> labMedicineReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Droplet # gene", "Droplet # Ref", "Total Detected (ng)", "Ratio ([Gene]/[Ref])", "Accepted Droplets", "Micronic Tube Barcode");
 
     public DigitalPcrReportGenerator() {
         setTaskToolbar(true);
@@ -200,6 +201,8 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
                 return gexReportHeaders;
             case "red":
                 return redReportHeaders;
+            case "LAB MEDICINE":
+                return labMedicineReportHeaders;
         }
         return cnvReportHeaders;
     }
