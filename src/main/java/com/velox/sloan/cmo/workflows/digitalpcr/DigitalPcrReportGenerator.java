@@ -37,7 +37,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
     private List<String> gexReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count MethyFam", "Droplet Count MethyHex", "Ratio ([MethyFam]/[MethyHex])", "Accepted Droplets", "Micronic Tube Barcode");
     private List<String> cnvReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count MethyFam", "Droplet Count MethyHex", "Ratio ([MethyFam]/[MethyHex])", "Accepted Droplets", "Micronic Tube Barcode");
     private List<String> redReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count MethyFam", "Droplet Count MethyHex", "Ratio ([MethyFam]/[MethyHex])", "Accepted Droplets", "Micronic Tube Barcode", "Human %");
-    private List<String> labMedicineReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Droplet # gene", "Droplet # Ref", "Total Detected (ng)", "Ratio ([Gene]/[Ref])", "Accepted Droplets", "Micronic Tube Barcode");
+    private List<String> labMedicineReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count# gene", "Droplet Count# Ref", "Total Detected (ng)", "Ratio ([Gene]/[Ref])", "Accepted Droplets", "Micronic Tube Barcode");
 
     public DigitalPcrReportGenerator() {
         setTaskToolbar(true);
@@ -92,7 +92,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
             List<String> headerForReport = getHeaderBasedOnReportType(reportType);
             XSSFWorkbook workbook = new XSSFWorkbook();
             List<Map<String, Object>> valuesForReport = setFieldsForReport(ddPcrResults);
-            generateExcelDataWorkbook(headerForReport, valuesForReport, workbook);
+            generateExcelDataWorkbook(reportType, headerForReport, valuesForReport, workbook);
             String fileName = generateFileNameFromRequestIds(attachedSamples);
             exportReport(workbook, fileName);
 
@@ -151,6 +151,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
                 reportFieldValues.put("OtherSampleId", record.getValue("OtherSampleId", user));
                 reportFieldValues.put("Assay", record.getValue("Assay", user));
                 reportFieldValues.put("TotalInput", record.getValue("TotalInput", user));
+                reportFieldValues.put("TotalDetected", record.getValue("TotalDnaDetected", user));
                 reportFieldValues.put("DropletCountTest", record.getValue("DropletCountMutation", user));
                 reportFieldValues.put("DropletCountRef", record.getValue("DropletCountWildType", user));
                 reportFieldValues.put("Ratio", record.getValue("Ratio", user));
@@ -266,7 +267,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      * @param dataValues
      * @param workbook
      */
-    private void generateExcelDataWorkbook(List<String> headerValues, List<Map<String, Object>> dataValues, XSSFWorkbook workbook) {
+    private void generateExcelDataWorkbook(String reportType, List<String> headerValues, List<Map<String, Object>> dataValues, XSSFWorkbook workbook) {
         XSSFSheet sheet = workbook.createSheet("ddPCR Report");
         int rowId = 0;
         XSSFRow row = sheet.createRow(rowId);
@@ -287,21 +288,35 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
             setDataCellStyle(workbook, row.createCell(3)).setCellValue(Double.parseDouble(data.get("TotalInput").toString()));
             setDataCellStyle(workbook, row.createCell(4)).setCellValue(Integer.parseInt(data.get("DropletCountTest").toString()));
             setDataCellStyle(workbook, row.createCell(5)).setCellValue(Integer.parseInt(data.get("DropletCountRef").toString()));
-            setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("Ratio").toString()));
-            setDataCellStyle(workbook, row.createCell(7)).setCellValue(Integer.parseInt(data.get("AcceptedDroplets").toString()));
+            if (!reportType.equals("LAB MEDICINE")) {
+                setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("Ratio").toString()));
+                setDataCellStyle(workbook, row.createCell(7)).setCellValue(Integer.parseInt(data.get("AcceptedDroplets").toString()));
 
-            if (data.get("MicronicTubeBarcode") != null) {
-                setDataCellStyle(workbook, row.createCell(8)).setCellValue(data.get("MicronicTubeBarcode").toString());
-            } else {
-                setDataCellStyle(workbook, row.createCell(8)).setCellValue("");
+                if (data.get("MicronicTubeBarcode") != null) {
+                    setDataCellStyle(workbook, row.createCell(8)).setCellValue(data.get("MicronicTubeBarcode").toString());
+                } else {
+                    setDataCellStyle(workbook, row.createCell(8)).setCellValue("");
+                }
+                if (headerValues.contains("Human %")) {
+                    if (data.get("HumanPercentage") != null) {
+                        setDataCellStyle(workbook, row.createCell(9)).setCellValue(Double.parseDouble(data.get("HumanPercentage").toString()));
+                    } else {
+                        setDataCellStyle(workbook, row.createCell(9)).setCellValue("");
+                    }
+                }
             }
-            if (headerValues.contains("Human %")) {
-                if (data.get("HumanPercentage") != null) {
-                    setDataCellStyle(workbook, row.createCell(9)).setCellValue(Double.parseDouble(data.get("HumanPercentage").toString()));
+            else {
+                setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("TotalDetected").toString()));
+                setDataCellStyle(workbook, row.createCell(7)).setCellValue(Double.parseDouble(data.get("Ratio").toString()));
+                setDataCellStyle(workbook, row.createCell(8)).setCellValue(Integer.parseInt(data.get("AcceptedDroplets").toString()));
+
+                if (data.get("MicronicTubeBarcode") != null) {
+                    setDataCellStyle(workbook, row.createCell(9)).setCellValue(data.get("MicronicTubeBarcode").toString());
                 } else {
                     setDataCellStyle(workbook, row.createCell(9)).setCellValue("");
                 }
             }
+
             rowId++;
         }
         autoSizeColumns(sheet, headerValues);
