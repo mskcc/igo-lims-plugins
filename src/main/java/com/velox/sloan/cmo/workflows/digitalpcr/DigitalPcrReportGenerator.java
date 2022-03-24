@@ -203,9 +203,9 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
                 return gexReportHeaders;
             case "red":
                 return redReportHeaders;
-            case "LAB MEDICINE":
+            case "lab medicine":
                 return labMedicineReportHeaders;
-            case "METHYLATED":
+            case "methylated":
                 return methylatedReportHeaders;
         }
         return cnvReportHeaders;
