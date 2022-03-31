@@ -192,11 +192,11 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
 
         if (indexTypes.toLowerCase().contains("tcrseq-igo")) {
             logInfo("Library samples have recipe values TCRseq-IGO, reserved indexes in set5 will not be used.");
-            boolean isAlph = recipes.get(0).toLowerCase().contains("alpha");
+            boolean isAlpha = recipes.get(0).toLowerCase().contains("alpha");
             boolean isBeta = recipes.get(0).toLowerCase().contains("beta");
 
             if (species.compareToIgnoreCase("mouse") == 0) {
-                if (isAlph) {
+                if (isAlpha) {
                     return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + " AND IsActive=1 AND SetId!=5 AND IndexId like 'M%' AND IndexId like '%acj%'", user);
                 }
                 else if (isBeta) {
@@ -204,7 +204,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                 }
             }
             else { // species: human
-                if (isAlph) {
+                if (isAlpha) {
                     return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + " AND IsActive=1 AND SetId!=5 AND IndexId like 'H%' AND IndexId like '%acj%'", user);
                 }
                 else if (isBeta) {
