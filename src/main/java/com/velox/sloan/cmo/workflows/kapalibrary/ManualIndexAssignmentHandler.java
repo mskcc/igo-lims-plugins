@@ -73,10 +73,12 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
             for(Object plate: uniquePlates) {
                 Integer plateSize = getPlateSize(attachedSamplesList);
                 String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
+                String species = attachedSamplesList.get(0).getStringVal("Species", user);
 
                 Double minAdapterVolInPlate = autohelper.getMinAdapterVolumeRequired(plateSize, isTCRseq);
                 Double maxPlateVolume = autohelper.getMaxVolumeLimit(plateSize);
-                setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords, minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType);
+                setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords,
+                        minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType, isTCRseq, species);
                 checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
             }
 
@@ -135,7 +137,10 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
      * @throws IoError
      * @throws ServerException
      */
-    private void setUpdatedIndexAssignmentValues(List<DataRecord> indexAssignmentConfigs, List<DataRecord> indexBarcodeRecords, Double minVolInAdapterPlate, Double maxPlateVolume, Integer plateSize, String sampleType) throws NotFound, RemoteException, InvalidValue, IoError, ServerException {
+    private void setUpdatedIndexAssignmentValues(List<DataRecord> indexAssignmentConfigs, List<DataRecord> indexBarcodeRecords,
+                                                 Double minVolInAdapterPlate, Double maxPlateVolume, Integer plateSize,
+                                                 String sampleType, boolean isTCRseq, String species) throws NotFound, RemoteException,
+            InvalidValue, IoError, ServerException {
         for (DataRecord indexBarcodeRec : indexBarcodeRecords) {
             boolean found = false;
             for (DataRecord indexConfig : indexAssignmentConfigs) {
@@ -160,6 +165,15 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                     indexBarcodeRec.setDataField("BarcodeVolume", adapterVolume, user);
                     indexBarcodeRec.setDataField("Aliq1WaterVolume", waterVolume, user);
                     indexBarcodeRec.setDataField("IndexBarcodeConcentration", actualTargetAdapterConc, user);
+
+                    if (isTCRseq) {
+                        if ((indexConfig.getStringVal("IndexId", user).toLowerCase().startsWith("h") &&
+                        species.toLowerCase().equals("mouse")) || (indexConfig.getStringVal("IndexId", user)
+                                .toLowerCase().startsWith("m") && species.toLowerCase().equals("human"))) {
+                            clientCallback.displayError("You've set a human adapter to a mouse sample or a mouse adapter to a human sample.");
+
+                        }
+                    }
                 }
             }
             if (!found) {
