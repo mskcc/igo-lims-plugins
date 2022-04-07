@@ -74,11 +74,22 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                 Integer plateSize = getPlateSize(attachedSamplesList);
                 String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
                 String species = attachedSamplesList.get(0).getStringVal("Species", user);
+                String AliquotRecipe = attachedSamplesList.get(0).getStringVal("Recipe", user);
 
                 Double minAdapterVolInPlate = autohelper.getMinAdapterVolumeRequired(plateSize, isTCRseq);
                 Double maxPlateVolume = autohelper.getMaxVolumeLimit(plateSize);
+                Boolean setUpdatedIndexAssignmentStatus = Boolean.TRUE;
                 setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords,
-                        minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType, isTCRseq, species);
+                        minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType, isTCRseq, species, AliquotRecipe,
+                        setUpdatedIndexAssignmentStatus);
+                if (!setUpdatedIndexAssignmentStatus) {
+                    String errMsg = String.format("The manual adapter assignment went wrong, 2 possible scenarios:\n" +
+                            "1) A human adapter been assigned to a mouse sample or vice versa.\n" +
+                            "2) An alpha adapter been assigned to a beta aliquot or vice vera");
+                    clientCallback.displayError(errMsg);
+                    logError(errMsg);
+                    return new PluginResult(false);
+                }
                 checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
             }
 
@@ -139,7 +150,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
      */
     private void setUpdatedIndexAssignmentValues(List<DataRecord> indexAssignmentConfigs, List<DataRecord> indexBarcodeRecords,
                                                  Double minVolInAdapterPlate, Double maxPlateVolume, Integer plateSize,
-                                                 String sampleType, boolean isTCRseq, String species) throws NotFound, RemoteException,
+                                                 String sampleType, boolean isTCRseq, String species, String aliquotRecipe, boolean status) throws NotFound, RemoteException,
             InvalidValue, IoError, ServerException {
         for (DataRecord indexBarcodeRec : indexBarcodeRecords) {
             boolean found = false;
@@ -170,8 +181,15 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                         if ((indexConfig.getStringVal("IndexId", user).toLowerCase().startsWith("h") &&
                         species.toLowerCase().equals("mouse")) || (indexConfig.getStringVal("IndexId", user)
                                 .toLowerCase().startsWith("m") && species.toLowerCase().equals("human"))) {
+                            status = false;
                             clientCallback.displayError("You've set a human adapter to a mouse sample or a mouse adapter to a human sample.");
 
+                        }
+                        if ((indexConfig.getStringVal("IndexId", user).toLowerCase().contains("acj") &&
+                                aliquotRecipe.toLowerCase().contains("beta")) || (indexConfig.getStringVal("IndexId", user)
+                                .toLowerCase().contains("bcj") && aliquotRecipe.toLowerCase().contains("alpha"))) {
+                            status = false;
+                            clientCallback.displayError("You've set an alpha adapter to a beta aliquot or a beta adapter to an alpha aliquot.");
                         }
                     }
                 }
