@@ -1,4 +1,4 @@
-package com.velox.sloan.cmo.workflows.TCRseq;
+package com.velox.sloan.cmo.workflows.workflows.TCRseq;
 
 import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.NotFound;
