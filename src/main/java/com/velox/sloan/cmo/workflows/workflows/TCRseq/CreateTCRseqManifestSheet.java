@@ -7,6 +7,7 @@ import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.api.workflow.ActiveTask;
 import com.velox.api.workflow.ActiveWorkflow;
+import com.velox.sapio.commons.exemplar.plugin.PluginOrder;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -23,6 +24,17 @@ import java.util.*;
 public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
     private List<String> manifestHeaders = Arrays.asList("SAMPLE ID", "PARENT BARCODE SEQUENCE", "CHILD BARCODE SEQUENCE");
 
+    public CreateTCRseqManifestSheet() {
+        /*
+        * setTaskToolbar(true);
+        setFormToolbar(true);
+        setLine1Text("Generate TCRseq");
+        setLine2Text("Manifest");*/
+        setTaskEntry(true);
+        setOrder(PluginOrder.EARLY.getOrder());
+        setDescription("Generates report for ddPCR experiment with specific columns.");
+        setIcon("com/velox/sloan/cmo/resources/export_32.gif");
+    }
     @Override
     public boolean shouldRun() throws RemoteException {
         return activeTask.getTask().getTaskOptions().containsKey("GENERATE TCRSEQ MANIFEST");
@@ -86,10 +98,14 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
                     try {
                         if (attachedSample.getStringVal("Recipe", user).toLowerCase().contains("alpha") &&
                         assignedIndex.getStringVal("SampleId", user).equals(attachedSample.getStringVal("SampleId", user))) {
+                            logInfo(assignedIndex.getStringVal("sampleId", user)  + " with recipe: "
+                                    + assignedIndex.getStringVal("Recipe", user) + " added to alpha assigned indices.");
                             alphaIndicesInfo.add(assignedIndex);
                         }
                         else if (attachedSample.getStringVal("Recipe", user).toLowerCase().contains("beta") &&
                                 assignedIndex.getStringVal("SampleId", user).equals(attachedSample.getStringVal("SampleId", user))) {
+                            logInfo(assignedIndex.getStringVal("sampleId", user) + " with recipe: "
+                                    + assignedIndex.getStringVal("Recipe", user) + " added to beta assigned indices.");
                             betaIndicesInfo.add(assignedIndex);
                         }
                     } catch (NotFound | RemoteException e) {
@@ -98,18 +114,19 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
                 }
             }
 
-
             XSSFWorkbook alphaWorkbook = new XSSFWorkbook();
+            logInfo("Generating alpha workbook..");
             List<Map<String, Object>> alphaValuesForReport = setFieldsForReport(alphaIndicesInfo);
             generateExcelDataWorkbook(headerForReport, alphaValuesForReport, alphaWorkbook);
             String alphaFileName = generateFileNameFromRequestIds(attachedSamples);
-            exportReport(alphaWorkbook, alphaFileName);
+            exportReport(true, alphaWorkbook, alphaFileName);
 
             XSSFWorkbook betaWorkbook = new XSSFWorkbook();
+            logInfo("Generating beta workbook..");
             List<Map<String, Object>> betaValuesForReport = setFieldsForReport(betaIndicesInfo);
             generateExcelDataWorkbook(headerForReport, betaValuesForReport, betaWorkbook);
             String betaFileName = generateFileNameFromRequestIds(attachedSamples);
-            exportReport(alphaWorkbook, betaFileName);
+            exportReport(false, betaWorkbook, betaFileName);
 
         } catch (RemoteException e) {
             String errMsg = String.format("Remote Exception Error while generating TCRseq Manifest File:\n%s", ExceptionUtils.getStackTrace(e));
@@ -134,7 +151,19 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
         for (DataRecord record : manifestInfo) {
             Map<String, Object> reportFieldValues = new HashMap<>();
             try {
-                reportFieldValues.put("SampleId", record.getValue("SampleId", user));
+                logInfo("sample id is: " + record.getValue("SampleId", user).toString());
+                Object[] sampleId = record.getValue("SampleId", user).toString().split("_");
+                String manifestSampleId = "";
+                if (sampleId[sampleId.length - 1].toString().equals("1")) {
+                    logInfo("Appending _A");
+                    manifestSampleId = sampleId[0].toString() + "_" + sampleId[1].toString() + "_A";
+                }
+                else if (sampleId[sampleId.length - 1].toString().equals("2")) {
+                    logInfo("Appending _B");
+                    manifestSampleId = sampleId[0].toString() + "_" + sampleId[1].toString() + "_B";
+                }
+
+                reportFieldValues.put("SampleId", manifestSampleId);
                 Object[] indexTag = record.getValue("IndexTag", user).toString().split("-");
                 reportFieldValues.put("ParentBarcodeSequence", indexTag[0]);
                 reportFieldValues.put("ChildBarcodeSequence", indexTag[1]);
@@ -176,7 +205,15 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
             sheet.autoSizeColumn(cellId);
             cellId++;
         }
+        for (Map<String, Object> data : dataValues) {
+            row = sheet.createRow(rowId);
+            row.createCell(0).setCellValue(data.get("SampleId").toString());
+            row.createCell(1).setCellValue(data.get("ParentBarcodeSequence").toString());
+            row.createCell(2).setCellValue(data.get("ChildBarcodeSequence").toString());
+            rowId++;
+        }
         autoSizeColumns(sheet, headerValues);
+
     }
     /**
      * Auto-size columns to show complete test in the cells.
@@ -254,17 +291,25 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
      * @throws IOException
      * @throws ServerException
      */
-    private void exportReport(XSSFWorkbook workbook, String outFileName) {
+    private void exportReport(boolean isAlpha, XSSFWorkbook workbook, String outFileName) {
         if (StringUtils.isBlank(outFileName)) {
             outFileName = "Project_";
         }
-        logInfo("Generating TCRseq manifest " + outFileName + "_TCRseq_Manifest.xlsx");
+        if (isAlpha) {
+            logInfo("Generating TCRseq manifest " + outFileName + "_TCRseq_Manifest_Alpha.xlsx");
+        }
+        else {
+            logInfo("Generating TCRseq manifest " + outFileName + "_TCRseq_Manifest_Beta.xlsx");
+        }
         ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
         try {
             workbook.write(byteStream);
             byteStream.close();
             byte[] bytes = byteStream.toByteArray();
-            clientCallback.writeBytes(bytes, outFileName + "_TCRseq_Manifest.xlsx");
+            if (isAlpha)
+                clientCallback.writeBytes(bytes, outFileName + "_TCRseq_Manifest_Alpha.xlsx");
+            else
+                clientCallback.writeBytes(bytes, outFileName + "_TCRseq_Manifest_Beta.xlsx");
         } catch (ServerException e) {
             logError(String.format("RemoteException -> Error while exporting TCRseq manifest:\n%s",ExceptionUtils.getStackTrace(e)));
         } catch (IOException e) {
