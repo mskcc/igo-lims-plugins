@@ -9,6 +9,9 @@ import com.velox.api.workflow.ActiveTask;
 import com.velox.api.workflow.ActiveWorkflow;
 import com.velox.sapio.commons.exemplar.plugin.PluginOrder;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
+import com.velox.sapioutils.shared.managers.DataRecordUtilManager;
+import com.velox.sapioutils.shared.managers.ManagerContext;
+import com.velox.sapioutils.shared.utilities.ExemplarConfig;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.poi.ss.usermodel.Cell;
@@ -16,13 +19,14 @@ import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.rmi.RemoteException;
 import java.util.*;
 
 public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
     private List<String> manifestHeaders = Arrays.asList("SAMPLE ID", "PARENT BARCODE SEQUENCE", "CHILD BARCODE SEQUENCE");
+    DataRecord experiment;
+    private DataRecordUtilManager dataRecordUtilManager;
 
     public CreateTCRseqManifestSheet() {
         /*
@@ -51,7 +55,13 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
         return false;
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws Throwable {
+
+        if (mainDataType == null)
+            mainDataType = ExemplarConfig.getMainDataType(managerContext);
+
+        dataRecordUtilManager = new DataRecordUtilManager(managerContext);
+        experiment = dataRecordUtilManager.getExperiment();
         try {
             List<DataRecord> assignedIndices = activeTask.getAttachedDataRecords("IgoTcrSeqIndexBarcode", user);
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
@@ -306,10 +316,32 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
             workbook.write(byteStream);
             byteStream.close();
             byte[] bytes = byteStream.toByteArray();
-            if (isAlpha)
-                clientCallback.writeBytes(bytes, outFileName + "_TCRseq_Manifest_Alpha.xlsx");
-            else
-                clientCallback.writeBytes(bytes, outFileName + "_TCRseq_Manifest_Beta.xlsx");
+            ExemplarConfig exemplarConfig = new ExemplarConfig(managerContext);
+            String tcrseqManifestPath = "/pskis34/vialelab/LIMS/TCRseqManifest";
+                    //exemplarConfig.getClientConfigValues().get("TCRseqManifestPath").toString();
+
+            File outFile = null;
+            if (isAlpha) {
+                outFile = new File(tcrseqManifestPath + "/" + outFileName + "_TCRseq_Manifest_Alpha.csv");
+                clientCallback.writeBytes(bytes, outFileName + "_TCRseq_Manifest_Alpha.csv");
+            }
+            else {
+                outFile = new File(tcrseqManifestPath + "/" + outFileName + "_TCRseq_Manifest_Beta.csv");
+                clientCallback.writeBytes(bytes, outFileName + "_TCRseq_Manifest_Beta.csv");
+            }
+
+
+            try (FileOutputStream fos = new FileOutputStream(outFile)){
+                fos.write(bytes);
+                outFile.setReadOnly();
+            } catch (Exception e) {
+                logInfo(e.getMessage());
+            }
+
+        } catch (NotFound e) {
+            logError(String.format("NotFoundException -> Error while exporting TCRseq manifest:\n%s",ExceptionUtils.getStackTrace(e)));
+        } catch (IoError e) {
+            logError(String.format("IoError -> Error while exporting TCRseq manifest:\n%s",ExceptionUtils.getStackTrace(e)));
         } catch (ServerException e) {
             logError(String.format("RemoteException -> Error while exporting TCRseq manifest:\n%s",ExceptionUtils.getStackTrace(e)));
         } catch (IOException e) {
