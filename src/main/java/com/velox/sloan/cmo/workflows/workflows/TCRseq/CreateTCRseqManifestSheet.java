@@ -317,8 +317,8 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
             byteStream.close();
             byte[] bytes = byteStream.toByteArray();
             ExemplarConfig exemplarConfig = new ExemplarConfig(managerContext);
-            String tcrseqManifestPath = "/pskis34/vialelab/LIMS/TCRseqManifest";
-                    //exemplarConfig.getClientConfigValues().get("TCRseqManifestPath").toString();
+            String tcrseqManifestPath = exemplarConfig.getExemplarConfigValues().get("TCRseqManifestPath").toString();
+                    //"/pskis34/vialelab/LIMS/TCRseqManifest"
 
             File outFile = null;
             if (isAlpha) {
