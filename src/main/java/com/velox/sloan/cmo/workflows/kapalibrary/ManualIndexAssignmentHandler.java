@@ -205,6 +205,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
             if (!found) {
                 clientCallback.displayError(String.format("No Active '%s' record found for Index ID '%s'. Please double check to avoid discrepancies in '%s' record volumes.",
                         INDEX_ASSIGNMENT_CONFIG_DATATYPE, indexBarcodeRec.getStringVal("IndexId", user), INDEX_ASSIGNMENT_CONFIG_DATATYPE));
+                return false;
             }
             activeTask.getTask().getTaskOptions().put("_UPDATE_INDEX_VOLUMES_POST_MANUAL_INDEX_ASSIGNMENT", "");
         }
