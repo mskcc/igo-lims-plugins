@@ -68,11 +68,14 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
             List<DataRecord> attachedAlphaSamples = new LinkedList<>();
             List<DataRecord> attachedBetaSamples = new LinkedList<>();
             for(DataRecord samples : attachedSamples) {
+                String sampleName = samples.getStringVal("OtherSampleId", user);
                 try {
                     if(samples.getStringVal("Recipe", user).toLowerCase().contains("alpha")) {
+                        samples.setDataField("OtherSampleId", sampleName + "_A", user);
                         attachedAlphaSamples.add(samples);
                     }
                     else if(samples.getStringVal("Recipe", user).toLowerCase().contains("beta")) {
+                        samples.setDataField("OtherSampleId", sampleName + "_B", user);
                         attachedBetaSamples.add(samples);
                     }
                 }
