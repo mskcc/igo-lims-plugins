@@ -71,11 +71,13 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
                 String sampleName = samples.getStringVal("OtherSampleId", user);
                 try {
                     if(samples.getStringVal("Recipe", user).toLowerCase().contains("alpha")) {
-                        samples.setDataField("OtherSampleId", sampleName + "_A", user);
+                        samples.setDataField("OtherSampleId", sampleName + "_alpha", user);
+                        logInfo("_alpha appended to the alpha sample name.");
                         attachedAlphaSamples.add(samples);
                     }
                     else if(samples.getStringVal("Recipe", user).toLowerCase().contains("beta")) {
-                        samples.setDataField("OtherSampleId", sampleName + "_B", user);
+                        samples.setDataField("OtherSampleId", sampleName + "_beta", user);
+                        logInfo("_beta appended to the beta sample name.");
                         attachedBetaSamples.add(samples);
                     }
                 }
