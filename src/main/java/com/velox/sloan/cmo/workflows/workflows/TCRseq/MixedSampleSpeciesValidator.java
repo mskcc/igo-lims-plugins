@@ -45,7 +45,6 @@ public class MixedSampleSpeciesValidator extends DefaultGenericPlugin {
             }
             if (sampleSpeciesValues.size() == 0) {
                 logInfo("Sample species values not found on samples");
-                clientCallback.displayWarning("Cannot validate Species for attached samples. Species values not found for samples in this task.");
                 return new PluginResult(true);
             }
 
