@@ -16,8 +16,8 @@ public class AutoIndexAssignmentHelperTest {
         Integer plateSize = 96;
         Integer plateSize2 = 384;
 
-        assertTrue(autoHelper.getMinAdapterVolumeRequired(plateSize) == 7.50);
-        assertTrue(autoHelper.getMinAdapterVolumeRequired(plateSize2) == 3.00);
+        assertTrue(autoHelper.getMinAdapterVolumeRequired(plateSize, false) == 7.50);
+        assertTrue(autoHelper.getMinAdapterVolumeRequired(plateSize2, false) == 3.00);
     }
 
     @Test
@@ -34,10 +34,10 @@ public class AutoIndexAssignmentHelperTest {
         String rnaSampleType = "rna";
         String rnaSampleType2="cdna";
 
-        assertTrue(autoHelper.getAdapterInputVolume(startConc, minVolumeForAdapter, targetConcentration, sampleType) == 5.0);
-        assertTrue(autoHelper.getAdapterInputVolume(startConc2, minVolumeForAdapter2, targetConcentration2, sampleType) == 2.0);
-        assertTrue(autoHelper.getAdapterInputVolume(startConc2, minVolumeForAdapter2, targetConcentration2, rnaSampleType) == 5.0);
-        assertTrue(autoHelper.getAdapterInputVolume(startConc2, minVolumeForAdapter2, targetConcentration2, rnaSampleType2) == 5.0);
+        assertTrue(autoHelper.getAdapterInputVolume(startConc, minVolumeForAdapter, targetConcentration, sampleType, false) == 5.0);
+        assertTrue(autoHelper.getAdapterInputVolume(startConc2, minVolumeForAdapter2, targetConcentration2, sampleType, false) == 2.0);
+        assertTrue(autoHelper.getAdapterInputVolume(startConc2, minVolumeForAdapter2, targetConcentration2, rnaSampleType, false) == 5.0);
+        assertTrue(autoHelper.getAdapterInputVolume(startConc2, minVolumeForAdapter2, targetConcentration2, rnaSampleType2, false) == 5.0);
     }
 
     @Test

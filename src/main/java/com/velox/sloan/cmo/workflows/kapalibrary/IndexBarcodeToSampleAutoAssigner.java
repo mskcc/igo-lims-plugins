@@ -13,6 +13,7 @@ import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
+import javax.xml.crypto.Data;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
 public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
 
     private final List<String> RECIPES_TO_USE_SPECIAL_ADAPTERS = Arrays.asList("CRISPRSeq", "AmpliconSeq");
+    private boolean isTCRseq = false;
     private IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
     private AutoIndexAssignmentHelper autoHelper;
 
@@ -47,7 +49,27 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         autoHelper = new AutoIndexAssignmentHelper();
         try {
             List<DataRecord> attachedSamplesList = activeTask.getAttachedDataRecords("Sample", user);
-            List<DataRecord> attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IndexBarcode", user);
+            List<DataRecord> attachedIndexBarcodeRecords = new LinkedList<>();
+            Set<DataRecord> uniquePlates = new HashSet<>();
+            for(DataRecord sample: attachedSamplesList) {
+                List<DataRecord> listOfParentPlates = sample.getParentsOfType("Plate", user);
+                uniquePlates.add(listOfParentPlates.get(listOfParentPlates.size() - 1));
+            }
+
+            if (activeTask.getTask().getTaskOptions().get("AUTOASSIGN INDEX BARCODES").toLowerCase().contains("tcrseq")) {
+                isTCRseq = true;
+                attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IgoTcrSeqIndexBarcode", user);
+            }
+            else {
+                attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IndexBarcode", user);
+            }
+
+            if(isTCRseq && attachedIndexBarcodeRecords.isEmpty()) {
+                clientCallback.displayError(String.format("Could not find any TCRseq Barcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
+                logError(String.format("Could not find any TCRseq Barcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
+                return new PluginResult(false);
+            }
+
             if (attachedIndexBarcodeRecords.isEmpty()) {
                 clientCallback.displayError(String.format("Could not find any IndexBarcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
                 logError(String.format("Could not find any IndexBarcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
@@ -65,27 +87,47 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
 
-            String taskOptionValueForIndexAssignment = activeTask.getTask().getTaskOptions().get("AUTOASSIGN INDEX BARCODES");
-            List<String> recipes = getUniqueSampleRecipes(attachedSamplesList);
-            String indexTypeToProcess = getIndexTypesToUse(taskOptionValueForIndexAssignment);
-            List<DataRecord> indexConfigsToUse = getIndexAssignmentConfigsForIndexType(indexTypeToProcess, recipes);
-            if (indexConfigsToUse.isEmpty()) {
-                clientCallback.displayError(String.format("Could not find 'AutoIndexAssignmentConfig' for Recipes/IndexTypes values '%s/%s' given to plugin 'AUTOASSIGN INDEX BARCODES", utils.convertListToString(recipes), indexTypeToProcess));
-                logError(String.format("Could not find 'AutoIndexAssignmentConfig' for Recipes '%s' for samples and TASK OPTION VALUE '%s' for Index Types given to Option 'AUTOASSIGN INDEX BARCODES", utils.convertListToString(recipes), indexTypeToProcess));
-                return new PluginResult(false);
-            }
-            List<DataRecord> sortedProtocolRecords = getSampleProtocolRecordsSortedByWellPositionColumnWise(attachedIndexBarcodeRecords);
-            Integer plateSize = getPlateSize(attachedSamplesList);
-            Double minAdapterVol = autoHelper.getMinAdapterVolumeRequired(plateSize);
-            String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
-            if (plateSize == 96) {
-                assignIndicesToSamples(sortedProtocolRecords, indexConfigsToUse, minAdapterVol, plateSize, sampleType);
-            } else if (plateSize == 384) {
-                List<List<DataRecord>> protocolsSplitByAlternateWell = getQuadrantsFromProtocols(sortedProtocolRecords);
-                for (List<DataRecord> protocolsList : protocolsSplitByAlternateWell) {
-                    assignIndicesToSamples(protocolsList, indexConfigsToUse, minAdapterVol, plateSize, sampleType);
+            for (DataRecord plate : uniquePlates) {
+                List<DataRecord> IndexBarcodeRecordsForThisPlate = new LinkedList<>();
+                logInfo("plate is: " + plate.getDataField("PlateId", user));
+                DataRecord samplesInThePlate[] = plate.getChildrenOfType("Sample", user);
+                for(DataRecord barcode: attachedIndexBarcodeRecords) {
+                    for(DataRecord currentSample: samplesInThePlate) {
+                        if(currentSample.getDataField("SampleId", user).toString().equals(barcode.getDataField("SampleId", user))) {
+                            logInfo("current sample is:" + currentSample.getDataField("SampleId", user).toString());
+                            IndexBarcodeRecordsForThisPlate.add(barcode);
+                        }
+                    }
+                }
+
+                String taskOptionValueForIndexAssignment = activeTask.getTask().getTaskOptions().get("AUTOASSIGN INDEX BARCODES");
+                List<String> recipes = getUniqueSampleRecipes(Arrays.asList(samplesInThePlate));
+
+                String indexTypeToProcess = getIndexTypesToUse(taskOptionValueForIndexAssignment);
+                List<DataRecord> indexConfigsToUse = getIndexAssignmentConfigsForIndexType(indexTypeToProcess, recipes, Arrays.asList(samplesInThePlate));
+
+                if (indexConfigsToUse.isEmpty()) {
+                    clientCallback.displayError(String.format("Could not find 'AutoIndexAssignmentConfig' for Recipes/IndexTypes values '%s/%s' given to plugin 'AUTOASSIGN INDEX BARCODES", utils.convertListToString(recipes), indexTypeToProcess));
+                    logError(String.format("Could not find 'AutoIndexAssignmentConfig' for Recipes '%s' for samples and TASK OPTION VALUE '%s' for Index Types given to Option 'AUTOASSIGN INDEX BARCODES", utils.convertListToString(recipes), indexTypeToProcess));
+                    return new PluginResult(false);
+                }
+                List<DataRecord> sortedProtocolRecords = getSampleProtocolRecordsSortedByWellPositionColumnWise(IndexBarcodeRecordsForThisPlate);
+                for(DataRecord sorted: sortedProtocolRecords) {
+                    logInfo("sample id of sorted protocol records: " + sorted.getStringVal("SampleId", user));
+                }
+                Integer plateSize = getPlateSize(attachedSamplesList);
+                Double minAdapterVol = autoHelper.getMinAdapterVolumeRequired(plateSize, isTCRseq);
+                String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
+                if (plateSize == 96) {
+                    assignIndicesToSamples(sortedProtocolRecords, indexConfigsToUse, minAdapterVol, plateSize, sampleType, isTCRseq);
+                } else if (plateSize == 384) {
+                    List<List<DataRecord>> protocolsSplitByAlternateWell = getQuadrantsFromProtocols(sortedProtocolRecords);
+                    for (List<DataRecord> protocolsList : protocolsSplitByAlternateWell) {
+                        assignIndicesToSamples(protocolsList, indexConfigsToUse, minAdapterVol, plateSize, sampleType, isTCRseq);
+                    }
                 }
             }
+
         } catch (Exception e) {
             clientCallback.displayError(String.format("Error while Auto Index assignment to samples:\n%s", ExceptionUtils.getStackTrace(e)));
             clientCallback.displayError(e.toString());
@@ -143,16 +185,42 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws ServerException
      */
-    private List<DataRecord> getIndexAssignmentConfigsForIndexType(String indexTypes, List<String> recipes) throws IoError, RemoteException, NotFound, ServerException {
+    private List<DataRecord> getIndexAssignmentConfigsForIndexType(String indexTypes, List<String> recipes, List<DataRecord> attachedSamplesList) throws IoError, RemoteException, NotFound, ServerException {
         boolean isCrisprOrAmpliconSeq = recipes.stream().anyMatch(RECIPES_TO_USE_SPECIAL_ADAPTERS::contains);
         String INDEX_ASSIGNMENT_CONFIG_DATATYPE = "AutoIndexAssignmentConfig";
-        if (!isCrisprOrAmpliconSeq) {
-            logInfo("Library samples do not have recipe values Crispr or AmpliconSeq, reserved indexes in set5 will not be used.");
-            return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + "AND IsActive=1 AND SetId!=5", user);
-        } else {
+        String species = attachedSamplesList.get(0).getStringVal("Species", user);
+
+        if (indexTypes.toLowerCase().contains("tcrseq-igo")) {
+            logInfo("Library samples have recipe values TCRseq-IGO, reserved indexes in set5 will not be used.");
+            boolean isAlpha = recipes.get(0).toLowerCase().contains("alpha");
+            boolean isBeta = recipes.get(0).toLowerCase().contains("beta");
+
+            if (species.compareToIgnoreCase("mouse") == 0) {
+                if (isAlpha) {
+                    return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + " AND IsActive=1 AND SetId!=5 AND IndexId like 'M%' AND IndexId like '%acj%'", user);
+                }
+                else if (isBeta) {
+                    return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + " AND IsActive=1 AND SetId!=5 AND IndexId like 'M%' AND IndexId like '%bcj%'", user);
+                }
+            }
+            else { // species: human
+                if (isAlpha) {
+                    return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + " AND IsActive=1 AND SetId!=5 AND IndexId like 'H%' AND IndexId like '%acj%'", user);
+                }
+                else if (isBeta) {
+                    return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + " AND IsActive=1 AND SetId!=5 AND IndexId like 'H%' AND IndexId like '%bcj%'", user);
+                }
+            }
+        } else if (isCrisprOrAmpliconSeq) {
             logInfo("Recipe on Library samples is Crispr or AmpliconSeq, reserved indexes in set5 will be used.");
             return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType='DUAL_IDT_LIB' AND SetId=5 and IsActive=1", user);
+
+        } else {
+            logInfo("Library samples do not have recipe values Crispr or AmpliconSeq, reserved indexes in set5 will not be used.");
+            return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + "AND IsActive=1 AND SetId!=5", user);
+
         }
+        return new LinkedList<DataRecord>();
     }
 
     /**
@@ -268,7 +336,10 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
      * @throws IoError
      * @throws ServerException
      */
-    private Map<String, Object> setAssignedIndicesDataRecordFieldValues(DataRecord indexBarcode, DataRecord indexAssignmentConfig, Double minVolInAdapterPlate, Double maxPlateVolume, Integer plateSize, String sampleType) throws NotFound, RemoteException, InvalidValue, IoError, ServerException {
+    private Map<String, Object> setAssignedIndicesDataRecordFieldValues(DataRecord indexBarcode, DataRecord indexAssignmentConfig,
+                                                                        Double minVolInAdapterPlate, Double maxPlateVolume,
+                                                                        Integer plateSize, String sampleType, boolean isTCRseq) throws NotFound,
+            RemoteException, InvalidValue, IoError, ServerException {
         Double sampleInputAmount = 0.0;
         if (indexBarcode.getValue("InitialInput", user) != null) {
             sampleInputAmount = Double.parseDouble(indexBarcode.getStringVal("InitialInput", user));
@@ -284,13 +355,18 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         String adapterSourceCol = autoHelper.getAdapterColPosition(wellPosition);
         Double adapterStartConc = indexAssignmentConfig.getDoubleVal("AdapterConcentration", user);
         Double targetAdapterConc = autoHelper.getCalculatedTargetAdapterConcentration(sampleInputAmount, plateSize, sampleType);
-        Double adapterVolume = autoHelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType);
+        Double adapterVolume = autoHelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType, isTCRseq);
         Double waterVolume = autoHelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume, sampleType);
         Double actualTargetAdapterConc = adapterStartConc / ((waterVolume + adapterVolume) / adapterVolume);
         setUpdatedIndexAssignmentConfigVol(indexAssignmentConfig, adapterVolume);
         Map<String, Object> indexAssignmentValues = new HashMap<>();
-        indexAssignmentValues.put("IndexId", indexId);
+
+
         indexAssignmentValues.put("IndexTag", indexTag);
+
+
+        indexAssignmentValues.put("IndexId", indexId);
+
         indexAssignmentValues.put("BarcodePlateID", adapterPlate);
         indexAssignmentValues.put("IndexRow", adapterSourceRow);
         indexAssignmentValues.put("IndexCol", adapterSourceCol);
@@ -385,7 +461,9 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
      * @throws InvalidValue
      * @throws ServerException
      */
-    private void assignIndicesToSamples(List<DataRecord> indexAssignmentProtocolRecordsSortedColumnWise, List<DataRecord> indexAssignmentConfigs, Double minAdapterVol, Integer plateSize, String sampleType) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
+    private void assignIndicesToSamples(List<DataRecord> indexAssignmentProtocolRecordsSortedColumnWise, List<DataRecord>
+            indexAssignmentConfigs, Double minAdapterVol, Integer plateSize, String sampleType, boolean isTCRseq) throws NotFound,
+            RemoteException, IoError, InvalidValue, ServerException {
         Integer positionOfLastUsedIndex = getPositionOfLastUsedIndex(indexAssignmentConfigs);
         Double maxPlateVolume = autoHelper.getMaxVolumeLimit(plateSize);
         Integer updatedLastIndexUsed = getStartIndexAssignmentConfigPosition(positionOfLastUsedIndex, indexAssignmentConfigs);
@@ -393,7 +471,8 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         for (int i = updatedLastIndexUsed, j = 0; i < indexAssignmentConfigs.size() && j < indexAssignmentProtocolRecordsSortedColumnWise.size(); i++, j++) {
             DataRecord indexAssignmentConfig = indexAssignmentConfigs.get(i);
             DataRecord indexBarcodeProtocolRecord = indexAssignmentProtocolRecordsSortedColumnWise.get(j);
-            Map<String, Object> indexAssignmentValues = setAssignedIndicesDataRecordFieldValues(indexBarcodeProtocolRecord, indexAssignmentConfig, minAdapterVol, maxPlateVolume, plateSize, sampleType);
+            Map<String, Object> indexAssignmentValues = setAssignedIndicesDataRecordFieldValues(indexBarcodeProtocolRecord,
+                    indexAssignmentConfig, minAdapterVol, maxPlateVolume, plateSize, sampleType, isTCRseq);
             indexBarcodeProtocolRecord.setFields(indexAssignmentValues, user);
             indexAssignmentConfigPlatesToUse.add(indexAssignmentConfig.getStringVal("AdapterPlateId", user));
             if (i == indexAssignmentConfigs.size() - 1 && j <= indexAssignmentProtocolRecordsSortedColumnWise.size()) {
@@ -445,5 +524,27 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                 }
             }
         }
+    }
+
+
+    /**
+     * Method to get the unique plates associated with Sample DataRecords.
+     *
+     * @param attachedSamples
+     * @return List<String>
+     */
+    private List<Object> getAllUniquesPlates(List<DataRecord> attachedSamples) {
+        List<Object> plates = new LinkedList<>();
+        for (DataRecord s : attachedSamples) {
+            try {
+                plates.add(s.getAncestorsOfType("Plate", user));
+            } catch (RemoteException re) {
+                logError("Remote exception happened while finding all unique plates for the attached samples", re);
+            }
+        }
+
+
+        Set<Object> uniquePlates = new HashSet<>(plates);
+        return new ArrayList<Object>(uniquePlates);
     }
 }

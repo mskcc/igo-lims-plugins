@@ -24,7 +24,10 @@ public class AutoIndexAssignmentHelper extends ManagerBase {
      * @param plateSize
      * @return Double volume
      */
-    public Double getMinAdapterVolumeRequired(Integer plateSize) {
+    public Double getMinAdapterVolumeRequired(Integer plateSize, boolean isTCRseq) {
+        if(isTCRseq) {
+            return 5.5;
+        }
         if (plateSize == 96) {
             return 7.50;
         } else {
@@ -40,18 +43,24 @@ public class AutoIndexAssignmentHelper extends ManagerBase {
      * @param targetAdapterConcentration
      * @return Double volume
      */
-    public Double getAdapterInputVolume(Double startingAdapterConcentration, Double minAdapterVolume, Double targetAdapterConcentration, String sampleType) {
-        if (RNA_SAMPLE_TYPES.contains(sampleType.toLowerCase())){
-            return 5.0;
+    public Double getAdapterInputVolume(Double startingAdapterConcentration, Double minAdapterVolume,
+                                        Double targetAdapterConcentration, String sampleType, boolean isTCRseq) {
+        if(isTCRseq) {
+            return 7.5;
         }
-        Double c1 = startingAdapterConcentration;
-        Double v1 = minAdapterVolume;
-        Double c2 = targetAdapterConcentration;
-        Double v2 = (c2 * v1) / c1;
-        if (v2 >= 2.00) {
-            return v2;
+        else {
+            if (RNA_SAMPLE_TYPES.contains(sampleType.toLowerCase())) {
+                return 5.0;
+            }
+            Double c1 = startingAdapterConcentration;
+            Double v1 = minAdapterVolume;
+            Double c2 = targetAdapterConcentration;
+            Double v2 = (c2 * v1) / c1;
+            if (v2 >= 2.00) {
+                return v2;
+            }
+            return 2.00;
         }
-        return 2.00;
     }
 
 

@@ -11,7 +11,7 @@ import com.velox.sapioutils.shared.enums.PluginOrder;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
-import java.util.List;
+import java.util.*;
 
 /**
  * This is the plugin class is designed to update the values for 'AutoIndexAssignmentConfig' records based on the 'IndexBarcode' DataRecord values manually assigned by the Users. This will help to track the
@@ -24,6 +24,7 @@ import java.util.List;
 public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
     private final String INDEX_ASSIGNMENT_CONFIG_DATATYPE = "AutoIndexAssignmentConfig";
     AutoIndexAssignmentHelper autohelper;
+    private boolean isTCRseq = false;
 
     public ManualIndexAssignmentHandler() {
         setTaskEntry(true);
@@ -39,7 +40,16 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
         autohelper = new AutoIndexAssignmentHelper();
         try {
             List<DataRecord> attachedSamplesList = activeTask.getAttachedDataRecords("Sample", user);
-            List<DataRecord> attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IndexBarcode", user);
+            List<DataRecord> attachedIndexBarcodeRecords = new LinkedList<>();
+            String recipe = attachedSamplesList.get(0).getStringVal("Recipe", user);
+            if(activeWorkflow.getWorkflow().getFullName().toLowerCase().contains("tcrseq") && recipe.toLowerCase().contains("tcrseq")) {
+                isTCRseq = true;
+                attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IgoTcrSeqIndexBarcode", user);
+            }
+            else {
+                attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IndexBarcode", user);
+            }
+
             if (attachedIndexBarcodeRecords.isEmpty()) {
                 clientCallback.displayError(String.format("Could not find any IndexBarcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
                 logError(String.format("Could not find any IndexBarcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
@@ -56,12 +66,32 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                 logError("Could not find any active 'AutoIndexAssignmentConfig'");
                 return new PluginResult(false);
             }
-            Integer plateSize = getPlateSize(attachedSamplesList);
-            String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
-            Double minAdapterVolInPlate = autohelper.getMinAdapterVolumeRequired(plateSize);
-            Double maxPlateVolume = autohelper.getMaxVolumeLimit(plateSize);
-            setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords, minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType);
-            checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
+            Set<Object> uniquePlates = new HashSet<>();
+            for(DataRecord sample: attachedSamplesList) {
+                uniquePlates.add(sample.getParentsOfType("Plate", user));
+            }
+            for(Object plate: uniquePlates) {
+                Integer plateSize = getPlateSize(attachedSamplesList);
+                String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
+                String species = attachedSamplesList.get(0).getStringVal("Species", user);
+                String AliquotRecipe = attachedSamplesList.get(0).getStringVal("Recipe", user);
+
+                Double minAdapterVolInPlate = autohelper.getMinAdapterVolumeRequired(plateSize, isTCRseq);
+                Double maxPlateVolume = autohelper.getMaxVolumeLimit(plateSize);
+                boolean setUpdatedIndexAssignmentStatus = setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords,
+                        minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType, isTCRseq, species, AliquotRecipe);
+                logInfo("Value of setUpdatedIndexAssignmentStatus is: " + setUpdatedIndexAssignmentStatus);
+                if (!setUpdatedIndexAssignmentStatus) {
+                    String errMsg = String.format("The manual adapter assignment went wrong, 2 possible scenarios:\n" +
+                            "1) A human adapter been assigned to a mouse sample or vice versa.\n" +
+                            "2) An alpha adapter been assigned to a beta aliquot or vice vera");
+                    clientCallback.displayError(errMsg);
+                    logError(errMsg);
+                    return new PluginResult(false);
+                }
+                checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
+            }
+
         } catch (NotFound e) {
             String errMsg = String.format("NotFound Exception while manual index assignment:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
@@ -111,19 +141,28 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
      * @param indexBarcodeRecords
      * @param minVolInAdapterPlate
      * @param maxPlateVolume
+     * @param plateSize
+     * @param sampleType
+     * @param isTCRseq
+     * @param species
+     * @param aliquotRecipe
      * @throws NotFound
      * @throws RemoteException
      * @throws InvalidValue
      * @throws IoError
      * @throws ServerException
      */
-    private void setUpdatedIndexAssignmentValues(List<DataRecord> indexAssignmentConfigs, List<DataRecord> indexBarcodeRecords, Double minVolInAdapterPlate, Double maxPlateVolume, Integer plateSize, String sampleType) throws NotFound, RemoteException, InvalidValue, IoError, ServerException {
+    private boolean setUpdatedIndexAssignmentValues(List<DataRecord> indexAssignmentConfigs, List<DataRecord> indexBarcodeRecords,
+                                                 Double minVolInAdapterPlate, Double maxPlateVolume, Integer plateSize,
+                                                 String sampleType, boolean isTCRseq, String species, String aliquotRecipe) throws NotFound, RemoteException,
+            InvalidValue, IoError, ServerException {
         for (DataRecord indexBarcodeRec : indexBarcodeRecords) {
             boolean found = false;
             for (DataRecord indexConfig : indexAssignmentConfigs) {
                 if (indexBarcodeRec.getStringVal("IndexId", user).equals(indexConfig.getStringVal("IndexId", user))
                         && indexBarcodeRec.getStringVal("IndexTag", user).equals(indexConfig.getStringVal("IndexTag", user))) {
                     found = true;
+                    logInfo("found is now true");
                     Object inputAmount = indexBarcodeRec.getStringVal("InitialInput", user);
                     Double dnaInputAmount = inputAmount != null ? Double.parseDouble(inputAmount.toString()) : 50.00;
                     String wellPosition = indexConfig.getStringVal("WellId", user);
@@ -131,7 +170,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                     String adapterSourceCol = autohelper.getAdapterColPosition(wellPosition);
                     Double adapterStartConc = indexConfig.getDoubleVal("AdapterConcentration", user);
                     Double targetAdapterConc = autohelper.getCalculatedTargetAdapterConcentration(dnaInputAmount, plateSize, sampleType);
-                    Double adapterVolume = autohelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType);
+                    Double adapterVolume = autohelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType, isTCRseq);
                     Double waterVolume = autohelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume, sampleType);
                     Double actualTargetAdapterConc = adapterStartConc / ((waterVolume + adapterVolume) / adapterVolume);
                     //Double adapterConcentration = autohelper.getAdapterConcentration(indexConfig, adapterVolume, waterVolume);
@@ -142,14 +181,36 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                     indexBarcodeRec.setDataField("BarcodeVolume", adapterVolume, user);
                     indexBarcodeRec.setDataField("Aliq1WaterVolume", waterVolume, user);
                     indexBarcodeRec.setDataField("IndexBarcodeConcentration", actualTargetAdapterConc, user);
+
+                    if (isTCRseq) {
+                        logInfo("It's a TCRseq request!");
+                        if ((indexConfig.getStringVal("IndexId", user).toLowerCase().startsWith("h") &&
+                        species.toLowerCase().equals("mouse")) || (indexConfig.getStringVal("IndexId", user)
+                                .toLowerCase().startsWith("m") && species.toLowerCase().equals("human"))) {
+                            logInfo("human -> mouse || mouse -> human happened!!");
+                            clientCallback.displayError("You've set a human adapter to a mouse sample or a mouse adapter to a human sample.");
+                            return false;
+
+                        }
+                        if ((indexConfig.getStringVal("IndexId", user).toLowerCase().contains("acj") &&
+                                aliquotRecipe.toLowerCase().contains("beta")) || (indexConfig.getStringVal("IndexId", user)
+                                .toLowerCase().contains("bcj") && aliquotRecipe.toLowerCase().contains("alpha"))) {
+                            logInfo("alpha -> beta || beta -> alpha happened!!");
+                            clientCallback.displayError("You've set an alpha adapter to a beta aliquot or a beta adapter to an alpha aliquot.");
+                            return false;
+                        }
+                    }
                 }
             }
             if (!found) {
                 clientCallback.displayError(String.format("No Active '%s' record found for Index ID '%s'. Please double check to avoid discrepancies in '%s' record volumes.",
                         INDEX_ASSIGNMENT_CONFIG_DATATYPE, indexBarcodeRec.getStringVal("IndexId", user), INDEX_ASSIGNMENT_CONFIG_DATATYPE));
+                return false;
             }
             activeTask.getTask().getTaskOptions().put("_UPDATE_INDEX_VOLUMES_POST_MANUAL_INDEX_ASSIGNMENT", "");
         }
+        logInfo("Returning true!!!!");
+        return true;
     }
 
     /**
