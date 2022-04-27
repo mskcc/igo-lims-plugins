@@ -25,13 +25,13 @@ public class MixedSampleSpeciesValidator extends DefaultGenericPlugin {
 
     @Override
     protected boolean shouldRun() throws Throwable {
-        return activeTask.getTask().getTaskName().equalsIgnoreCase("create experiment") &&
-                activeTask.getTask().getTaskOptions().containsKey("VALIDATE MIXED SAMPLE SPECIES");
+        return this.activeTask.getTask().getTaskName().equalsIgnoreCase("create experiment") &&
+                this.activeTask.getTask().getTaskOptions().containsKey("VALIDATE MIXED SAMPLE SPECIES");
     }
 
-    @Override
-    public PluginResult runPlugin() throws ServerException {
+    public PluginResult run() throws ServerException {
         try {
+            logInfo("I should run species validator plugin!!!");
             List<DataRecord> samples = activeTask.getAttachedDataRecords("Sample", user);
             Set<String> sampleSpeciesValues = new HashSet<>();
             for (DataRecord sample : samples) {
@@ -50,7 +50,7 @@ public class MixedSampleSpeciesValidator extends DefaultGenericPlugin {
 
                 boolean isUniqueSampleSpecies = sampleSpeciesValues.size() == 1;
                 if (!isUniqueSampleSpecies && hasAllMixedSampleSpeciesToAvoid(sampleSpeciesValues)){
-                    logInfo(String.format("Mixed Recipes WARNING -> %s samples are being launched together.", MIXED_SAMPLESPECIES_TO_AVOID.toString()));
+                    logInfo(String.format("Mixed SPECIES WARNING -> %s samples are being launched together.", MIXED_SAMPLESPECIES_TO_AVOID.toString()));
                     if (!clientCallback.showOkCancelDialog("SAMPLES HAVE MIXED SAMPLE SPECIES WHICH SHOULD NOT BE LAUNCHED TOGETHER!",
                             String.format("Samples launched in the workflow contain %s Species.\nDO YOU WANT TO CONTINUE?", MIXED_SAMPLESPECIES_TO_AVOID.toString()))) {
                         logInfo(String.format("User %s elected to cancel workflow %s to avoid 'Human' and 'Mouse' samples being launched together.", activeWorkflow.getActiveWorkflowName(), user.getAccountName()));
