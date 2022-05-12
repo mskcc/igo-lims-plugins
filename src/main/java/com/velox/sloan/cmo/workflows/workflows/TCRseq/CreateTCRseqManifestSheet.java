@@ -22,9 +22,14 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.*;
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
     private List<String> manifestHeaders = Arrays.asList("SAMPLE ID", "PARENT BARCODE SEQUENCE", "CHILD BARCODE SEQUENCE");
+
+    private final static String IGO_ID_WITHOUT_ALPHABETS_PATTERN = "^[0-9]+_[0-9]+.*$";  // sample id without alphabets
+    private final static String IGO_ID_WITH_ALPHABETS_PATTERN = "^[0-9]+_[A-Z]+_[0-9]+.*$";  // sample id without alphabets
+
     DataRecord experiment;
     private DataRecordUtilManager dataRecordUtilManager;
 
@@ -171,11 +176,11 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
                 String manifestSampleId = "";
                 if (sampleId[sampleId.length - 1].toString().equals("1")) {
                     logInfo("Appending _A");
-                    manifestSampleId = sampleId[0].toString() + "_" + sampleId[1].toString() + "_A";
+                    manifestSampleId = getBaseSampleId(record.getValue("SampleId", user).toString()) + "_A";
                 }
                 else if (sampleId[sampleId.length - 1].toString().equals("2")) {
                     logInfo("Appending _B");
-                    manifestSampleId = sampleId[0].toString() + "_" + sampleId[1].toString() + "_B";
+                    manifestSampleId = getBaseSampleId(record.getValue("SampleId", user).toString()) + "_B";
                 }
 
                 reportFieldValues.put("SampleId", manifestSampleId);
@@ -359,5 +364,26 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
             }
         }
 
+    }
+
+    /**
+     * Method to get base Sample ID when aliquot annotation is present.
+     * Example: for sample id 012345_1_1_2, base sample id is 012345_1
+     * Example2: for sample id 012345_B_1_1_2, base sample id is 012345_B_1
+     * @param sampleId
+     * @return
+     */
+    public static String getBaseSampleId(String sampleId){
+        Pattern alphabetPattern = Pattern.compile(IGO_ID_WITH_ALPHABETS_PATTERN);
+        Pattern withoutAlphabetPattern = Pattern.compile(IGO_ID_WITHOUT_ALPHABETS_PATTERN);
+        if (alphabetPattern.matcher(sampleId).matches()){
+            String[] sampleIdValues =  sampleId.split("_");
+            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,3));
+        }
+        if(withoutAlphabetPattern.matcher(sampleId).matches()){
+            String[] sampleIdValues =  sampleId.split("_");
+            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,2));
+        }
+        return sampleId;
     }
 }
