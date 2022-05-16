@@ -81,15 +81,16 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                 boolean setUpdatedIndexAssignmentStatus = setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords,
                         minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType, isTCRseq, species, AliquotRecipe);
                 logInfo("Value of setUpdatedIndexAssignmentStatus is: " + setUpdatedIndexAssignmentStatus);
+                checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
                 if (!setUpdatedIndexAssignmentStatus) {
                     String errMsg = String.format("The manual adapter assignment went wrong, 2 possible scenarios:\n" +
                             "1) A human adapter been assigned to a mouse sample or vice versa.\n" +
                             "2) An alpha adapter been assigned to a beta aliquot or vice vera");
-                    clientCallback.displayError(errMsg);
+                    //clientCallback.displayError(errMsg);
                     logError(errMsg);
                     return new PluginResult(false);
                 }
-                checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
+
             }
 
         } catch (NotFound e) {
@@ -185,8 +186,8 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                     if (isTCRseq) {
                         logInfo("It's a TCRseq request!");
                         if ((indexConfig.getStringVal("IndexId", user).toLowerCase().startsWith("h") &&
-                        species.toLowerCase().equals("mouse")) || (indexConfig.getStringVal("IndexId", user)
-                                .toLowerCase().startsWith("m") && species.toLowerCase().equals("human"))) {
+                        species.trim().toLowerCase().equals("mouse")) || (indexConfig.getStringVal("IndexId", user)
+                                .toLowerCase().startsWith("m") && species.trim().toLowerCase().equals("human"))) {
                             logInfo("human -> mouse || mouse -> human happened!!");
                             clientCallback.displayError("You've set a human adapter to a mouse sample or a mouse adapter to a human sample.");
                             return false;
