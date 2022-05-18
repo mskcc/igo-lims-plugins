@@ -67,30 +67,60 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
             Set<Object> uniquePlates = new HashSet<>();
-            for(DataRecord sample: attachedSamplesList) {
+            for (DataRecord sample: attachedSamplesList) {
                 uniquePlates.add(sample.getParentsOfType("Plate", user));
             }
-            for(Object plate: uniquePlates) {
+            for (Object plate: uniquePlates) {
                 Integer plateSize = getPlateSize(attachedSamplesList);
                 String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
                 String species = attachedSamplesList.get(0).getStringVal("Species", user);
-                String AliquotRecipe = attachedSamplesList.get(0).getStringVal("Recipe", user);
+                String aliquotRecipe = attachedSamplesList.get(0).getStringVal("Recipe", user);
 
                 Double minAdapterVolInPlate = autohelper.getMinAdapterVolumeRequired(plateSize, isTCRseq);
                 Double maxPlateVolume = autohelper.getMaxVolumeLimit(plateSize);
-                boolean setUpdatedIndexAssignmentStatus = setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, attachedIndexBarcodeRecords,
-                        minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType, isTCRseq, species, AliquotRecipe);
-                logInfo("Value of setUpdatedIndexAssignmentStatus is: " + setUpdatedIndexAssignmentStatus);
-                checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
-                if (!setUpdatedIndexAssignmentStatus) {
-                    String errMsg = String.format("The manual adapter assignment went wrong, 2 possible scenarios:\n" +
-                            "1) A human adapter been assigned to a mouse sample or vice versa.\n" +
-                            "2) An alpha adapter been assigned to a beta aliquot or vice vera");
-                    //clientCallback.displayError(errMsg);
-                    logError(errMsg);
-                    return new PluginResult(false);
+                List<DataRecord> alphaAttachedIndexBarcodeRecords = new LinkedList<>();
+                List<DataRecord> betaAttachedIndexBarcodeRecords = new LinkedList<>();
+
+                // Splitting the attached alpha and beta barcodes
+                for (DataRecord attachedBarcode : attachedIndexBarcodeRecords) {
+                    if(attachedBarcode.getStringVal("Recipe", user).trim().toLowerCase().contains("alpha")) {
+                        alphaAttachedIndexBarcodeRecords.add(attachedBarcode);
+                    }
+                    else {
+                        betaAttachedIndexBarcodeRecords.add(attachedBarcode);
+                    }
                 }
 
+                if (aliquotRecipe.trim().toLowerCase().contains("alpha")) {
+                    boolean setUpdatedIndexAssignmentStatus = setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, alphaAttachedIndexBarcodeRecords,
+                            minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType, isTCRseq, species, aliquotRecipe);
+
+                    logInfo("Value of setUpdatedIndexAssignmentStatus is: " + setUpdatedIndexAssignmentStatus);
+                    checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
+                    if (!setUpdatedIndexAssignmentStatus) {
+                        String errMsg = String.format("The manual adapter assignment went wrong, 3 possible scenarios (if TCRseq application 2 & 3 apply):\n" +
+                                "1) No Active record found for Index ID. Please double check to avoid discrepancies.\n" +
+                                "2) A human adapter been assigned to a mouse sample or vice versa.\n" +
+                                "3) An alpha adapter been assigned to a beta aliquot or vice vera");
+                        logError(errMsg);
+                        return new PluginResult(false);
+                    }
+                }
+                else {
+                    boolean setUpdatedIndexAssignmentStatus = setUpdatedIndexAssignmentValues(activeIndexAssignmentConfigs, betaAttachedIndexBarcodeRecords,
+                            minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType, isTCRseq, species, aliquotRecipe);
+
+                    logInfo("Value of setUpdatedIndexAssignmentStatus is: " + setUpdatedIndexAssignmentStatus);
+                    checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
+                    if (!setUpdatedIndexAssignmentStatus) {
+                        String errMsg = String.format("The manual adapter assignment went wrong, 3 possible scenarios (if TCRseq application 2 & 3 apply):\n" +
+                                "1) No Active record found for Index ID. Please double check to avoid discrepancies.\n" +
+                                "2) A human adapter been assigned to a mouse sample or vice versa.\n" +
+                                "3) An alpha adapter been assigned to a beta aliquot or vice vera");
+                        logError(errMsg);
+                        return new PluginResult(false);
+                    }
+                }
             }
 
         } catch (NotFound e) {
@@ -186,7 +216,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                     if (isTCRseq) {
                         logInfo("It's a TCRseq request!");
                         if ((indexConfig.getStringVal("IndexId", user).toLowerCase().startsWith("h") &&
-                        species.trim().toLowerCase().equals("mouse")) || (indexConfig.getStringVal("IndexId", user)
+                                species.trim().toLowerCase().equals("mouse")) || (indexConfig.getStringVal("IndexId", user)
                                 .toLowerCase().startsWith("m") && species.trim().toLowerCase().equals("human"))) {
                             logInfo("human -> mouse || mouse -> human happened!!");
                             clientCallback.displayError("You've set a human adapter to a mouse sample or a mouse adapter to a human sample.");
@@ -200,6 +230,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                             clientCallback.displayError("You've set an alpha adapter to a beta aliquot or a beta adapter to an alpha aliquot.");
                             return false;
                         }
+
                     }
                 }
             }

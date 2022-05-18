@@ -5,12 +5,8 @@ import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
-import com.velox.api.workflow.ActiveTask;
-import com.velox.api.workflow.ActiveWorkflow;
 import com.velox.sapio.commons.exemplar.plugin.PluginOrder;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
-import com.velox.sapioutils.shared.managers.DataRecordUtilManager;
-import com.velox.sapioutils.shared.managers.ManagerContext;
 import com.velox.sapioutils.shared.utilities.ExemplarConfig;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -30,9 +26,6 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
     private final static String IGO_ID_WITHOUT_ALPHABETS_PATTERN = "^[0-9]+_[0-9]+.*$";  // sample id without alphabets
     private final static String IGO_ID_WITH_ALPHABETS_PATTERN = "^[0-9]+_[A-Z]+_[0-9]+.*$";  // sample id without alphabets
 
-    DataRecord experiment;
-    private DataRecordUtilManager dataRecordUtilManager;
-
     public CreateTCRseqManifestSheet() {
         /*
         * setTaskToolbar(true);
@@ -40,7 +33,7 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
         setLine1Text("Generate TCRseq");
         setLine2Text("Manifest");*/
         setTaskEntry(true);
-        setOrder(PluginOrder.EARLY.getOrder());
+        setOrder(PluginOrder.LAST.getOrder());
         setDescription("Generates report for ddPCR experiment with specific columns.");
         setIcon("com/velox/sloan/cmo/resources/export_32.gif");
     }
@@ -49,24 +42,8 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
         return activeTask.getTask().getTaskOptions().containsKey("GENERATE TCRSEQ MANIFEST");
     }
 
-    @Override
-    public boolean onTaskToolbar(ActiveWorkflow activeWorkflow, ActiveTask activeTask) {
-        try {
-            return activeTask.getTask().getTaskOptions().containsKey("GENERATE TCRSEQ MANIFEST");
-        } catch (RemoteException e) {
-            String errMsg = String.format("Remote Exception Error while setting toolbar button:\n%s", ExceptionUtils.getStackTrace(e));
-            logError(errMsg);
-        }
-        return false;
-    }
-
     public PluginResult run() throws Throwable {
 
-        if (mainDataType == null)
-            mainDataType = ExemplarConfig.getMainDataType(managerContext);
-
-        dataRecordUtilManager = new DataRecordUtilManager(managerContext);
-        experiment = dataRecordUtilManager.getExperiment();
         try {
             List<DataRecord> assignedIndices = activeTask.getAttachedDataRecords("IgoTcrSeqIndexBarcode", user);
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
@@ -95,6 +72,11 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
             if (assignedIndices.isEmpty()) {
                 clientCallback.displayError("No '' records found attached to this task.");
                 logError("No attached 'IGO TCRseq assigned indices' records found attached to this task.");
+                return new PluginResult(false);
+            }
+            if(attachedSamples.isEmpty()) {
+                clientCallback.displayError("No 'Sample' records found attached to this task.");
+                logError("No sample records found attached to this task.");
                 return new PluginResult(false);
             }
             if (attachedAlphaSamples.isEmpty()) {
