@@ -27,11 +27,6 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
     private final static String IGO_ID_WITH_ALPHABETS_PATTERN = "^[0-9]+_[A-Z]+_[0-9]+.*$";  // sample id without alphabets
 
     public CreateTCRseqManifestSheet() {
-        /*
-        * setTaskToolbar(true);
-        setFormToolbar(true);
-        setLine1Text("Generate TCRseq");
-        setLine2Text("Manifest");*/
         setTaskEntry(true);
         setOrder(PluginOrder.LAST.getOrder());
         setDescription("Generates report for ddPCR experiment with specific columns.");
@@ -39,7 +34,8 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
     }
     @Override
     public boolean shouldRun() throws RemoteException {
-        return activeTask.getTask().getTaskOptions().containsKey("GENERATE TCRSEQ MANIFEST");
+        return activeTask.getTask().getTaskOptions().containsKey("GENERATE TCRSEQ MANIFEST") &&
+                !this.activeTask.getTask().getTaskOptions().containsKey("TCRSEQ SAMPLE MANIFEST GENERATED");
     }
 
     public PluginResult run() throws Throwable {
@@ -49,15 +45,18 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
             List<DataRecord> attachedAlphaSamples = new LinkedList<>();
             List<DataRecord> attachedBetaSamples = new LinkedList<>();
-            for(DataRecord samples : attachedSamples) {
+            for (DataRecord samples : attachedSamples) {
                 String sampleName = samples.getStringVal("OtherSampleId", user);
                 try {
-                    if(samples.getStringVal("Recipe", user).toLowerCase().contains("alpha")) {
+                    if (samples.getStringVal("Recipe", user).toLowerCase().contains("alpha")
+                    && !samples.getStringVal("OtherSampleId", user).toLowerCase().contains("_alpha")) {
                         samples.setDataField("OtherSampleId", sampleName + "_alpha", user);
                         logInfo("_alpha appended to the alpha sample name.");
                         attachedAlphaSamples.add(samples);
+
                     }
-                    else if(samples.getStringVal("Recipe", user).toLowerCase().contains("beta")) {
+                    else if (samples.getStringVal("Recipe", user).toLowerCase().contains("beta")
+                    && !samples.getStringVal("OtherSampleId", user).toLowerCase().contains("_beta")) {
                         samples.setDataField("OtherSampleId", sampleName + "_beta", user);
                         logInfo("_beta appended to the beta sample name.");
                         attachedBetaSamples.add(samples);
@@ -79,16 +78,16 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
                 logError("No sample records found attached to this task.");
                 return new PluginResult(false);
             }
-            if (attachedAlphaSamples.isEmpty()) {
-                clientCallback.displayError("No 'Alpha Sample' records found attached to this task.");
-                logError("No attached 'alpha' records found attached to this task.");
-                return new PluginResult(false);
-            }
-            if (attachedBetaSamples.isEmpty()) {
-                clientCallback.displayError("No 'Beta Sample' records found attached to this task.");
-                logError("No attached 'beta' records found attached to this task.");
-                return new PluginResult(false);
-            }
+//            if (attachedAlphaSamples.isEmpty()) {
+//                clientCallback.displayError("No 'Alpha Sample' records found attached to this task.");
+//                logError("No attached 'alpha' records found attached to this task.");
+//                return new PluginResult(false);
+//            }
+//            if (attachedBetaSamples.isEmpty()) {
+//                clientCallback.displayError("No 'Beta Sample' records found attached to this task.");
+//                logError("No attached 'beta' records found attached to this task.");
+//                return new PluginResult(false);
+//            }
 
 
             List<String> headerForReport = manifestHeaders;
@@ -136,6 +135,7 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
             logError(errMsg);
             return new PluginResult(false);
         }
+        this.activeTask.getTask().getTaskOptions().put("TCRSEQ SAMPLE MANIFEST GENERATED", "");
         return new PluginResult(true);
     }
 
