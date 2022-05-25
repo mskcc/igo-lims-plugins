@@ -153,19 +153,18 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
         for (DataRecord record : manifestInfo) {
             Map<String, Object> reportFieldValues = new HashMap<>();
             try {
-                logInfo("sample id is: " + record.getValue("SampleId", user).toString());
                 Object[] sampleId = record.getValue("SampleId", user).toString().split("_");
-                String manifestSampleId = "";
+                String manifestSampleName = record.getValue("OtherSampleId", user).toString();
                 if (sampleId[sampleId.length - 1].toString().equals("1")) {
-                    logInfo("Appending _A");
-                    manifestSampleId = getBaseSampleId(record.getValue("SampleId", user).toString()) + "_A";
+                    logInfo("Appending _alpha");
+                    manifestSampleName += "_alpha";
                 }
                 else if (sampleId[sampleId.length - 1].toString().equals("2")) {
-                    logInfo("Appending _B");
-                    manifestSampleId = getBaseSampleId(record.getValue("SampleId", user).toString()) + "_B";
+                    logInfo("Appending _beta");
+                    manifestSampleName += "_beta";
                 }
-
-                reportFieldValues.put("SampleId", manifestSampleId);
+                logInfo("manifestSampleName = " + manifestSampleName);
+                reportFieldValues.put("SampleName", manifestSampleName);
                 Object[] indexTag = record.getValue("IndexTag", user).toString().split("-");
                 reportFieldValues.put("ParentBarcodeSequence", indexTag[0]);
                 reportFieldValues.put("ChildBarcodeSequence", indexTag[1]);
@@ -186,7 +185,7 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
      * @param data
      */
     private void sortMapBySampleId(List<Map<String, Object>> data) {
-        data.sort(Comparator.comparing(o -> o.get("SampleId").toString()));
+        data.sort(Comparator.comparing(o -> o.get("SampleName").toString()));
     }
     /**
      * Add data values to the excel workbook.
@@ -209,7 +208,7 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
         }
         for (Map<String, Object> data : dataValues) {
             row = sheet.createRow(rowId);
-            row.createCell(0).setCellValue(data.get("SampleId").toString());
+            row.createCell(0).setCellValue(data.get("SampleName").toString());
             row.createCell(1).setCellValue(data.get("ParentBarcodeSequence").toString());
             row.createCell(2).setCellValue(data.get("ChildBarcodeSequence").toString());
             rowId++;
@@ -298,10 +297,10 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
             outFileName = "Project_";
         }
         if (isAlpha) {
-            logInfo("Generating TCRseq manifest " + outFileName + "_TCRseq_Manifest_Alpha.xlsx");
+            logInfo("Generating TCRseq manifest " + outFileName + "_TCRseq_Manifest_Alpha.csv");
         }
         else {
-            logInfo("Generating TCRseq manifest " + outFileName + "_TCRseq_Manifest_Beta.xlsx");
+            logInfo("Generating TCRseq manifest " + outFileName + "_TCRseq_Manifest_Beta.csv");
         }
         ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
         try {
