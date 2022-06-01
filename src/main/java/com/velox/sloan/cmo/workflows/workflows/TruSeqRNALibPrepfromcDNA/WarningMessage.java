@@ -14,11 +14,14 @@ public class WarningMessage extends DefaultGenericPlugin {
 
     @Override
     protected boolean shouldRun() throws Throwable {
-        return this.activeTask.getTask().getTaskName().equalsIgnoreCase("create experiment") &&
-                this.activeTask.getTask().getTaskOptions().containsKey("VALIDATE cDNA QC");
+        return this.activeTask.getTask().getTaskOptions().containsKey("VALIDATE cDNA QC");
     }
     public PluginResult run() throws ServerException {
-        clientCallback.displayInfo("QC cDNA from day1 before launching samples for Day2");
-        return new PluginResult(true);
+        boolean userChoice = clientCallback.showOkCancelDialog("QC cDNA", "Have you finished the QC for cDNA from day1 " +
+                        "before launching samples for Day2?");
+        if(userChoice) {
+            return new PluginResult(true);
+        }
+        return new PluginResult(false);
     }
 }
