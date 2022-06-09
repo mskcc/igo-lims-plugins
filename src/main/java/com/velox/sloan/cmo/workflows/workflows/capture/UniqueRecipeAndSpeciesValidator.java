@@ -52,7 +52,7 @@ public class UniqueRecipeAndSpeciesValidator extends DefaultGenericPlugin {
             }
             if (recipes.size() == 0) {
                 logInfo("Recipe values not found on samples");
-                clientCallback.displayWarning("Cannot validate uniqie recipes. Recipe values not found for samples in this task.");
+                clientCallback.displayWarning("Cannot validate unique recipes. Recipe values not found for samples in this task.");
                 return new PluginResult(true);
             }
             if (speciesValues.size() == 0) {
