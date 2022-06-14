@@ -15,12 +15,15 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
+import javax.net.ssl.*;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.CertificateException;
 import java.time.Instant;
 import java.util.*;
+import java.security.cert.X509Certificate;
 
 
 public class DmpToBankedSampleDataReader {
@@ -292,17 +295,20 @@ public class DmpToBankedSampleDataReader {
     }
 
     // Patient ID redaction using CRDB, for a Python example check sample-submission-backend/views/upload: /patientIdConverter
-    private String crdb(String patientId, ClientCallbackOperations cb) throws IOException, FileNotFoundException, ServerException {
+    public String crdb(String patientId, ClientCallbackOperations cb) throws IOException, FileNotFoundException, ServerException {
 
         // crdb endpoint for this service was updated on February 19 2021
         // curl  -u cmoint:cmointp "https://plcrdbapp1.mskcc.org:7002/rest/cmo/getDataAUTH?mrn=00300678&sid=P1"
         StringBuilder response = new StringBuilder();
         String resourceFile = Objects.requireNonNull(Test.class.getClassLoader().getResource("properties")).getPath();
         try (InputStream input = new FileInputStream(resourceFile)) {
+            //java.lang.System.setProperty("appdynamics.force.default.ssl.certificate.validation", "false");
+            disable();
             URL url = new URL("https://plcrdbapp1.mskcc.org:7002/rest/cmo/getDataAuthV2");
-            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
             con.setRequestMethod("POST");
             con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            con.setRequestProperty("Accept", "application/json");
             con.setDoOutput(true);
             con.setDoInput(true);
             Properties prop = new Properties();
@@ -334,6 +340,36 @@ public class DmpToBankedSampleDataReader {
         } catch (ParseException e) {
             cb.displayError(String.format("Error while getting scrambled 'PATIENT ID' value from CRDB: %s", ExceptionUtils.getStackTrace(e)));
             return "CRDB Error";
+        }
+    }
+
+    public static void disable() {
+        try {
+            SSLContext sslc = SSLContext.getInstance("TLS");
+            TrustManager[] trustManagerArray = { new NullX509TrustManager() };
+            sslc.init(null, trustManagerArray, null);
+            HttpsURLConnection.setDefaultSSLSocketFactory(sslc.getSocketFactory());
+            HttpsURLConnection.setDefaultHostnameVerifier(new NullHostnameVerifier());
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static class NullX509TrustManager implements X509TrustManager {
+        public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+            System.out.println();
+        }
+        public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+            System.out.println();
+        }
+        public X509Certificate[] getAcceptedIssuers() {
+            return new X509Certificate[0];
+        }
+    }
+
+    private static class NullHostnameVerifier implements HostnameVerifier {
+        public boolean verify(String hostname, SSLSession session) {
+            return true;
         }
     }
 }
