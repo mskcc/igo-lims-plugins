@@ -29,7 +29,6 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
     public CreateTCRseqManifestSheet() {
         setTaskEntry(true);
         setOrder(PluginOrder.LAST.getOrder());
-        setDescription("Generates report for ddPCR experiment with specific columns.");
         setIcon("com/velox/sloan/cmo/resources/export_32.gif");
     }
     @Override
@@ -43,91 +42,89 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
         try {
             List<DataRecord> assignedIndices = activeTask.getAttachedDataRecords("IgoTcrSeqIndexBarcode", user);
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
+            Set<String> setOfProjects = new HashSet<>();
             List<DataRecord> attachedAlphaSamples = new LinkedList<>();
             List<DataRecord> attachedBetaSamples = new LinkedList<>();
+
             for (DataRecord samples : attachedSamples) {
-                String sampleName = samples.getStringVal("OtherSampleId", user);
-                try {
-                    if (samples.getStringVal("Recipe", user).toLowerCase().contains("alpha")
-                    && !samples.getStringVal("OtherSampleId", user).toLowerCase().contains("_alpha")) {
-                        samples.setDataField("OtherSampleId", sampleName + "_alpha", user);
-                        logInfo("_alpha appended to the alpha sample name.");
-                        attachedAlphaSamples.add(samples);
-
-                    }
-                    else if (samples.getStringVal("Recipe", user).toLowerCase().contains("beta")
-                    && !samples.getStringVal("OtherSampleId", user).toLowerCase().contains("_beta")) {
-                        samples.setDataField("OtherSampleId", sampleName + "_beta", user);
-                        logInfo("_beta appended to the beta sample name.");
-                        attachedBetaSamples.add(samples);
-                    }
-                }
-                catch(NotFound | RemoteException e) {
-
-                }
+                String projectId = getBaseProjectId(samples.getStringVal("SampleId", user));
+                setOfProjects.add(projectId);
             }
 
+            for(String project: setOfProjects) {
+                for (DataRecord samples : attachedSamples) {
+                    String sampleName = samples.getStringVal("OtherSampleId", user);
+                    String projectId = getBaseProjectId(samples.getStringVal("SampleId", user));
+                    if(project.equals(projectId)) {
+                        try {
+                            if (samples.getStringVal("Recipe", user).toLowerCase().contains("alpha")
+                                    && !samples.getStringVal("OtherSampleId", user).toLowerCase().contains("_alpha")) {
+                                samples.setDataField("OtherSampleId", sampleName + "_alpha", user);
+                                logInfo("_alpha appended to the alpha sample name.");
+                                attachedAlphaSamples.add(samples);
 
-            if (assignedIndices.isEmpty()) {
-                clientCallback.displayError("No '' records found attached to this task.");
-                logError("No attached 'IGO TCRseq assigned indices' records found attached to this task.");
-                return new PluginResult(false);
-            }
-            if(attachedSamples.isEmpty()) {
-                clientCallback.displayError("No 'Sample' records found attached to this task.");
-                logError("No sample records found attached to this task.");
-                return new PluginResult(false);
-            }
-//            if (attachedAlphaSamples.isEmpty()) {
-//                clientCallback.displayError("No 'Alpha Sample' records found attached to this task.");
-//                logError("No attached 'alpha' records found attached to this task.");
-//                return new PluginResult(false);
-//            }
-//            if (attachedBetaSamples.isEmpty()) {
-//                clientCallback.displayError("No 'Beta Sample' records found attached to this task.");
-//                logError("No attached 'beta' records found attached to this task.");
-//                return new PluginResult(false);
-//            }
+                            } else if (samples.getStringVal("Recipe", user).toLowerCase().contains("beta")
+                                    && !samples.getStringVal("OtherSampleId", user).toLowerCase().contains("_beta")) {
+                                samples.setDataField("OtherSampleId", sampleName + "_beta", user);
+                                logInfo("_beta appended to the beta sample name.");
+                                attachedBetaSamples.add(samples);
+                            }
+                        } catch (NotFound | RemoteException e) {
 
-
-            List<String> headerForReport = manifestHeaders;
-            List<DataRecord> alphaIndicesInfo = new LinkedList<>();
-            List<DataRecord> betaIndicesInfo = new LinkedList<>();
-
-            for (DataRecord attachedSample : attachedSamples) {
-                for (DataRecord assignedIndex : assignedIndices) {
-                    try {
-                        if (attachedSample.getStringVal("Recipe", user).toLowerCase().contains("alpha") &&
-                        assignedIndex.getStringVal("SampleId", user).equals(attachedSample.getStringVal("SampleId", user))) {
-                            logInfo(assignedIndex.getStringVal("sampleId", user)  + " with recipe: "
-                                    + assignedIndex.getStringVal("Recipe", user) + " added to alpha assigned indices.");
-                            alphaIndicesInfo.add(assignedIndex);
                         }
-                        else if (attachedSample.getStringVal("Recipe", user).toLowerCase().contains("beta") &&
-                                assignedIndex.getStringVal("SampleId", user).equals(attachedSample.getStringVal("SampleId", user))) {
-                            logInfo(assignedIndex.getStringVal("sampleId", user) + " with recipe: "
-                                    + assignedIndex.getStringVal("Recipe", user) + " added to beta assigned indices.");
-                            betaIndicesInfo.add(assignedIndex);
-                        }
-                    } catch (NotFound | RemoteException e) {
-
                     }
                 }
+
+
+                if (assignedIndices.isEmpty()) {
+                    clientCallback.displayError("No '' records found attached to this task.");
+                    logError("No attached 'IGO TCRseq assigned indices' records found attached to this task.");
+                    return new PluginResult(false);
+                }
+                if (attachedSamples.isEmpty()) {
+                    clientCallback.displayError("No 'Sample' records found attached to this task.");
+                    logError("No sample records found attached to this task.");
+                    return new PluginResult(false);
+                }
+
+                List<String> headerForReport = manifestHeaders;
+                List<DataRecord> alphaIndicesInfo = new LinkedList<>();
+                List<DataRecord> betaIndicesInfo = new LinkedList<>();
+
+                for (DataRecord attachedSample : attachedSamples) {
+                    for (DataRecord assignedIndex : assignedIndices) {
+                        try {
+                            if (attachedSample.getStringVal("Recipe", user).toLowerCase().contains("alpha") &&
+                                    assignedIndex.getStringVal("SampleId", user).equals(attachedSample.getStringVal("SampleId", user))) {
+                                logInfo(assignedIndex.getStringVal("sampleId", user) + " with recipe: "
+                                        + assignedIndex.getStringVal("Recipe", user) + " added to alpha assigned indices.");
+                                alphaIndicesInfo.add(assignedIndex);
+                            } else if (attachedSample.getStringVal("Recipe", user).toLowerCase().contains("beta") &&
+                                    assignedIndex.getStringVal("SampleId", user).equals(attachedSample.getStringVal("SampleId", user))) {
+                                logInfo(assignedIndex.getStringVal("sampleId", user) + " with recipe: "
+                                        + assignedIndex.getStringVal("Recipe", user) + " added to beta assigned indices.");
+                                betaIndicesInfo.add(assignedIndex);
+                            }
+                        } catch (NotFound | RemoteException e) {
+
+                        }
+                    }
+                }
+
+                XSSFWorkbook alphaWorkbook = new XSSFWorkbook();
+                logInfo("Generating alpha workbook..");
+                List<Map<String, Object>> alphaValuesForReport = setFieldsForReport(alphaIndicesInfo);
+                generateExcelDataWorkbook(headerForReport, alphaValuesForReport, alphaWorkbook);
+                String alphaFileName = generateFileNameFromRequestIds(attachedSamples);
+                exportReport(true, alphaWorkbook, alphaFileName);
+
+                XSSFWorkbook betaWorkbook = new XSSFWorkbook();
+                logInfo("Generating beta workbook..");
+                List<Map<String, Object>> betaValuesForReport = setFieldsForReport(betaIndicesInfo);
+                generateExcelDataWorkbook(headerForReport, betaValuesForReport, betaWorkbook);
+                String betaFileName = generateFileNameFromRequestIds(attachedSamples);
+                exportReport(false, betaWorkbook, betaFileName);
             }
-
-            XSSFWorkbook alphaWorkbook = new XSSFWorkbook();
-            logInfo("Generating alpha workbook..");
-            List<Map<String, Object>> alphaValuesForReport = setFieldsForReport(alphaIndicesInfo);
-            generateExcelDataWorkbook(headerForReport, alphaValuesForReport, alphaWorkbook);
-            String alphaFileName = generateFileNameFromRequestIds(attachedSamples);
-            exportReport(true, alphaWorkbook, alphaFileName);
-
-            XSSFWorkbook betaWorkbook = new XSSFWorkbook();
-            logInfo("Generating beta workbook..");
-            List<Map<String, Object>> betaValuesForReport = setFieldsForReport(betaIndicesInfo);
-            generateExcelDataWorkbook(headerForReport, betaValuesForReport, betaWorkbook);
-            String betaFileName = generateFileNameFromRequestIds(attachedSamples);
-            exportReport(false, betaWorkbook, betaFileName);
 
         } catch (RemoteException e) {
             String errMsg = String.format("Remote Exception Error while generating TCRseq Manifest File:\n%s", ExceptionUtils.getStackTrace(e));
@@ -349,21 +346,21 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
 
     /**
      * Method to get base Sample ID when aliquot annotation is present.
-     * Example: for sample id 012345_1_1_2, base sample id is 012345_1
-     * Example2: for sample id 012345_B_1_1_2, base sample id is 012345_B_1
+     * Example: for sample id 012345_1_1_2, base sample id is 012345
+     * Example2: for sample id 012345_B_1_1_2, base sample id is 012345_B
      * @param sampleId
      * @return
      */
-    public static String getBaseSampleId(String sampleId){
+    public static String getBaseProjectId(String sampleId){
         Pattern alphabetPattern = Pattern.compile(IGO_ID_WITH_ALPHABETS_PATTERN);
         Pattern withoutAlphabetPattern = Pattern.compile(IGO_ID_WITHOUT_ALPHABETS_PATTERN);
         if (alphabetPattern.matcher(sampleId).matches()){
             String[] sampleIdValues =  sampleId.split("_");
-            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,3));
+            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,2));
         }
         if(withoutAlphabetPattern.matcher(sampleId).matches()){
             String[] sampleIdValues =  sampleId.split("_");
-            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,2));
+            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,1));
         }
         return sampleId;
     }
