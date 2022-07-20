@@ -43,39 +43,41 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
             List<DataRecord> assignedIndices = activeTask.getAttachedDataRecords("IgoTcrSeqIndexBarcode", user);
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
             Set<String> setOfProjects = new HashSet<>();
-            List<DataRecord> attachedAlphaSamples = new LinkedList<>();
-            List<DataRecord> attachedBetaSamples = new LinkedList<>();
+//            List<DataRecord> attachedAlphaSamples = new LinkedList<>();
+//            List<DataRecord> attachedBetaSamples = new LinkedList<>();
 
             for (DataRecord samples : attachedSamples) {
                 String projectId = getBaseProjectId(samples.getStringVal("SampleId", user));
                 setOfProjects.add(projectId);
             }
 
+            List<DataRecord> eachProjectsAttachedSample = new LinkedList<>();
             for(String project: setOfProjects) {
+                logInfo("Project id is:" + project);
                 for (DataRecord samples : attachedSamples) {
                     String sampleName = samples.getStringVal("OtherSampleId", user);
                     String projectId = getBaseProjectId(samples.getStringVal("SampleId", user));
                     if(project.equals(projectId)) {
-                        try {
-                            if (samples.getStringVal("Recipe", user).toLowerCase().contains("alpha")
-                                    && !samples.getStringVal("OtherSampleId", user).toLowerCase().contains("_alpha")) {
-                                samples.setDataField("OtherSampleId", sampleName + "_alpha", user);
-                                logInfo("_alpha appended to the alpha sample name.");
-                                attachedAlphaSamples.add(samples);
-
-                            } else if (samples.getStringVal("Recipe", user).toLowerCase().contains("beta")
-                                    && !samples.getStringVal("OtherSampleId", user).toLowerCase().contains("_beta")) {
-                                samples.setDataField("OtherSampleId", sampleName + "_beta", user);
-                                logInfo("_beta appended to the beta sample name.");
-                                attachedBetaSamples.add(samples);
-                            }
-                        } catch (NotFound | RemoteException e) {
-
-                        }
+                        eachProjectsAttachedSample.add(samples);
+                        logInfo("attached " + sampleName + " to " + project + " list.");
+//                        try {
+//                            if (samples.getStringVal("Recipe", user).toLowerCase().contains("alpha")
+//                                    && !samples.getStringVal("OtherSampleId", user).toLowerCase().contains("_alpha")) {
+//                                samples.setDataField("OtherSampleId", sampleName + "_alpha", user);
+//                                logInfo("_alpha appended to the alpha sample name.");
+//                                attachedAlphaSamples.add(samples);
+//
+//                            } else if (samples.getStringVal("Recipe", user).toLowerCase().contains("beta")
+//                                    && !samples.getStringVal("OtherSampleId", user).toLowerCase().contains("_beta")) {
+//                                samples.setDataField("OtherSampleId", sampleName + "_beta", user);
+//                                logInfo("_beta appended to the beta sample name.");
+//                                attachedBetaSamples.add(samples);
+//                            }
+//                        } catch (NotFound | RemoteException e) {
+//
+//                        }
                     }
                 }
-
-
                 if (assignedIndices.isEmpty()) {
                     clientCallback.displayError("No '' records found attached to this task.");
                     logError("No attached 'IGO TCRseq assigned indices' records found attached to this task.");
@@ -114,21 +116,27 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
                     }
                 }
 
+                String fileName = generateFileNameFromRequestIds(eachProjectsAttachedSample);
+                eachProjectsAttachedSample.clear();
+
                 XSSFWorkbook alphaWorkbook = new XSSFWorkbook();
                 logInfo("Generating alpha workbook..");
                 List<Map<String, Object>> alphaValuesForReport = setFieldsForReport(alphaIndicesInfo);
                 generateExcelDataWorkbook(headerForReport, alphaValuesForReport, alphaWorkbook);
-                String alphaFileName = generateFileNameFromRequestIds(attachedSamples);
-                exportReport(true, alphaWorkbook, alphaFileName);
+                exportReport(true, alphaWorkbook, fileName);
 
                 XSSFWorkbook betaWorkbook = new XSSFWorkbook();
                 logInfo("Generating beta workbook..");
                 List<Map<String, Object>> betaValuesForReport = setFieldsForReport(betaIndicesInfo);
                 generateExcelDataWorkbook(headerForReport, betaValuesForReport, betaWorkbook);
-                String betaFileName = generateFileNameFromRequestIds(attachedSamples);
-                exportReport(false, betaWorkbook, betaFileName);
+                exportReport(false, betaWorkbook, fileName);
             }
 
+        } catch(NotFound e) {
+            String errMsg = String.format("Not Found Exception Error while assigning TCRseq Manifest File name:\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return new PluginResult(false);
         } catch (RemoteException e) {
             String errMsg = String.format("Remote Exception Error while generating TCRseq Manifest File:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
@@ -236,15 +244,14 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private String generateFileNameFromRequestIds(List<DataRecord> attachedRecords) {
-        Set<String> requestIds = new HashSet<>();
-        for (DataRecord sample : attachedRecords) {
-            String requestId = getParentRequestId(sample);
-            if (!StringUtils.isBlank(requestId)) {
-                requestIds.add(requestId);
-            }
+    private String generateFileNameFromRequestIds(List<DataRecord> attachedRecords) throws RemoteException, NotFound {
+        DataRecord firstSample = attachedRecords.get(0);
+        String requestId = getBaseProjectId(firstSample.getStringVal("SampleId", user)); //getParentRequestId
+        logInfo("sample request id is:" + requestId);
+        if (!StringUtils.isBlank(requestId)) {
+            return "Project_" + requestId;
         }
-        return "Project_" + StringUtils.join(requestIds, "_");
+        return "";
     }
 
     /**
