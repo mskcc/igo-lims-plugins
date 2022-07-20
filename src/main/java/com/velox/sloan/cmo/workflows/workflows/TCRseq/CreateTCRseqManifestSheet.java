@@ -93,20 +93,23 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
 
                 for (DataRecord attachedSample : attachedSamples) {
                     for (DataRecord assignedIndex : assignedIndices) {
-                        try {
-                            if (attachedSample.getStringVal("Recipe", user).toLowerCase().contains("alpha") &&
-                                    assignedIndex.getStringVal("SampleId", user).equals(attachedSample.getStringVal("SampleId", user))) {
-                                logInfo(assignedIndex.getStringVal("sampleId", user) + " with recipe: "
-                                        + assignedIndex.getStringVal("Recipe", user) + " added to alpha assigned indices.");
-                                alphaIndicesInfo.add(assignedIndex);
-                            } else if (attachedSample.getStringVal("Recipe", user).toLowerCase().contains("beta") &&
-                                    assignedIndex.getStringVal("SampleId", user).equals(attachedSample.getStringVal("SampleId", user))) {
-                                logInfo(assignedIndex.getStringVal("sampleId", user) + " with recipe: "
-                                        + assignedIndex.getStringVal("Recipe", user) + " added to beta assigned indices.");
-                                betaIndicesInfo.add(assignedIndex);
-                            }
-                        } catch (NotFound | RemoteException e) {
+                        String projectId = getBaseProjectId(attachedSample.getStringVal("SampleId", user));
+                        if(project.equals(projectId)) {
+                            try {
+                                if (attachedSample.getStringVal("Recipe", user).toLowerCase().contains("alpha") &&
+                                        assignedIndex.getStringVal("SampleId", user).equals(attachedSample.getStringVal("SampleId", user))) {
+                                    logInfo(assignedIndex.getStringVal("sampleId", user) + " with recipe: "
+                                            + assignedIndex.getStringVal("Recipe", user) + " added to alpha assigned indices.");
+                                    alphaIndicesInfo.add(assignedIndex);
+                                } else if (attachedSample.getStringVal("Recipe", user).toLowerCase().contains("beta") &&
+                                        assignedIndex.getStringVal("SampleId", user).equals(attachedSample.getStringVal("SampleId", user))) {
+                                    logInfo(assignedIndex.getStringVal("sampleId", user) + " with recipe: "
+                                            + assignedIndex.getStringVal("Recipe", user) + " added to beta assigned indices.");
+                                    betaIndicesInfo.add(assignedIndex);
+                                }
+                            } catch (NotFound | RemoteException e) {
 
+                            }
                         }
                     }
                 }
