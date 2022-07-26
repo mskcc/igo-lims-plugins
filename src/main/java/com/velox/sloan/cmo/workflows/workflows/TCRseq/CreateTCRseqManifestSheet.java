@@ -119,17 +119,20 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
                 String fileName = generateFileNameFromRequestIds(eachProjectsAttachedSample);
                 eachProjectsAttachedSample.clear();
 
-                XSSFWorkbook alphaWorkbook = new XSSFWorkbook();
+                //XSSFWorkbook alphaWorkbook = new XSSFWorkbook();
+                StringBuffer dataLines = new StringBuffer();
                 logInfo("Generating alpha workbook..");
-                List<Map<String, Object>> alphaValuesForReport = setFieldsForReport(alphaIndicesInfo);
-                generateExcelDataWorkbook(headerForReport, alphaValuesForReport, alphaWorkbook);
-                exportReport(true, alphaWorkbook, fileName);
+                List<Map<String, String>> alphaValuesForReport = setFieldsForReport(alphaIndicesInfo);
+                generateCSVData(headerForReport, alphaValuesForReport, dataLines, fileName, true);
+//                generateExcelDataWorkbook(headerForReport, alphaValuesForReport, alphaWorkbook);
+//                exportReport(true, alphaWorkbook, fileName);
 
-                XSSFWorkbook betaWorkbook = new XSSFWorkbook();
+                //XSSFWorkbook betaWorkbook = new XSSFWorkbook();
                 logInfo("Generating beta workbook..");
-                List<Map<String, Object>> betaValuesForReport = setFieldsForReport(betaIndicesInfo);
-                generateExcelDataWorkbook(headerForReport, betaValuesForReport, betaWorkbook);
-                exportReport(false, betaWorkbook, fileName);
+                List<Map<String, String>> betaValuesForReport = setFieldsForReport(betaIndicesInfo);
+                generateCSVData(headerForReport, betaValuesForReport, dataLines, fileName, false);
+//                generateExcelDataWorkbook(headerForReport, betaValuesForReport, betaWorkbook);
+//                exportReport(false, betaWorkbook, fileName);
             }
 
         } catch(NotFound e) {
@@ -156,10 +159,10 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws IoError
      */
-    private List<Map<String, Object>> setFieldsForReport(List<DataRecord> manifestInfo){
-        List<Map<String, Object>> reportFieldValueMaps = new ArrayList<>();
+    private List<Map<String, String>> setFieldsForReport(List<DataRecord> manifestInfo){
+        List<Map<String, String>> reportFieldValueMaps = new ArrayList<>();
         for (DataRecord record : manifestInfo) {
-            Map<String, Object> reportFieldValues = new HashMap<>();
+            Map<String, String> reportFieldValues = new HashMap<>();
             try {
                 Object[] sampleId = record.getValue("SampleId", user).toString().split("_");
                 String manifestSampleName = record.getValue("OtherSampleId", user).toString();
@@ -173,8 +176,11 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
                 }
                 logInfo("manifestSampleName = " + manifestSampleName);
                 reportFieldValues.put("SampleName", manifestSampleName);
-                Object[] indexTag = record.getValue("IndexTag", user).toString().split("-");
+                String[] indexTag = record.getValue("IndexTag", user).toString().split("-");
                 reportFieldValues.put("ParentBarcodeSequence", indexTag[0]);
+                if (indexTag[1].startsWith("NNNN")) {
+                    indexTag[1] = indexTag[1].substring(4, indexTag[1].length());
+                }
                 reportFieldValues.put("ChildBarcodeSequence", indexTag[1]);
 
                 reportFieldValueMaps.add(reportFieldValues);
@@ -192,8 +198,8 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
      *
      * @param data
      */
-    private void sortMapBySampleId(List<Map<String, Object>> data) {
-        data.sort(Comparator.comparing(o -> o.get("SampleName").toString()));
+    private void sortMapBySampleId(List<Map<String, String>> data) {
+        data.sort(Comparator.comparing(o -> o.get("SampleName")));
     }
     /**
      * Add data values to the excel workbook.
@@ -224,6 +230,75 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
         autoSizeColumns(sheet, headerValues);
 
     }
+    private void generateCSVData(List<String> headerValues, List<Map<String, String>> dataValues, StringBuffer dataLines
+    , String outFileName, boolean isAlpha) {
+        for (String headerValue : headerValues) {
+            dataLines.append(headerValue + ",");
+        }
+        dataLines.append("\n");
+        for(Map<String, String> row : dataValues) {
+            dataLines.append(row.get("SampleName") + "," + row.get("ParentBarcodeSequence") + ","
+            + row.get("ChildBarcodeSequence") + "\n");
+        }
+
+        if (StringUtils.isBlank(outFileName)) {
+            outFileName = "Project_";
+        }
+        if (isAlpha) {
+            logInfo("Generating TCRseq manifest " + outFileName + "_TCRseq_Manifest_Alpha.csv");
+        }
+        else {
+            logInfo("Generating TCRseq manifest " + outFileName + "_TCRseq_Manifest_Beta.csv");
+        }
+        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+
+
+        try {
+            //************************
+            byteStream.close();
+            byte[] bytes = byteStream.toByteArray();
+            ExemplarConfig exemplarConfig = new ExemplarConfig(managerContext);
+            String tcrseqManifestPath = exemplarConfig.getExemplarConfigValues().get("TCRseqManifestPath").toString();
+            //"/pskis34/vialelab/LIMS/TCRseqManifest"
+
+            File outFile = null;
+            if (isAlpha) {
+                outFile = new File(tcrseqManifestPath + "/" + outFileName + "_TCRseq_Manifest_Alpha.csv");
+                //clientCallback.writeBytes(bytes, outFileName + "_TCRseq_Manifest_Alpha.csv");
+            }
+            else {
+                outFile = new File(tcrseqManifestPath + "/" + outFileName + "_TCRseq_Manifest_Beta.csv");
+                //clientCallback.writeBytes(bytes, outFileName + "_TCRseq_Manifest_Beta.csv");
+            }
+            // Local files
+            PrintWriter writer = new PrintWriter(outFileName);
+            writer.write(dataLines.toString());
+
+            try (FileOutputStream fos = new FileOutputStream(outFile)){
+                fos.write(bytes);
+                outFile.setReadOnly();
+            } catch (Exception e) {
+                logInfo("Error in writing to shared drive: " + e.getMessage());
+            }
+        }
+        catch (FileNotFoundException e) {
+            logInfo("Error while writing the csv file: %s" + e.getMessage());
+        } catch (NotFound e) {
+            logError(String.format("NotFoundException -> Error while exporting TCRseq manifest:\n%s",ExceptionUtils.getStackTrace(e)));
+        } catch (IoError e) {
+            logError(String.format("IoError -> Error while exporting TCRseq manifest:\n%s",ExceptionUtils.getStackTrace(e)));
+        } catch (ServerException e) {
+            logError(String.format("RemoteException -> Error while exporting TCRseq manifest:\n%s",ExceptionUtils.getStackTrace(e)));
+        } catch (IOException e) {
+            logError(String.format("IOException -> Error while exporting TCRseq manifes:\n%s", ExceptionUtils.getStackTrace(e)));
+        } finally {
+            try {
+                byteStream.close();
+            } catch (IOException e) {
+                logError(String.format("IOException -> Error while closing the ByteArrayOutputStream:\n%s", ExceptionUtils.getStackTrace(e)));
+            }
+        }
+    }
     /**
      * Auto-size columns to show complete test in the cells.
      *
@@ -250,43 +325,6 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
         logInfo("sample request id is:" + requestId);
         if (!StringUtils.isBlank(requestId)) {
             return "Project_" + requestId;
-        }
-        return "";
-    }
-
-    /**
-     * This method is designed to find and return the Sample in hierarchy with a desired child DataType
-     *
-     * @param sample
-     * @return Sample DataRecord
-     * @throws IoError
-     * @throws RemoteException
-     */
-    private String getParentRequestId(DataRecord sample){
-        DataRecord record = null;
-        Stack<DataRecord> samplePile = new Stack<>();
-        samplePile.push(sample);
-        try {
-            do {
-                DataRecord startSample = samplePile.pop();
-                List<DataRecord> parentRecords = startSample.getParentsOfType("Sample", user);
-                if (!parentRecords.isEmpty() && parentRecords.get(0).getParentsOfType("Request", user).size() > 0) {
-                    record = parentRecords.get(0);
-                }
-                if (!parentRecords.isEmpty() && record == null) {
-                    samplePile.push(parentRecords.get(0));
-                }
-            } while (!samplePile.empty());
-
-            if ((record != null) && (record.getValue("RequestId", user) != null)) {
-                return (String) record.getValue("RequestId", user);
-            }
-        } catch (RemoteException e) {
-            logError(String.format("RemoteException -> Error getting Parent RequestId for Sample with recordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
-        } catch (IoError ioError) {
-            logError(String.format("IoError Exception -> Error getting Parent RequestId for Sample with recordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(ioError)));
-        } catch (NotFound notFound) {
-            logError(String.format("NotFound Exception -> Error getting Parent RequestId for Sample with recordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
         }
         return "";
     }
@@ -333,7 +371,7 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
                 fos.write(bytes);
                 outFile.setReadOnly();
             } catch (Exception e) {
-                logInfo(e.getMessage());
+                logInfo("Error in writing to shared drive: " + e.getMessage());
             }
 
         } catch (NotFound e) {
@@ -353,7 +391,6 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
         }
 
     }
-
     /**
      * Method to get base Sample ID when aliquot annotation is present.
      * Example: for sample id 012345_1_1_2, base sample id is 012345
