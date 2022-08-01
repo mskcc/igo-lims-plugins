@@ -231,16 +231,34 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
             ExemplarConfig exemplarConfig = new ExemplarConfig(managerContext);
             String tcrseqManifestPath = exemplarConfig.getExemplarConfigValues().get("TCRseqManifestPath").toString();
             //"/pskis34/vialelab/LIMS/TCRseqManifest"
-
+            int copyNumber = 1;
             if (isAlpha) {
+                copyNumber = 1;
                 outFile = new File(tcrseqManifestPath + "/LIMSTesting/" + outFileName + "_TCRseq_Manifest_Alpha.csv");
+
+                while (outFile.exists() && !outFile.isDirectory()) {
+                    logInfo("The alpha outfile compared in while loop is: " + outFile);
+                    outFile =  new File(tcrseqManifestPath + "/LIMSTesting/" + outFileName + "_TCRseq_Manifest_Alpha("
+                            + copyNumber + ").csv");
+                    copyNumber++;
+                }
+                logInfo("Alpha drive filename is:" + outFile);
                 clientCallback.writeBytes(bytes, outFileName + "_TCRseq_Manifest_Alpha.csv");
             }
             else {
+                copyNumber = 1;
                 outFile = new File(tcrseqManifestPath + "/LIMSTesting/" + outFileName + "_TCRseq_Manifest_Beta.csv");
+                while (outFile.exists() && !outFile.isDirectory()) {
+                    logInfo("The beta outfile compared in while loop is: " + outFile);
+                    outFile =  new File(tcrseqManifestPath + "/LIMSTesting/" + outFileName + "_TCRseq_Manifest_Beta("
+                            + copyNumber + ").csv");
+                    copyNumber++;
+                }
+                logInfo("Beta drive filename is:" + outFile);
                 clientCallback.writeBytes(bytes, outFileName + "_TCRseq_Manifest_Beta.csv");
             }
-            try (OutputStream fos = new FileOutputStream(outFile)){
+
+            try (OutputStream fos = new FileOutputStream(outFile, false)){
                 //byteStream.writeTo(fos);
                 fos.write(bytes);
                 outFile.setReadOnly();
