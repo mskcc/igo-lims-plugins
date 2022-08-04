@@ -234,11 +234,11 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
             int copyNumber = 1;
             if (isAlpha) {
                 copyNumber = 1;
-                outFile = new File(tcrseqManifestPath + "/LIMSTesting/" + outFileName + "_TCRseq_Manifest_Alpha.csv");
+                outFile = new File(tcrseqManifestPath + "/" + outFileName + "_TCRseq_Manifest_Alpha.csv");
 
                 while (outFile.exists() && !outFile.isDirectory()) {
                     logInfo("The alpha outfile compared in while loop is: " + outFile);
-                    outFile =  new File(tcrseqManifestPath + "/LIMSTesting/" + outFileName + "_TCRseq_Manifest_Alpha("
+                    outFile =  new File(tcrseqManifestPath + "/" + outFileName + "_TCRseq_Manifest_Alpha("
                             + copyNumber + ").csv");
                     copyNumber++;
                 }
@@ -247,10 +247,10 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
             }
             else {
                 copyNumber = 1;
-                outFile = new File(tcrseqManifestPath + "/LIMSTesting/" + outFileName + "_TCRseq_Manifest_Beta.csv");
+                outFile = new File(tcrseqManifestPath + "/" + outFileName + "_TCRseq_Manifest_Beta.csv");
                 while (outFile.exists() && !outFile.isDirectory()) {
                     logInfo("The beta outfile compared in while loop is: " + outFile);
-                    outFile =  new File(tcrseqManifestPath + "/LIMSTesting/" + outFileName + "_TCRseq_Manifest_Beta("
+                    outFile =  new File(tcrseqManifestPath + "/" + outFileName + "_TCRseq_Manifest_Beta("
                             + copyNumber + ").csv");
                     copyNumber++;
                 }
