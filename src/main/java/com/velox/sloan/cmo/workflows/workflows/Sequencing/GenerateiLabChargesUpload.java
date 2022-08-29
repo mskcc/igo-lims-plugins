@@ -16,6 +16,8 @@ import java.util.*;
 
 public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
+    public Map<String, String> serviceInfoMap = new HashMap<>();
+
     public GenerateiLabChargesUpload() {
         setTaskEntry(true);
         setOrder(PluginOrder.LAST.getOrder());
@@ -30,8 +32,10 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         // Illumina Sequencing Workflow last step has FlowCellSamples attached to it, which are pools
         // need to access initial samples and their parent the request to publish: project_id, number of samples, investigator email
         // address, PI email address, Date of request, service_request_id?
+        populateServiceInfoMap();
         List<DataRecord> flowCellSamples = activeTask.getAttachedDataRecords("NormalizationPooledLibProtocol", user);
-        String serviceType = "";
+        String serviceType = flowCellSamples.get(0).getParentsOfType("Sample", user).get(0)
+                .getStringVal("Recipe", user);
         List<DataRecord> chargesInfo = outputChargesInfo(serviceType);
         setFieldsForReport(chargesInfo);
         generateiLabChargeSheet();
@@ -41,6 +45,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
     private List<DataRecord> outputChargesInfo(String serviceType) {
         // Logic for charges corresponding to different services
+
     }
     private void generateiLabChargeSheet() {
         // Make the sheet with 7 columns
@@ -56,9 +61,12 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         i = 0;
         String[] dataInfoArray = new String[headerValues.size()];
         for(Map<String, String> row : dataValues) {
-            dataInfoArray[i++] = row.get("SampleName");
-            dataInfoArray[i++] = row.get("ParentBarcodeSequence");
-            dataInfoArray[i++] = row.get("ChildBarcodeSequence");
+            dataInfoArray[i++] = row.get("note");
+            dataInfoArray[i++] = row.get("serviceQuantity");
+            dataInfoArray[i++] = row.get("purchasedOn");
+            dataInfoArray[i++] = row.get("serviceRequestId");
+            dataInfoArray[i++] = row.get("ownerEmail");
+            dataInfoArray[i++] = row.get("pIEmail");
             dataLines.add(dataInfoArray);
             dataInfoArray = new String[headerValues.size()];
             i = 0;
@@ -79,7 +87,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             bytes = allData.toString().getBytes();
             ExemplarConfig exemplarConfig = new ExemplarConfig(managerContext);
             String iLabChargeUpload = exemplarConfig.getExemplarConfigValues().get("").toString();
-            //"/pskis34/vialelab/LIMS/TCRseqManifest"
+            //"/pskis34/vialelab/LIMS/iLabBulkUploadCharges"
 
 
             try (OutputStream fos = new FileOutputStream(outFile, false)){
@@ -113,17 +121,24 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         for (DataRecord record : chargesInformation) {
             Map<String, String> reportFieldValues = new HashMap<>();
             try {
-                Object[] sampleId = record.getValue("SampleId", user).toString().split("_");
-                String sampleName = record.getValue("OtherSampleId", user).toString();
+                DataRecord requestRecord = record.getParentsOfType("Request", user).get(0);
+                String ownerEmail = requestRecord.getStringVal("ProjectOwner", user);
+                String piEmail = requestRecord.getStringVal("PIemail", user);
+                String requestId = requestRecord.getStringVal("RequestId", user);
+                String purchaseDate = requestRecord.getStringVal("RequestDate", user);
+                String serviceQuantity = requestRecord.getStringVal("SampleNumber", user);
 
-                reportFieldValues.put("note", sampleName);
-                reportFieldValues.put("serviceQuantity", );
-                reportFieldValues.put("purchasedOn", );
+                reportFieldValues.put("serviceId", );
+                reportFieldValues.put("note", requestId);
+                reportFieldValues.put("serviceQuantity", serviceQuantity);
+                reportFieldValues.put("purchasedOn", purchaseDate);
                 reportFieldValues.put("serviceRequestId", );
-                reportFieldValues.put("ownerEmail", );
-                reportFieldValues.put("pIEmail", );
+                reportFieldValues.put("ownerEmail", ownerEmail);
+                reportFieldValues.put("pIEmail", piEmail);
 
                 reportFieldValueMaps.add(reportFieldValues);
+            } catch (IoError e) {
+                logError(String.format("IOError -> Error setting field values for charges sheet:\n%s", ExceptionUtils.getStackTrace(e)));
             } catch (RemoteException e) {
                 logError(String.format("RemoteException -> Error setting field values for charges sheet:\n%s", ExceptionUtils.getStackTrace(e)));
             } catch (NotFound notFound) {
@@ -132,4 +147,13 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         }
         return reportFieldValueMaps;
     }
+
+    // Make the map of Service ID -> Service Name
+    public Map<String, String> populateServiceInfoMap() {
+        serviceInfoMap.put("490181", "10X FB Library");
+        serviceInfoMap.put("490175", "10X GEX Library");
+
+        return serviceInfoMap;
+    }
+
 }
