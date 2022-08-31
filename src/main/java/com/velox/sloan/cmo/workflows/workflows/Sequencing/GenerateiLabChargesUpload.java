@@ -16,100 +16,104 @@ import java.util.*;
 
 public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
+    // SampleReceving Request Type pick list ID
+
     private static final Map<String, String> serviceInfoMap = new HashMap<>();
     static { // Make the map of Service Name -> Service ID
-        serviceInfoMap.put("10X FB Library", "490181");
-        serviceInfoMap.put("10X GEX Library", "490175");
-        serviceInfoMap.put("10X GEX Sequencing - 10K cells", "490177");
-        serviceInfoMap.put("10X GEX Sequencing - 1K cells", "490176");
-        serviceInfoMap.put("10X Multiome Library", "490182");
-        serviceInfoMap.put("10X Multiome Sequencing - 10K nuclei", "490184");
+        serviceInfoMap.put("10X FB Library", "490181"); //Feature Barcoding
+        serviceInfoMap.put("10X GEX Library", "490175"); // Gene Expression Library Prep
+        serviceInfoMap.put("10X GEX Sequencing - 10K cells", "490177"); // Gene Expression Sequencing + cell count (sample table)
+        serviceInfoMap.put("10X GEX Sequencing - 1K cells", "490176"); // Gene Expression Sequencing + cell count (sample table)
+        serviceInfoMap.put("10X Multiome Library", "490182"); // Multiome Lib Prep
+        serviceInfoMap.put("10X Multiome Sequencing - 10K nuclei", "490184"); // Where to find Nuclei info? which table?
         serviceInfoMap.put("10X Multiome Sequencing - 1K nuclei", "490183");
-        serviceInfoMap.put("10X VDJ Library", "490178");
-        serviceInfoMap.put("10X VDJ/FB Sequencing - 10K cells", "490180");
-        serviceInfoMap.put("10X VDJ/FB Sequencing - 1K cells", "490179");
-        serviceInfoMap.put("10X Visium Library", "490190");
-        serviceInfoMap.put("10X Visium Optimization", "490189");
-        serviceInfoMap.put("10X Visium Sequencing (25%)", "490191");
-        serviceInfoMap.put("ACCESS - Normal", "406820");
+        serviceInfoMap.put("10X VDJ Library", "490178"); // Lib Prep?
+        serviceInfoMap.put("10X VDJ/FB Sequencing - 10K cells", "490180"); // Sequencing, VDJ/FB?
+        serviceInfoMap.put("10X VDJ/FB Sequencing - 1K cells", "490179"); // Sequencing, VDJ/FB?
+        serviceInfoMap.put("10X Visium Library", "490190"); // Lib Prep?
+        serviceInfoMap.put("10X Visium Optimization", "490189"); // What property is "Optimization"?
+        serviceInfoMap.put("10X Visium Sequencing (25%)", "490191"); // Sequencing
+        serviceInfoMap.put("ACCESS - Normal", "406820"); //Tumor or normal in sample
         serviceInfoMap.put("ACCESS - Tumor", "406821");
-        serviceInfoMap.put("Adaptive immunoSEQ - Deep", "490139");
-        serviceInfoMap.put("Adaptive immunoSEQ - Survey", "490138");
-        serviceInfoMap.put("Adaptive immunoSEQ - Ultradeep", "490504");
-        serviceInfoMap.put("AmpliconSeq", "490510");
-        serviceInfoMap.put("Archer Fusion - Heme Panel", "334267");
-        serviceInfoMap.put("Archer Fusion - Solid Tumor (MSK) Panel", "334266");
-        serviceInfoMap.put("Archer Immunoverse", "490140");
-        serviceInfoMap.put("ATAC Library Prep", "490513"); // IGO Internal
-        serviceInfoMap.put("ATAC-Seq", "483257");
-        serviceInfoMap.put("Cell Line Authentication", "490142");
-        serviceInfoMap.put("cfDNA Extraction - Plasma", "261860");
-        serviceInfoMap.put("ChIP-Seq/CUT&RUN", "483258");
-        serviceInfoMap.put("CMO-CH", "492855");
-        serviceInfoMap.put("CRISPR-Seq", "308754");
-        serviceInfoMap.put("Data Analysis - ACCESS (N)", "495935");
-        serviceInfoMap.put("Data Analysis - ACCESS (T)", "495936");
-        serviceInfoMap.put("Data Analysis - CMO-CH", "495937");
-        serviceInfoMap.put("Data Handling", "491618"); // IGO Internal
-        serviceInfoMap.put("ddPCR (1 reaction)", "256041");
-        serviceInfoMap.put("ddPCR Assay Design", "288524");
-        serviceInfoMap.put("ddPCR Assay Order - CNV", "290735");
-        serviceInfoMap.put("ddPCR Assay Order - Mutation/GEX", "288525");
-        serviceInfoMap.put("ddPCR Human % Assay", "490143");
-        serviceInfoMap.put("ddPCR KRAS Multiplexing", "337962");
-        serviceInfoMap.put("DLP Library - 800 cells", "490187");
-        serviceInfoMap.put("DLP Sequencing - 1 quadrant", "490188");
-        serviceInfoMap.put("DNA Extraction - Blood", "256034");
-        serviceInfoMap.put("DNA Extraction - FFPE", "256048");
-        serviceInfoMap.put("DNA Extraction - Fresh/Frozen", "256043");
-        serviceInfoMap.put("DNA Extraction - Nails", "288528");
-        serviceInfoMap.put("DNA Extraction - Viably Frozen", "490136");
-        serviceInfoMap.put("DNA/RNA Dual Extraction", "256092");
-        serviceInfoMap.put("Double Capture", "497933"); // IGO Internal
-        serviceInfoMap.put("EPIC Methyl Capture", "483259");
-        serviceInfoMap.put("FFPE Sectioning - Curls", "260306");
-        serviceInfoMap.put("FFPE Sectioning - Slides", "260305");
-        serviceInfoMap.put("Fingerprinting - STR", "302835");
-        serviceInfoMap.put("H&E Stain", "260304");
-        serviceInfoMap.put("HemePACT - Normal", "259603");
-        serviceInfoMap.put("HemePACT - Tumor", "406819");
-        serviceInfoMap.put("IMPACT - Mouse", "331388");
+//        serviceInfoMap.put("Adaptive immunoSEQ - Deep", "490139"); // Where to find Deep/ Survey/ Ultradeep?
+//        serviceInfoMap.put("Adaptive immunoSEQ - Survey", "490138");
+//        serviceInfoMap.put("Adaptive immunoSEQ - Ultradeep", "490504");
+        serviceInfoMap.put("AmpliconSeq", "490510"); // Request name: AmpliconSeq
+        serviceInfoMap.put("Archer Fusion - Heme Panel", "334267"); // Request name: Archer
+        serviceInfoMap.put("Archer Fusion - Solid Tumor (MSK) Panel", "334266"); // Request name: Archer
+        serviceInfoMap.put("Archer Immunoverse", "490140"); // Request name: Archer
+        serviceInfoMap.put("ATAC Library Prep", "490513"); // IGO Internal, Request name: ATACSeq, Do we charge for IGO internals?
+        serviceInfoMap.put("ATAC-Seq", "483257"); // Request name: ATACSeq
+        serviceInfoMap.put("Cell Line Authentication", "490142"); // Request name: CellLineAuthentication
+        serviceInfoMap.put("cfDNA Extraction - Plasma", "261860"); // What is the request name?
+        serviceInfoMap.put("ChIP-Seq/CUT&RUN", "483258"); // Request name: ChIPSeq
+        serviceInfoMap.put("CMO-CH", "492855"); // Request name: CMO-CH
+        serviceInfoMap.put("CRISPR-Seq", "308754"); // Request name: CRISPRSeq
+        serviceInfoMap.put("Data Analysis - ACCESS (N)", "495935"); // Request name: MSK-ACCESS_v1?
+        serviceInfoMap.put("Data Analysis - ACCESS (T)", "495936"); // Request name: MSK-ACCESS_v1?
+        serviceInfoMap.put("Data Analysis - CMO-CH", "495937"); // analysis Pipelinable or BIC AutoRunnable? (request table)
+        serviceInfoMap.put("Data Handling", "491618"); // IGO Internal, Any expense entered in the iLab?
+        serviceInfoMap.put("ddPCR (1 reaction)", "256041"); // Request name: DDPCR
+        serviceInfoMap.put("ddPCR Assay Design", "288524"); // Where do this property
+        serviceInfoMap.put("ddPCR Assay Order - CNV", "290735"); // Pick list ID: ddPCR Assay Type
+        serviceInfoMap.put("ddPCR Assay Order - Mutation/GEX", "288525"); // Pick list ID: ddPCR Assay Type
+        serviceInfoMap.put("ddPCR Human % Assay", "490143"); // Pick list ID: ddPCR Species
+        serviceInfoMap.put("ddPCR KRAS Multiplexing", "337962"); // What is "KRAS Multiplexing"?
+        serviceInfoMap.put("DLP Library - 800 cells", "490187"); // DLP Lib Prep
+        serviceInfoMap.put("DLP Sequencing - 1 quadrant", "490188"); // DLP Sequencing
+        serviceInfoMap.put("DNA Extraction - Blood", "256034"); // Available request names: DNAExtraction and PATH-DNAExtraction, Sample origin: Blood?
+        serviceInfoMap.put("DNA Extraction - FFPE", "256048"); // Available request names: DNAExtraction and PATH-DNAExtraction, Sample Preservation: FFPE?
+        serviceInfoMap.put("DNA Extraction - Fresh/Frozen", "256043"); // Available request names: DNAExtraction and PATH-DNAExtraction, Sample preservation: Fresh/Frozen
+        serviceInfoMap.put("DNA Extraction - Nails", "288528"); // Available request names: DNAExtraction and PATH-DNAExtraction, What property is Nails?
+        serviceInfoMap.put("DNA Extraction - Viably Frozen", "490136"); // Available request names: DNAExtraction and PATH-DNAExtraction, What is Viably Frozen?
+        serviceInfoMap.put("DNA/RNA Dual Extraction", "256092"); // Request name: PATH-DNA/RNASimultaneous??
+        serviceInfoMap.put("Double Capture", "497933"); // IGO Internal, iLab charge? Request name: CustomCapture???
+        serviceInfoMap.put("EPIC Methyl Capture", "483259"); // request name: MethylSeq???
+        serviceInfoMap.put("FFPE Sectioning - Curls", "260306"); // what is it?
+        serviceInfoMap.put("FFPE Sectioning - Slides", "260305"); // what is it?
+        serviceInfoMap.put("Fingerprinting - STR", "302835"); // None Sequencing, Cell line Auth?
+        serviceInfoMap.put("H&E Stain", "260304"); // Is it a request name? What property is it?
+        serviceInfoMap.put("HemePACT - Normal", "259603"); // Tumor or normal Sample level info
+        serviceInfoMap.put("HemePACT - Tumor", "406819"); // Tumor or normal Sample level info
+        serviceInfoMap.put("IMPACT - Mouse", "331388"); // Tumor or normal/ Species Sample level info
         serviceInfoMap.put("IMPACT - Normal", "256124");
         serviceInfoMap.put("IMPACT - Tumor", "406813");
         serviceInfoMap.put("KAPA HT Library Prep", "256127");
-        serviceInfoMap.put("KAPA Hyper Library Prep", "351941");
-        serviceInfoMap.put("KAPA WGS Library Prep - PCR+", "490516");
-        serviceInfoMap.put("KAPA WGS Library Prep - PCR-free", "490515");
-        serviceInfoMap.put("Micronic Tube", "308755");
+        serviceInfoMap.put("KAPA Hyper Library Prep", "351941"); // Available request name: WholeExome-KAPALib and RNASeq-KAPAmRNAStranded
+        serviceInfoMap.put("KAPA WGS Library Prep - PCR+", "490516"); // Available request name: WholeExome-KAPALib and RNASeq-KAPAmRNAStranded
+        serviceInfoMap.put("KAPA WGS Library Prep - PCR-free", "490515"); // Available request name: WholeExome-KAPALib and RNASeq-KAPAmRNAStranded
+        serviceInfoMap.put("Micronic Tube", "308755"); // Where is it included?
         serviceInfoMap.put("PlateSeq Library Prep", "490185");
         serviceInfoMap.put("PlateSeq Sequencing - 1 column", "490186");
-        serviceInfoMap.put("PolyA Library Prep", "490511");
-        serviceInfoMap.put("QC - Agilent", "256044");
-        serviceInfoMap.put("QC - Quant-it", "259492");
-        serviceInfoMap.put("QC - Quantity + Quality", "256029");
-        serviceInfoMap.put("RiboDepletion Library Prep", "490512");
-        serviceInfoMap.put("RNA Extraction + COVID19 Testing", "490141");
-        serviceInfoMap.put("RNA Extraction - FFPE", "256100");
-        serviceInfoMap.put("RNA Extraction - Fresh/Frozen", "256097");
-        serviceInfoMap.put("RNA Extraction - Viably Frozen", "490137");
-        serviceInfoMap.put("RNASeq - polyA - 10-20M", "490506");
-        serviceInfoMap.put("RNASeq - polyA - 100M+", "490507");
-        serviceInfoMap.put("RNASeq - polyA - 20-30M", "404330");
-        serviceInfoMap.put("RNASeq - polyA - 30-40M", "404331");
-        serviceInfoMap.put("RNASeq - polyA - 40-50M", "487566");
-        serviceInfoMap.put("RNASeq - polyA - 50-60M", "404332");
-        serviceInfoMap.put("RNASeq - polyA - 60-80M", "490144");
-        serviceInfoMap.put("RNASeq - polyA - 80-100M", "404334");
-        serviceInfoMap.put("RNASeq - Ribodeplete - 10-20M", "490508");
-        serviceInfoMap.put("RNASeq - Ribodeplete - 100M+", "490509");
-        serviceInfoMap.put("RNASeq - Ribodeplete - 20-30M", "490145");
-        serviceInfoMap.put("RNASeq - Ribodeplete - 30-40M", "404335");
-        serviceInfoMap.put("RNASeq - Ribodeplete - 40-50M", "490146");
-        serviceInfoMap.put("RNASeq - Ribodeplete - 50-60M", "404336");
-        serviceInfoMap.put("RNASeq - Ribodeplete - 60-80M", "404337");
-        serviceInfoMap.put("RNASeq - Ribodeplete - 80-100M", "404338");
-        serviceInfoMap.put("Sample Capture + Library", "490514");
-        serviceInfoMap.put("Sample Pooling", "491619");
+        serviceInfoMap.put("PolyA Library Prep", "490511"); // Lib prep
+        serviceInfoMap.put("QC - Agilent", "256044"); // DNA? RNA? Library?
+        serviceInfoMap.put("QC - Quant-it", "259492"); // DNA? RNA? Library?
+        serviceInfoMap.put("QC - Quantity + Quality", "256029"); // DNA? RNA? Library?
+        serviceInfoMap.put("RiboDepletion Library Prep", "490512"); // Lib prep
+        serviceInfoMap.put("RNA Extraction + COVID19 Testing", "490141"); // Request name: RNAExtraction-COVIDScreen
+        serviceInfoMap.put("RNA Extraction - FFPE", "256100"); // Where does FFPE come from?
+        serviceInfoMap.put("RNA Extraction - Fresh/Frozen", "256097"); // Fresh/ Frozen -> sample properties
+        serviceInfoMap.put("RNA Extraction - Viably Frozen", "490137"); // Viably Frozen -> sample property?
+        serviceInfoMap.put("RNASeq - polyA - 10-20M", "490506"); // Sequencing, Request name: RNASeq-TruSeqPolyA +  requested reads
+        serviceInfoMap.put("RNASeq - polyA - 100M+", "490507"); // Sequencing, Request name: RNASeq-TruSeqPolyA +  requested reads
+        serviceInfoMap.put("RNASeq - polyA - 20-30M", "404330"); // Sequencing, Request name: RNASeq-TruSeqPolyA +  requested reads
+        serviceInfoMap.put("RNASeq - polyA - 30-40M", "404331"); // Sequencing, Request name: RNASeq-TruSeqPolyA +  requested reads
+        serviceInfoMap.put("RNASeq - polyA - 40-50M", "487566"); // Sequencing, Request name: RNASeq-TruSeqPolyA +  requested reads
+        serviceInfoMap.put("RNASeq - polyA - 50-60M", "404332"); // Sequencing, Request name: RNASeq-TruSeqPolyA +  requested reads
+        serviceInfoMap.put("RNASeq - polyA - 60-80M", "490144"); // Sequencing, Request name: RNASeq-TruSeqPolyA +  requested reads
+        serviceInfoMap.put("RNASeq - polyA - 80-100M", "404334"); // Sequencing, Request name: RNASeq-TruSeqPolyA +  requested reads
+        serviceInfoMap.put("RNASeq - Ribodeplete - 10-20M", "490508"); // Sequencing, Request name: RNASeq-TruSeqRiboDeplete?
+        serviceInfoMap.put("RNASeq - Ribodeplete - 100M+", "490509"); // Sequencing, Request name: RNASeq-TruSeqRiboDeplete?
+        serviceInfoMap.put("RNASeq - Ribodeplete - 20-30M", "490145"); // Sequencing, Request name: RNASeq-TruSeqRiboDeplete?
+        serviceInfoMap.put("RNASeq - Ribodeplete - 30-40M", "404335"); // Sequencing, Request name: RNASeq-TruSeqRiboDeplete?
+        serviceInfoMap.put("RNASeq - Ribodeplete - 40-50M", "490146"); // Sequencing, Request name: RNASeq-TruSeqRiboDeplete?
+        serviceInfoMap.put("RNASeq - Ribodeplete - 50-60M", "404336"); // Sequencing, Request name: RNASeq-TruSeqRiboDeplete?
+        serviceInfoMap.put("RNASeq - Ribodeplete - 60-80M", "404337"); // Sequencing, Request name: RNASeq-TruSeqRiboDeplete?
+        serviceInfoMap.put("RNASeq - Ribodeplete - 80-100M", "404338"); // Sequencing, Request name: RNASeq-TruSeqRiboDeplete?
+        serviceInfoMap.put("Sample Capture + Library", "490514"); // Where is it included?
+        serviceInfoMap.put("Sample Pooling", "491619"); // Is it included in all services goring into sequencing?
+
+        // Sequencing Only
         serviceInfoMap.put("Sequencing  - 100M Reads - 150c", "490157");
         serviceInfoMap.put("Sequencing - 100M Reads - 300c", "490158");
         serviceInfoMap.put("Sequencing - 10M Reads - 10X Standard", "490149");
@@ -137,20 +141,23 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         serviceInfoMap.put("Sequencing - MiSeq Micro 300c", "490152");
         serviceInfoMap.put("Sequencing - MiSeq Nano 300c", "490150");
         serviceInfoMap.put("Sequencing - MiSeq Nano 500c", "490151");
-        serviceInfoMap.put("Shallow WGS", "341254");
-        serviceInfoMap.put("Slide Dissection", "260643");
-        serviceInfoMap.put("Slide Scraping", "296697");
-        serviceInfoMap.put("SMARTer Amplification", "261859");
-        serviceInfoMap.put("Special Processing -- Extraction", "487571");
+
+        // End of Sequencing Only
+
+        serviceInfoMap.put("Shallow WGS", "341254"); // Human Whole Genome/ Mouse Whole Genome/ Whole Genome?
+        serviceInfoMap.put("Slide Dissection", "260643"); // Where is it included?
+        serviceInfoMap.put("Slide Scraping", "296697"); // Where is it included?
+        serviceInfoMap.put("SMARTer Amplification", "261859"); // Request name: RNASeq-SMARTerAmp
+        serviceInfoMap.put("Special Processing -- Extraction", "487571"); // ?
         serviceInfoMap.put("TCRSeq-IGO", "498671");
-        serviceInfoMap.put("UMI Library Prep", "351940");
-        serviceInfoMap.put("WES - 100X", "289981");
+        serviceInfoMap.put("UMI Library Prep", "351940"); // ?
+        serviceInfoMap.put("WES - 100X", "289981"); // WholeExomeKapaLib + coverage
         serviceInfoMap.put("WES - 150X", "289982");
         serviceInfoMap.put("WES - 200X", "289983");
         serviceInfoMap.put("WES - 250X", "289984");
         serviceInfoMap.put("WES - 30X", "289979");
         serviceInfoMap.put("WES - 70X", "289980");
-        serviceInfoMap.put("WGS - PCR+ - 100X", "490204");
+        serviceInfoMap.put("WGS - PCR+ - 100X", "490204"); // PCR information?
         serviceInfoMap.put("WGS - PCR+ - 10X", "495934");
         serviceInfoMap.put("WGS - PCR+ - 150X", "490205");
         serviceInfoMap.put("WGS - PCR+ - 30X", "490199");
@@ -195,6 +202,10 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
     private List<DataRecord> outputChargesInfo(String serviceType) {
         // Logic for charges corresponding to different services
+
+        // Request name in Request table is a drop down menu with certain options
+        //SeqRequirement datatype to find the read length, requested reads, minimum reads, coverage
+        // Use sample table properties: Species, origin,
 
     }
     private void generateiLabChargeSheet() {
