@@ -10,6 +10,7 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.utilities.ExemplarConfig;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
+import javax.xml.crypto.Data;
 import java.io.*;
 import java.rmi.RemoteException;
 import java.util.*;
@@ -191,8 +192,9 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         // need to access initial samples and their parent the request to publish: project_id, number of samples, investigator email
         // address, PI email address, Date of request, service_request_id?
         List<DataRecord> flowCellSamples = activeTask.getAttachedDataRecords("NormalizationPooledLibProtocol", user);
-        String serviceType = flowCellSamples.get(0).getParentsOfType("Sample", user).get(0)
-                .getStringVal("Recipe", user);
+        DataRecord firstSample = flowCellSamples.get(0).getParentsOfType("Sample", user).get(0);
+        String serviceType = firstSample.getParentsOfType("Request", user).get(0)
+                .getStringVal("RequestName", user);
         List<DataRecord> chargesInfo = outputChargesInfo(serviceType);
         setFieldsForReport(chargesInfo);
         generateiLabChargeSheet();
@@ -202,10 +204,236 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
     private List<DataRecord> outputChargesInfo(String serviceType) {
         // Logic for charges corresponding to different services
+        List<DataRecord> chargeInfoRecords = new LinkedList<>();
+
 
         // Request name in Request table is a drop down menu with certain options
         //SeqRequirement datatype to find the read length, requested reads, minimum reads, coverage
         // Use sample table properties: Species, origin,
+        Object serviceId;
+        serviceId = serviceInfoMap.get(serviceType);
+        chargeInfoRecords.add(0, (DataRecord) serviceId);
+        if(serviceType.equals("DNAExtraction")) {
+
+        }
+        if(serviceType.equals("RNAExtraction")) {
+
+        }
+        if(serviceType.equals("RNAExtraction-COVIDScreen")) {
+
+        }
+        if(serviceType.equals("DNA Cleanup")) {
+
+        }
+        if(serviceType.equals("RNA Cleanup")) {
+
+        }
+        if(serviceType.equals("DNA/RNASimultaneous")) {
+
+        }
+        if(serviceType.equals("PATH-DNAExtraction")) {
+
+        }
+        if(serviceType.equals("PATH-RNAExtraction")) {
+
+        }
+        if(serviceType.equals("PATH-DNA/RNASimultaneous")) {
+
+        }
+        if(serviceType.equals("BloodExtraction")) {
+
+        }
+        if(serviceType.equals("DNA-QC")) {
+
+        }
+        if(serviceType.equals("RNA-QC")) {
+
+        }
+        if(serviceType.equals("Library-QC")) {
+
+        }
+        if(serviceType.equals("IMPACT341")) {
+
+        }
+        if(serviceType.equals("IMPACT341+")) {
+
+        }
+        if(serviceType.equals("IMPACT410")) {
+
+        }
+        if(serviceType.equals("IMPACT410+")) {
+
+        }
+        if(serviceType.equals("IMPACT468")) {
+
+        }
+        if(serviceType.equals("IMPACT505")) {
+
+        }
+        if(serviceType.equals("PM-IMPACT")) {
+
+        }
+        if(serviceType.equals("M-IMPACT")) {
+
+        }
+        if(serviceType.equals("HemePACT_v3")) {
+
+        }
+        if(serviceType.equals("HemePACT_v3+")) {
+
+        }
+        if(serviceType.equals("HemePACT_v4")) {
+
+        }
+        if(serviceType.equals("CustomCapture")) {
+
+        }
+        if(serviceType.equals("MSK-ACCESS_v1")) {
+
+        }
+        if(serviceType.equals("MissionBio")) {
+
+        }
+        if(serviceType.equals("RNASeq-TruSeqPolyA")) {
+
+        }
+        if(serviceType.equals("RNASeq-KAPAmRNAStranded")) {
+
+        }
+        if(serviceType.equals("RNASeq-TruSeqFusion")) {
+
+        }
+        if(serviceType.equals("RNASeq-TruSeqRiboDeplete")) {
+
+        }
+        if(serviceType.equals("RNASeq-SMARTerAmp")) {
+
+        }
+        if(serviceType.equals("Rapid-RCC")) {
+
+        }
+        if(serviceType.equals("Archer")) {
+
+        }
+        if(serviceType.equals("NanoString")) {
+
+        }
+        if(serviceType.equals("10XGenomics_GeneExpression")) {
+
+        }
+        if(serviceType.equals("10XGenomics_VDJ")) {
+
+        }
+        if(serviceType.equals("10XGenomics_CNV")) {
+
+        }
+        if(serviceType.equals("10XGenomics_FeatureBarcoding")) {
+
+        }
+        if(serviceType.equals("10XGenomics_Multiome")) {
+
+        }
+        if(serviceType.equals("10XGenomics_Visium")) {
+
+        }
+        if(serviceType.equals("96Well_SmartSeq2")) {
+
+        }
+        if(serviceType.equals("WholeExome + IMPACT")) {
+
+        }
+        if(serviceType.equals("WholeExome-KAPALib")) {
+
+        }
+        if(serviceType.equals("HumanWholeGenome")) {
+
+        }
+        if(serviceType.equals("MouseWholeGenome")) {
+
+        }
+        if(serviceType.equals("WholeGenome")) {
+
+        }
+        if(serviceType.equals("sWGS")) {
+
+        }
+        if(serviceType.equals("ChIPSeq")) {
+
+        }
+        if(serviceType.equals("MethylSeq")) {
+
+        }
+        if(serviceType.equals("CRISPRSeq")) {
+
+        }
+        if(serviceType.equals("shRNAScreen")) {
+
+        }
+        if(serviceType.equals("RiboProfileSeq")) {
+
+        }
+        if(serviceType.equals("ATACSeq")) {
+
+        }
+        if(serviceType.equals("AmpliSeq")) {
+
+        }
+        if(serviceType.equals("AmpliconSeq")) {
+
+        }
+        if(serviceType.equals("AdaptiveImmunoSeq")) {
+
+        }
+        if(serviceType.equals("CLIPSeq")) {
+
+        }
+        if(serviceType.equals("HiSeq-Other")) {
+
+        }
+        if(serviceType.equals("MiSeq-Other")) {
+
+        }
+        if(serviceType.equals("NextSeq-Other")) {
+
+        }
+        if(serviceType.equals("NovaSeq-Other")) {
+
+        }
+        if(serviceType.equals("Investigator Prepared Libraries")) {
+
+        }
+        if(serviceType.equals("Investigator Prepared Pools")) {
+
+        }
+        if(serviceType.equals("ddPCR")) {
+
+        }
+        if(serviceType.equals("DLP")) {
+
+        }
+        if(serviceType.equals("PED-PEG")) {
+
+        }
+        if(serviceType.equals("IGO-Test")) {
+
+        }
+        if(serviceType.equals("FragmentAnalysis")) {
+
+        }
+        if(serviceType.equals("CellLineAuthentication")) {
+
+        }
+        if(serviceType.equals("SingleCellCNV")) {
+
+        }
+        if(serviceType.equals("CMO-CH")) {
+
+        }
+        if(serviceType.equals("TCRSeq-IGO")) {
+
+        }
+
+        return chargeInfoRecords;
 
     }
     private void generateiLabChargeSheet() {
@@ -289,7 +517,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 String purchaseDate = requestRecord.getStringVal("RequestDate", user);
                 String serviceQuantity = requestRecord.getStringVal("SampleNumber", user);
 
-                reportFieldValues.put("serviceId", );
+                reportFieldValues.put("serviceId", chargesInformation.get(0).toString());
                 reportFieldValues.put("note", requestId);
                 reportFieldValues.put("serviceQuantity", serviceQuantity);
                 reportFieldValues.put("purchasedOn", purchaseDate);
