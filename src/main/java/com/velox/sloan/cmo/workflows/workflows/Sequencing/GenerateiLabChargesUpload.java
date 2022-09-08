@@ -21,80 +21,113 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
     private static final Map<String, String> serviceInfoMap = new HashMap<>();
     static { // Make the map of Service Name -> Service ID
-        serviceInfoMap.put("10X FB Library", "490181"); //Feature Barcoding
-        serviceInfoMap.put("10X GEX Library", "490175"); // Gene Expression Library Prep
-        serviceInfoMap.put("10X GEX Sequencing - 10K cells", "490177"); // Gene Expression Sequencing + cell count (sample table)
-        serviceInfoMap.put("10X GEX Sequencing - 1K cells", "490176"); // Gene Expression Sequencing + cell count (sample table)
-        serviceInfoMap.put("10X Multiome Library", "490182"); // Multiome Lib Prep
-        serviceInfoMap.put("10X Multiome Sequencing - 10K nuclei", "490184"); // Where to find Nuclei info? which table?
-        serviceInfoMap.put("10X Multiome Sequencing - 1K nuclei", "490183");
-        serviceInfoMap.put("10X VDJ Library", "490178"); // Lib Prep?
-        serviceInfoMap.put("10X VDJ/FB Sequencing - 10K cells", "490180"); // Sequencing, VDJ/FB?
-        serviceInfoMap.put("10X VDJ/FB Sequencing - 1K cells", "490179"); // Sequencing, VDJ/FB?
-        serviceInfoMap.put("10X Visium Library", "490190"); // Lib Prep?
-        serviceInfoMap.put("10X Visium Optimization", "490189"); // What property is "Optimization"?
-        serviceInfoMap.put("10X Visium Sequencing (25%)", "490191"); // Sequencing
-        serviceInfoMap.put("ACCESS - Normal", "406820"); //Tumor or normal in sample
-        serviceInfoMap.put("ACCESS - Tumor", "406821");
-//        serviceInfoMap.put("Adaptive immunoSEQ - Deep", "490139"); // Where to find Deep/ Survey/ Ultradeep?
-//        serviceInfoMap.put("Adaptive immunoSEQ - Survey", "490138");
-//        serviceInfoMap.put("Adaptive immunoSEQ - Ultradeep", "490504");
-        serviceInfoMap.put("AmpliconSeq", "490510"); // Request name: AmpliconSeq
-        serviceInfoMap.put("Archer Fusion - Heme Panel", "334267"); // Request name: Archer
-        serviceInfoMap.put("Archer Fusion - Solid Tumor (MSK) Panel", "334266"); // Request name: Archer
-        serviceInfoMap.put("Archer Immunoverse", "490140"); // Request name: Archer
-        serviceInfoMap.put("ATAC Library Prep", "490513"); // IGO Internal, Request name: ATACSeq, Do we charge for IGO internals?
-        serviceInfoMap.put("ATAC-Seq", "483257"); // Request name: ATACSeq
-        serviceInfoMap.put("Cell Line Authentication", "490142"); // Request name: CellLineAuthentication
-        serviceInfoMap.put("cfDNA Extraction - Plasma", "261860"); // What is the request name?
-        serviceInfoMap.put("ChIP-Seq/CUT&RUN", "483258"); // Request name: ChIPSeq
-        serviceInfoMap.put("CMO-CH", "492855"); // Request name: CMO-CH
-        serviceInfoMap.put("CRISPR-Seq", "308754"); // Request name: CRISPRSeq
-        serviceInfoMap.put("Data Analysis - ACCESS (N)", "495935"); // Request name: MSK-ACCESS_v1?
-        serviceInfoMap.put("Data Analysis - ACCESS (T)", "495936"); // Request name: MSK-ACCESS_v1?
-        serviceInfoMap.put("Data Analysis - CMO-CH", "495937"); // analysis Pipelinable or BIC AutoRunnable? (request table)
-        serviceInfoMap.put("Data Handling", "491618"); // IGO Internal, Any expense entered in the iLab?
+        //QC
+        serviceInfoMap.put("QC - Agilent", "256044"); // DNA? RNA? Library?
+        serviceInfoMap.put("QC - Quant-it", "259492"); // DNA? RNA? Library?
+        serviceInfoMap.put("QC - Quantity + Quality", "256029"); // DNA? RNA? Library?
+        // DDPCR Non-Sequencing
         serviceInfoMap.put("ddPCR (1 reaction)", "256041"); // Request name: DDPCR
         serviceInfoMap.put("ddPCR Assay Design", "288524"); // Where do this property
         serviceInfoMap.put("ddPCR Assay Order - CNV", "290735"); // Pick list ID: ddPCR Assay Type
         serviceInfoMap.put("ddPCR Assay Order - Mutation/GEX", "288525"); // Pick list ID: ddPCR Assay Type
         serviceInfoMap.put("ddPCR Human % Assay", "490143"); // Pick list ID: ddPCR Species
         serviceInfoMap.put("ddPCR KRAS Multiplexing", "337962"); // What is "KRAS Multiplexing"?
+        // CellLine Aut (STR) Non-Sequencing
+        serviceInfoMap.put("Cell Line Authentication", "490142"); // Request name: CellLineAuthentication
+        serviceInfoMap.put("Fingerprinting - STR", "302835"); // None Sequencing, Cell line Auth?
+        // Data Analysis
+        serviceInfoMap.put("Data Analysis - ACCESS (N)", "495935"); // Request name: MSK-ACCESS_v1?
+        serviceInfoMap.put("Data Analysis - ACCESS (T)", "495936"); // Request name: MSK-ACCESS_v1?
+        serviceInfoMap.put("Data Analysis - CMO-CH", "495937"); // analysis Pipelinable or BIC AutoRunnable? (request table)
+        serviceInfoMap.put("Data Handling", "491618"); // IGO Internal, Any expense entered in the iLab?
+
+        // Library Prep
+        serviceInfoMap.put("10X FB Library", "490181"); //Feature Barcoding
+
+        serviceInfoMap.put("10X GEX Library", "490175"); // Gene Expression Library Prep
+        serviceInfoMap.put("10X GEX Sequencing - 10K cells", "490177"); // Gene Expression Sequencing + cell count (sample table)
+        serviceInfoMap.put("10X GEX Sequencing - 1K cells", "490176"); // Gene Expression Sequencing + cell count (sample table)
+
+        serviceInfoMap.put("10X Multiome Library", "490182"); // Multiome Lib Prep
+        serviceInfoMap.put("10X Multiome Sequencing - 10K nuclei", "490184"); // Where to find Nuclei info? which table?
+        serviceInfoMap.put("10X Multiome Sequencing - 1K nuclei", "490183");
+
+        serviceInfoMap.put("10X VDJ Library", "490178"); // Lib Prep?
+        serviceInfoMap.put("10X VDJ/FB Sequencing - 10K cells", "490180"); // Sequencing, VDJ/FB?
+        serviceInfoMap.put("10X VDJ/FB Sequencing - 1K cells", "490179"); // Sequencing, VDJ/FB?
+
+        serviceInfoMap.put("10X Visium Library", "490190"); // Lib Prep?
+        serviceInfoMap.put("10X Visium Optimization", "490189"); // What property is "Optimization"?
+        serviceInfoMap.put("10X Visium Sequencing (25%)", "490191"); // Sequencing
+
+
+        serviceInfoMap.put("ACCESS - Normal", "406820"); //Tumor or normal in sample
+        serviceInfoMap.put("ACCESS - Tumor", "406821");
+//        serviceInfoMap.put("Adaptive immunoSEQ - Deep", "490139"); // Where to find Deep/ Survey/ Ultradeep?
+//        serviceInfoMap.put("Adaptive immunoSEQ - Survey", "490138");
+//        serviceInfoMap.put("Adaptive immunoSEQ - Ultradeep", "490504");
+        serviceInfoMap.put("AmpliconSeq", "490510"); // Request name: AmpliconSeq
+
+        serviceInfoMap.put("Archer Fusion - Heme Panel", "334267"); // Request name: Archer
+        serviceInfoMap.put("Archer Fusion - Solid Tumor (MSK) Panel", "334266"); // Request name: Archer
+        serviceInfoMap.put("Archer Immunoverse", "490140"); // Request name: Archer
+
+        serviceInfoMap.put("ATAC Library Prep", "490513"); // IGO Internal, Request name: ATACSeq, Do we charge for IGO internals?
+        serviceInfoMap.put("ATAC-Seq", "483257"); // Request name: ATACSeq
+
+        serviceInfoMap.put("cfDNA Extraction - Plasma", "261860"); // What is the request name?
+
+        serviceInfoMap.put("ChIP-Seq/CUT&RUN", "483258"); // Request name: ChIPSeq
+
+        serviceInfoMap.put("CMO-CH", "492855"); // Request name: CMO-CH
+
+        serviceInfoMap.put("CRISPR-Seq", "308754"); // Request name: CRISPRSeq
+
         serviceInfoMap.put("DLP Library - 800 cells", "490187"); // DLP Lib Prep
         serviceInfoMap.put("DLP Sequencing - 1 quadrant", "490188"); // DLP Sequencing
+
         serviceInfoMap.put("DNA Extraction - Blood", "256034"); // Available request names: DNAExtraction and PATH-DNAExtraction, Sample origin: Blood?
         serviceInfoMap.put("DNA Extraction - FFPE", "256048"); // Available request names: DNAExtraction and PATH-DNAExtraction, Sample Preservation: FFPE?
         serviceInfoMap.put("DNA Extraction - Fresh/Frozen", "256043"); // Available request names: DNAExtraction and PATH-DNAExtraction, Sample preservation: Fresh/Frozen
         serviceInfoMap.put("DNA Extraction - Nails", "288528"); // Available request names: DNAExtraction and PATH-DNAExtraction, What property is Nails?
         serviceInfoMap.put("DNA Extraction - Viably Frozen", "490136"); // Available request names: DNAExtraction and PATH-DNAExtraction, What is Viably Frozen?
         serviceInfoMap.put("DNA/RNA Dual Extraction", "256092"); // Request name: PATH-DNA/RNASimultaneous??
+
         serviceInfoMap.put("Double Capture", "497933"); // IGO Internal, iLab charge? Request name: CustomCapture???
+
         serviceInfoMap.put("EPIC Methyl Capture", "483259"); // request name: MethylSeq???
+
         serviceInfoMap.put("FFPE Sectioning - Curls", "260306"); // what is it?
         serviceInfoMap.put("FFPE Sectioning - Slides", "260305"); // what is it?
-        serviceInfoMap.put("Fingerprinting - STR", "302835"); // None Sequencing, Cell line Auth?
+
         serviceInfoMap.put("H&E Stain", "260304"); // Is it a request name? What property is it?
+
         serviceInfoMap.put("HemePACT - Normal", "259603"); // Tumor or normal Sample level info
         serviceInfoMap.put("HemePACT - Tumor", "406819"); // Tumor or normal Sample level info
+
         serviceInfoMap.put("IMPACT - Mouse", "331388"); // Tumor or normal/ Species Sample level info
         serviceInfoMap.put("IMPACT - Normal", "256124");
         serviceInfoMap.put("IMPACT - Tumor", "406813");
+
         serviceInfoMap.put("KAPA HT Library Prep", "256127");
         serviceInfoMap.put("KAPA Hyper Library Prep", "351941"); // Available request name: WholeExome-KAPALib and RNASeq-KAPAmRNAStranded
         serviceInfoMap.put("KAPA WGS Library Prep - PCR+", "490516"); // Available request name: WholeExome-KAPALib and RNASeq-KAPAmRNAStranded
         serviceInfoMap.put("KAPA WGS Library Prep - PCR-free", "490515"); // Available request name: WholeExome-KAPALib and RNASeq-KAPAmRNAStranded
+
         serviceInfoMap.put("Micronic Tube", "308755"); // Where is it included?
+
         serviceInfoMap.put("PlateSeq Library Prep", "490185");
         serviceInfoMap.put("PlateSeq Sequencing - 1 column", "490186");
+
         serviceInfoMap.put("PolyA Library Prep", "490511"); // Lib prep
-        serviceInfoMap.put("QC - Agilent", "256044"); // DNA? RNA? Library?
-        serviceInfoMap.put("QC - Quant-it", "259492"); // DNA? RNA? Library?
-        serviceInfoMap.put("QC - Quantity + Quality", "256029"); // DNA? RNA? Library?
+
         serviceInfoMap.put("RiboDepletion Library Prep", "490512"); // Lib prep
-        serviceInfoMap.put("RNA Extraction + COVID19 Testing", "490141"); // Request name: RNAExtraction-COVIDScreen
-        serviceInfoMap.put("RNA Extraction - FFPE", "256100"); // Where does FFPE come from?
-        serviceInfoMap.put("RNA Extraction - Fresh/Frozen", "256097"); // Fresh/ Frozen -> sample properties
-        serviceInfoMap.put("RNA Extraction - Viably Frozen", "490137"); // Viably Frozen -> sample property?
+        //serviceInfoMap.put("RNA Extraction + COVID19 Testing", "490141"); // Request name: RNAExtraction-COVIDScreen
+
+        serviceInfoMap.put("RNA Extraction - FFPE", "256100"); // Where does FFPE come from? Sample preservation?
+        serviceInfoMap.put("RNA Extraction - Fresh/Frozen", "256097"); // Fresh/ Frozen -> sample properties: Sample preservation?
+        serviceInfoMap.put("RNA Extraction - Viably Frozen", "490137"); // Viably Frozen -> sample property: Sample preservation?
+
         serviceInfoMap.put("RNASeq - polyA - 10-20M", "490506"); // Sequencing, Request name: RNASeq-TruSeqPolyA +  requested reads
         serviceInfoMap.put("RNASeq - polyA - 100M+", "490507"); // Sequencing, Request name: RNASeq-TruSeqPolyA +  requested reads
         serviceInfoMap.put("RNASeq - polyA - 20-30M", "404330"); // Sequencing, Request name: RNASeq-TruSeqPolyA +  requested reads
@@ -111,8 +144,10 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         serviceInfoMap.put("RNASeq - Ribodeplete - 50-60M", "404336"); // Sequencing, Request name: RNASeq-TruSeqRiboDeplete?
         serviceInfoMap.put("RNASeq - Ribodeplete - 60-80M", "404337"); // Sequencing, Request name: RNASeq-TruSeqRiboDeplete?
         serviceInfoMap.put("RNASeq - Ribodeplete - 80-100M", "404338"); // Sequencing, Request name: RNASeq-TruSeqRiboDeplete?
+
         serviceInfoMap.put("Sample Capture + Library", "490514"); // Where is it included?
-        serviceInfoMap.put("Sample Pooling", "491619"); // Is it included in all services goring into sequencing?
+
+        serviceInfoMap.put("Sample Pooling", "491619"); // Is it included in all services going into sequencing?
 
         // Sequencing Only
         serviceInfoMap.put("Sequencing  - 100M Reads - 150c", "490157");
@@ -146,18 +181,25 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         // End of Sequencing Only
 
         serviceInfoMap.put("Shallow WGS", "341254"); // Human Whole Genome/ Mouse Whole Genome/ Whole Genome?
+
         serviceInfoMap.put("Slide Dissection", "260643"); // Where is it included?
         serviceInfoMap.put("Slide Scraping", "296697"); // Where is it included?
+
         serviceInfoMap.put("SMARTer Amplification", "261859"); // Request name: RNASeq-SMARTerAmp
+
         serviceInfoMap.put("Special Processing -- Extraction", "487571"); // ?
+
         serviceInfoMap.put("TCRSeq-IGO", "498671");
+
         serviceInfoMap.put("UMI Library Prep", "351940"); // ?
+
         serviceInfoMap.put("WES - 100X", "289981"); // WholeExomeKapaLib + coverage
         serviceInfoMap.put("WES - 150X", "289982");
         serviceInfoMap.put("WES - 200X", "289983");
         serviceInfoMap.put("WES - 250X", "289984");
         serviceInfoMap.put("WES - 30X", "289979");
         serviceInfoMap.put("WES - 70X", "289980");
+
         serviceInfoMap.put("WGS - PCR+ - 100X", "490204"); // PCR information?
         serviceInfoMap.put("WGS - PCR+ - 10X", "495934");
         serviceInfoMap.put("WGS - PCR+ - 150X", "490205");
@@ -193,248 +235,265 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         // address, PI email address, Date of request, service_request_id?
         List<DataRecord> flowCellSamples = activeTask.getAttachedDataRecords("NormalizationPooledLibProtocol", user);
         DataRecord firstSample = flowCellSamples.get(0).getParentsOfType("Sample", user).get(0);
-        String serviceType = firstSample.getParentsOfType("Request", user).get(0)
-                .getStringVal("RequestName", user);
-        List<DataRecord> chargesInfo = outputChargesInfo(serviceType);
+        List<DataRecord> chargesInfo = outputChargesInfo(firstSample);
         setFieldsForReport(chargesInfo);
         generateiLabChargeSheet();
-        // Populate different services sheets
         return new PluginResult(true);
     }
 
-    private List<DataRecord> outputChargesInfo(String serviceType) {
-        // Logic for charges corresponding to different services
+    /**
+     * Logic for charges corresponding to different service types
+     * @param firstSample
+     * @return all iLab template sheet information for the bulk charge upload
+     * */
+    private List<DataRecord> outputChargesInfo(DataRecord firstSample) {
+
         List<DataRecord> chargeInfoRecords = new LinkedList<>();
+        try {
+            String serviceType = firstSample.getParentsOfType("Request", user).get(0)
+                    .getStringVal("RequestName", user);
+            String species = firstSample.getStringVal("Species", user);
+            String preservation = firstSample.getStringVal("Preservation", user);
+            String tumorOrNormal = firstSample.getStringVal("TumorOrNormal", user);
+            String assay = firstSample.getStringVal("Assay", user);
+            String origin = firstSample.getStringVal("SampleOrigin", user);
 
 
-        // Request name in Request table is a drop down menu with certain options
-        //SeqRequirement datatype to find the read length, requested reads, minimum reads, coverage
-        // Use sample table properties: Species, origin,
-        Object serviceId;
-        serviceId = serviceInfoMap.get(serviceType);
-        chargeInfoRecords.add(0, (DataRecord) serviceId);
-        if(serviceType.equals("DNAExtraction")) {
+            DataRecord [] seqRequeirements = firstSample.getChildrenOfType("SeqRequirement", user);
+            String maxNumOfReads = seqRequeirements[0].getStringVal("RequestedReads", user);
+            String covrage = seqRequeirements[0].getStringVal("CoverageTarget", user);
+            String runLength = seqRequeirements[0].getStringVal("SequencingRunType", user);
 
-        }
-        if(serviceType.equals("RNAExtraction")) {
+            // Request name in Request table is a drop down menu with certain options
+            Object serviceId;
+            // Adding rows of charges information for each service
+            if(serviceType.contains("DNA") && serviceType.contains("Extraction")) {
 
-        }
-        if(serviceType.equals("RNAExtraction-COVIDScreen")) {
+            }
+            if(serviceType.contains("RNA") && serviceType.contains("Extraction")) {
 
-        }
-        if(serviceType.equals("DNA Cleanup")) {
+            }
+//            if(serviceType.equals("RNAExtraction-COVIDScreen")) {
+//
+//            }
+            if(serviceType.equals("DNA Cleanup")) {
 
-        }
-        if(serviceType.equals("RNA Cleanup")) {
+            }
+            if(serviceType.equals("RNA Cleanup")) {
 
-        }
-        if(serviceType.equals("DNA/RNASimultaneous")) {
+            }
+            if(serviceType.equals("DNA/RNASimultaneous")) {
 
-        }
-        if(serviceType.equals("PATH-DNAExtraction")) {
+            }
+            if(serviceType.equals("PATH-DNAExtraction")) {
 
-        }
-        if(serviceType.equals("PATH-RNAExtraction")) {
+            }
+            if(serviceType.equals("PATH-RNAExtraction")) {
 
-        }
-        if(serviceType.equals("PATH-DNA/RNASimultaneous")) {
+            }
+            if(serviceType.equals("PATH-DNA/RNASimultaneous")) {
 
-        }
-        if(serviceType.equals("BloodExtraction")) {
+            }
+            if(serviceType.equals("BloodExtraction")) {
 
-        }
-        if(serviceType.equals("DNA-QC")) {
+            }
+            if(serviceType.equals("DNA-QC")) {
 
-        }
-        if(serviceType.equals("RNA-QC")) {
+            }
+            if(serviceType.equals("RNA-QC")) {
 
-        }
-        if(serviceType.equals("Library-QC")) {
+            }
+            if(serviceType.equals("Library-QC")) {
 
-        }
-        if(serviceType.equals("IMPACT341")) {
+            }
+            if(serviceType.equals("IMPACT341")) {
 
-        }
-        if(serviceType.equals("IMPACT341+")) {
+            }
+            if(serviceType.equals("IMPACT341+")) {
 
-        }
-        if(serviceType.equals("IMPACT410")) {
+            }
+            if(serviceType.equals("IMPACT410")) {
 
-        }
-        if(serviceType.equals("IMPACT410+")) {
+            }
+            if(serviceType.equals("IMPACT410+")) {
 
-        }
-        if(serviceType.equals("IMPACT468")) {
+            }
+            if(serviceType.equals("IMPACT468")) {
 
-        }
-        if(serviceType.equals("IMPACT505")) {
+            }
+            if(serviceType.equals("IMPACT505")) {
 
-        }
-        if(serviceType.equals("PM-IMPACT")) {
+            }
+            if(serviceType.equals("PM-IMPACT")) {
 
-        }
-        if(serviceType.equals("M-IMPACT")) {
+            }
+            if(serviceType.equals("M-IMPACT")) {
 
-        }
-        if(serviceType.equals("HemePACT_v3")) {
+            }
+            if(serviceType.equals("HemePACT_v3")) {
 
-        }
-        if(serviceType.equals("HemePACT_v3+")) {
+            }
+            if(serviceType.equals("HemePACT_v3+")) {
 
-        }
-        if(serviceType.equals("HemePACT_v4")) {
+            }
+            if(serviceType.equals("HemePACT_v4")) {
 
-        }
-        if(serviceType.equals("CustomCapture")) {
+            }
+            if(serviceType.equals("CustomCapture")) {
 
-        }
-        if(serviceType.equals("MSK-ACCESS_v1")) {
+            }
+            if(serviceType.equals("MSK-ACCESS_v1")) {
 
-        }
-        if(serviceType.equals("MissionBio")) {
+            }
+            if(serviceType.equals("MissionBio")) {
 
-        }
-        if(serviceType.equals("RNASeq-TruSeqPolyA")) {
+            }
+            if(serviceType.equals("RNASeq-TruSeqPolyA")) {
 
-        }
-        if(serviceType.equals("RNASeq-KAPAmRNAStranded")) {
+            }
+            if(serviceType.equals("RNASeq-KAPAmRNAStranded")) {
 
-        }
-        if(serviceType.equals("RNASeq-TruSeqFusion")) {
+            }
+            if(serviceType.equals("RNASeq-TruSeqFusion")) {
 
-        }
-        if(serviceType.equals("RNASeq-TruSeqRiboDeplete")) {
+            }
+            if(serviceType.equals("RNASeq-TruSeqRiboDeplete")) {
 
-        }
-        if(serviceType.equals("RNASeq-SMARTerAmp")) {
+            }
+            if(serviceType.equals("RNASeq-SMARTerAmp")) {
 
-        }
-        if(serviceType.equals("Rapid-RCC")) {
+            }
+            if(serviceType.equals("Rapid-RCC")) {
 
-        }
-        if(serviceType.equals("Archer")) {
+            }
+            if(serviceType.equals("Archer")) {
 
-        }
-        if(serviceType.equals("NanoString")) {
+            }
+            if(serviceType.equals("NanoString")) {
 
-        }
-        if(serviceType.equals("10XGenomics_GeneExpression")) {
+            }
+            if(serviceType.equals("10XGenomics_GeneExpression")) {
 
-        }
-        if(serviceType.equals("10XGenomics_VDJ")) {
+            }
+            if(serviceType.equals("10XGenomics_VDJ")) {
 
-        }
-        if(serviceType.equals("10XGenomics_CNV")) {
+            }
+            if(serviceType.equals("10XGenomics_CNV")) {
 
-        }
-        if(serviceType.equals("10XGenomics_FeatureBarcoding")) {
+            }
+            if(serviceType.equals("10XGenomics_FeatureBarcoding")) {
 
-        }
-        if(serviceType.equals("10XGenomics_Multiome")) {
+            }
+            if(serviceType.equals("10XGenomics_Multiome")) {
 
-        }
-        if(serviceType.equals("10XGenomics_Visium")) {
+            }
+            if(serviceType.equals("10XGenomics_Visium")) {
 
-        }
-        if(serviceType.equals("96Well_SmartSeq2")) {
+            }
+            if(serviceType.equals("96Well_SmartSeq2")) {
 
-        }
-        if(serviceType.equals("WholeExome + IMPACT")) {
+            }
+            if(serviceType.equals("WholeExome + IMPACT")) {
 
-        }
-        if(serviceType.equals("WholeExome-KAPALib")) {
+            }
+            if(serviceType.equals("WholeExome-KAPALib")) {
 
-        }
-        if(serviceType.equals("HumanWholeGenome")) {
+            }
+            if(serviceType.equals("HumanWholeGenome")) {
 
-        }
-        if(serviceType.equals("MouseWholeGenome")) {
+            }
+            if(serviceType.equals("MouseWholeGenome")) {
 
-        }
-        if(serviceType.equals("WholeGenome")) {
+            }
+            if(serviceType.equals("WholeGenome")) {
 
-        }
-        if(serviceType.equals("sWGS")) {
+            }
+            if(serviceType.equals("sWGS")) {
 
-        }
-        if(serviceType.equals("ChIPSeq")) {
+            }
+            if(serviceType.equals("ChIPSeq")) {
 
-        }
-        if(serviceType.equals("MethylSeq")) {
+            }
+            if(serviceType.equals("MethylSeq")) {
 
-        }
-        if(serviceType.equals("CRISPRSeq")) {
+            }
+            if(serviceType.equals("CRISPRSeq")) {
 
-        }
-        if(serviceType.equals("shRNAScreen")) {
+            }
+            if(serviceType.equals("shRNAScreen")) {
 
-        }
-        if(serviceType.equals("RiboProfileSeq")) {
+            }
+            if(serviceType.equals("RiboProfileSeq")) {
 
-        }
-        if(serviceType.equals("ATACSeq")) {
+            }
+            if(serviceType.equals("ATACSeq")) {
 
-        }
-        if(serviceType.equals("AmpliSeq")) {
+            }
+            if(serviceType.equals("AmpliSeq")) {
 
-        }
-        if(serviceType.equals("AmpliconSeq")) {
+            }
+            if(serviceType.equals("AmpliconSeq")) {
 
-        }
-        if(serviceType.equals("AdaptiveImmunoSeq")) {
+            }
+            if(serviceType.equals("AdaptiveImmunoSeq")) {
 
-        }
-        if(serviceType.equals("CLIPSeq")) {
+            }
+            if(serviceType.equals("CLIPSeq")) {
 
-        }
-        if(serviceType.equals("HiSeq-Other")) {
+            }
+            if(serviceType.equals("HiSeq-Other")) {
 
-        }
-        if(serviceType.equals("MiSeq-Other")) {
+            }
+            if(serviceType.equals("MiSeq-Other")) {
 
-        }
-        if(serviceType.equals("NextSeq-Other")) {
+            }
+            if(serviceType.equals("NextSeq-Other")) {
 
-        }
-        if(serviceType.equals("NovaSeq-Other")) {
+            }
+            if(serviceType.equals("NovaSeq-Other")) {
 
-        }
-        if(serviceType.equals("Investigator Prepared Libraries")) {
+            }
+            if(serviceType.equals("Investigator Prepared Libraries")) {
+                // sequencing only
+            }
+            if(serviceType.equals("Investigator Prepared Pools")) {
+                // sequencing only
+            }
+            if(serviceType.equals("ddPCR")) {
 
-        }
-        if(serviceType.equals("Investigator Prepared Pools")) {
+            }
+            if(serviceType.equals("DLP")) {
 
-        }
-        if(serviceType.equals("ddPCR")) {
+            }
+            if(serviceType.equals("PED-PEG")) {
 
-        }
-        if(serviceType.equals("DLP")) {
+            }
+            if(serviceType.equals("IGO-Test")) {
 
-        }
-        if(serviceType.equals("PED-PEG")) {
+            }
+            if(serviceType.equals("FragmentAnalysis")) {
 
-        }
-        if(serviceType.equals("IGO-Test")) {
+            }
+            if(serviceType.equals("CellLineAuthentication")) {
 
-        }
-        if(serviceType.equals("FragmentAnalysis")) {
+            }
+            if(serviceType.equals("SingleCellCNV")) {
 
-        }
-        if(serviceType.equals("CellLineAuthentication")) {
+            }
+            if(serviceType.equals("CMO-CH")) {
 
-        }
-        if(serviceType.equals("SingleCellCNV")) {
+            }
+            if(serviceType.equals("TCRSeq-IGO")) {
 
-        }
-        if(serviceType.equals("CMO-CH")) {
-
-        }
-        if(serviceType.equals("TCRSeq-IGO")) {
-
+            }
+            serviceId = serviceInfoMap.get(serviceType);
+            // Adding recognized serviceId to the last element of the returned list
+            chargeInfoRecords.add(chargeInfoRecords.size(), (DataRecord) serviceId);
+        } catch (IoError | RemoteException | NotFound e) {
+            logError("An exception occurred while  retrieving first sample's request info");
         }
 
         return chargeInfoRecords;
-
     }
     private void generateiLabChargeSheet() {
         // Make the sheet with 7 columns
@@ -505,6 +564,11 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         }
     }
 
+    /**
+     * Setting the iLab template sheet fields
+     * @param chargesInformation
+     * @return List of map of iLab template fields and their values
+     * */
     private List<Map<String, String>> setFieldsForReport(List<DataRecord> chargesInformation) {
         List<Map<String, String>> reportFieldValueMaps = new ArrayList<>();
         for (DataRecord record : chargesInformation) {
@@ -517,7 +581,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 String purchaseDate = requestRecord.getStringVal("RequestDate", user);
                 String serviceQuantity = requestRecord.getStringVal("SampleNumber", user);
 
-                reportFieldValues.put("serviceId", chargesInformation.get(0).toString());
+                reportFieldValues.put("serviceId", chargesInformation.get(chargesInformation.size() - 1).toString());
                 reportFieldValues.put("note", requestId);
                 reportFieldValues.put("serviceQuantity", serviceQuantity);
                 reportFieldValues.put("purchasedOn", purchaseDate);
