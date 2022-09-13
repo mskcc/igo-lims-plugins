@@ -10,13 +10,16 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.utilities.ExemplarConfig;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
-import javax.xml.crypto.Data;
 import java.io.*;
 import java.rmi.RemoteException;
 import java.util.*;
 
-public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
+//**************Can I upload a dummy charge upload to actual IGO core room? *****************
 
+
+
+public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
+    public List<Map<String, String>> dataValues = new LinkedList<>();
     // SampleReceving Request Type pick list ID
 
     private static final Map<String, String> serviceInfoMap = new HashMap<>();
@@ -229,15 +232,25 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 !this.activeTask.getTask().getTaskOptions().containsKey("GENERATE ILAB CHARGES SHEET GENERATED");
     }
 
+    /**
+     * At any run we are processing charges for ALL requests for which their samples are present in the flowcell we are
+     * looking at, at the Illumina sequencing workflow
+     * */
     public PluginResult run() throws Throwable {
         // Illumina Sequencing Workflow last step has FlowCellSamples attached to it, which are pools
         // need to access initial samples and their parent the request to publish: project_id, number of samples, investigator email
         // address, PI email address, Date of request, service_request_id?
         List<DataRecord> flowCellSamples = activeTask.getAttachedDataRecords("NormalizationPooledLibProtocol", user);
-        DataRecord firstSample = flowCellSamples.get(0).getParentsOfType("Sample", user).get(0);
-        List<DataRecord> chargesInfo = outputChargesInfo(firstSample);
-        setFieldsForReport(chargesInfo);
-        generateiLabChargeSheet();
+        Set<String> uniqueRequestsOnTheFlowCell = new HashSet<>();
+        for(DataRecord eachSample : flowCellSamples) {
+            DataRecord firstSampleOfEachRequest = eachSample.getParentsOfType("Sample", user).get(0);
+            String requestId = firstSampleOfEachRequest.getParentsOfType("Request", user).get(0).getStringVal("RequestId", user);
+            if (uniqueRequestsOnTheFlowCell.add(requestId)) {
+                dataValues = outputChargesInfo(firstSampleOfEachRequest);
+                generateiLabChargeSheet();
+            }
+            dataValues.clear();
+        }
         return new PluginResult(true);
     }
 
@@ -246,29 +259,47 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
      * @param firstSample
      * @return all iLab template sheet information for the bulk charge upload
      * */
-    private List<DataRecord> outputChargesInfo(DataRecord firstSample) {
+    private List<Map<String, String>> outputChargesInfo(DataRecord firstSample) {
 
-        List<DataRecord> chargeInfoRecords = new LinkedList<>();
+        List<Map<String, String>> chargeInfoRecords = new LinkedList<>();
         try {
             String serviceType = firstSample.getParentsOfType("Request", user).get(0)
                     .getStringVal("RequestName", user);
+            // Request level information
+            DataRecord requestRecord = firstSample.getParentsOfType("Request", user).get(0);
+            String ownerEmail = requestRecord.getStringVal("ProjectOwner", user);
+            String piEmail = requestRecord.getStringVal("PIemail", user);
+            String requestId = requestRecord.getStringVal("RequestId", user);
+            String purchaseDate = requestRecord.getStringVal("RequestDate", user);
+            String serviceQuantity = requestRecord.getStringVal("SampleNumber", user);
+            // Sample level information
             String species = firstSample.getStringVal("Species", user);
             String preservation = firstSample.getStringVal("Preservation", user);
             String tumorOrNormal = firstSample.getStringVal("TumorOrNormal", user);
             String assay = firstSample.getStringVal("Assay", user);
             String origin = firstSample.getStringVal("SampleOrigin", user);
 
-
+            // Sequencing Requirements
             DataRecord [] seqRequeirements = firstSample.getChildrenOfType("SeqRequirement", user);
             String maxNumOfReads = seqRequeirements[0].getStringVal("RequestedReads", user);
             String covrage = seqRequeirements[0].getStringVal("CoverageTarget", user);
             String runLength = seqRequeirements[0].getStringVal("SequencingRunType", user);
 
             // Request name in Request table is a drop down menu with certain options
-            Object serviceId;
-            // Adding rows of charges information for each service
-            if(serviceType.contains("DNA") && serviceType.contains("Extraction")) {
+            String serviceId;
+            Map<String, String> reportFieldValues = new HashMap<>();
 
+            reportFieldValues.put("note", requestId);
+            reportFieldValues.put("serviceQuantity", serviceQuantity);
+            reportFieldValues.put("purchasedOn", purchaseDate);
+            reportFieldValues.put("serviceRequestId", );
+            reportFieldValues.put("ownerEmail", ownerEmail);
+            reportFieldValues.put("pIEmail", piEmail);
+            chargeInfoRecords.add(reportFieldValues);
+
+            if(serviceType.contains("DNA") && serviceType.contains("Extraction")) {
+                serviceId = serviceInfoMap.get(serviceType);
+                reportFieldValues.put("serviceId", serviceId);
             }
             if(serviceType.contains("RNA") && serviceType.contains("Extraction")) {
 
@@ -382,6 +413,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
             }
             if(serviceType.equals("10XGenomics_FeatureBarcoding")) {
+                //490181
 
             }
             if(serviceType.equals("10XGenomics_Multiome")) {
@@ -486,19 +518,20 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             if(serviceType.equals("TCRSeq-IGO")) {
 
             }
-            serviceId = serviceInfoMap.get(serviceType);
-            // Adding recognized serviceId to the last element of the returned list
-            chargeInfoRecords.add(chargeInfoRecords.size(), (DataRecord) serviceId);
         } catch (IoError | RemoteException | NotFound e) {
             logError("An exception occurred while  retrieving first sample's request info");
         }
 
         return chargeInfoRecords;
     }
+
+    /**
+     * Generating the iLab bulk charge upload CSV sheet
+     * */
     private void generateiLabChargeSheet() {
         // Make the sheet with 7 columns
         List<String> headerValues;
-        List<Map<String, String>> dataValues;
+        //List<Map<String, String>> dataValues;
         List<String[]> dataLines = new LinkedList<>();
         String[] headersArray = new String[headerValues.size()];
         int i = 0;
@@ -537,7 +570,6 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             String iLabChargeUpload = exemplarConfig.getExemplarConfigValues().get("").toString();
             //"/pskis34/vialelab/LIMS/iLabBulkUploadCharges"
 
-
             try (OutputStream fos = new FileOutputStream(outFile, false)){
                 fos.write(bytes);
                 outFile.setReadOnly();
@@ -545,8 +577,6 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             } catch (Exception e) {
                 logInfo("Error in writing to shared drive: " + e.getMessage());
             }
-
-
         } catch (NotFound e) {
             logError(String.format("NotFoundException -> Error while exporting iLab bulk charge sheet:\n%s", ExceptionUtils.getStackTrace(e)));
         } catch (IoError e) {
@@ -562,42 +592,5 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 logError(String.format("IOException -> Error while closing the ByteArrayOutputStream:\n%s", ExceptionUtils.getStackTrace(e)));
             }
         }
-    }
-
-    /**
-     * Setting the iLab template sheet fields
-     * @param chargesInformation
-     * @return List of map of iLab template fields and their values
-     * */
-    private List<Map<String, String>> setFieldsForReport(List<DataRecord> chargesInformation) {
-        List<Map<String, String>> reportFieldValueMaps = new ArrayList<>();
-        for (DataRecord record : chargesInformation) {
-            Map<String, String> reportFieldValues = new HashMap<>();
-            try {
-                DataRecord requestRecord = record.getParentsOfType("Request", user).get(0);
-                String ownerEmail = requestRecord.getStringVal("ProjectOwner", user);
-                String piEmail = requestRecord.getStringVal("PIemail", user);
-                String requestId = requestRecord.getStringVal("RequestId", user);
-                String purchaseDate = requestRecord.getStringVal("RequestDate", user);
-                String serviceQuantity = requestRecord.getStringVal("SampleNumber", user);
-
-                reportFieldValues.put("serviceId", chargesInformation.get(chargesInformation.size() - 1).toString());
-                reportFieldValues.put("note", requestId);
-                reportFieldValues.put("serviceQuantity", serviceQuantity);
-                reportFieldValues.put("purchasedOn", purchaseDate);
-                reportFieldValues.put("serviceRequestId", );
-                reportFieldValues.put("ownerEmail", ownerEmail);
-                reportFieldValues.put("pIEmail", piEmail);
-
-                reportFieldValueMaps.add(reportFieldValues);
-            } catch (IoError e) {
-                logError(String.format("IOError -> Error setting field values for charges sheet:\n%s", ExceptionUtils.getStackTrace(e)));
-            } catch (RemoteException e) {
-                logError(String.format("RemoteException -> Error setting field values for charges sheet:\n%s", ExceptionUtils.getStackTrace(e)));
-            } catch (NotFound notFound) {
-                logError(String.format("NotFound Exception -> Error setting field values for charges sheet:\n%s", ExceptionUtils.getStackTrace(notFound)));
-            }
-        }
-        return reportFieldValueMaps;
     }
 }
