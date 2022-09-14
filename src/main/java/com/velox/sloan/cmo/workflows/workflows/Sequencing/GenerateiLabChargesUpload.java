@@ -19,6 +19,8 @@ import java.util.*;
 
 
 public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
+    private List<String> headerValues = Arrays.asList("service_id", "note", "service_quantity", "purchased_on",
+            "service_request_id", "owner_email", "pi_email_or_group_id");
     public List<Map<String, String>> dataValues = new LinkedList<>();
     // SampleReceving Request Type pick list ID
 
@@ -527,8 +529,6 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 reportFieldValues.put("pIEmail", piEmail);
                 chargeInfoRecords.add(reportFieldValues);
             }
-
-
         } catch (IoError | RemoteException | NotFound e) {
             logError("An exception occurred while  retrieving first sample's request info");
         }
@@ -541,7 +541,6 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
      * */
     private void generateiLabChargeSheet() {
         // Make the sheet with 7 columns
-        List<String> headerValues;
         //List<Map<String, String>> dataValues;
         List<String[]> dataLines = new LinkedList<>();
         String[] headersArray = new String[headerValues.size()];
