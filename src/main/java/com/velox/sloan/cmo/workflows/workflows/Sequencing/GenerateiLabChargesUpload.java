@@ -287,19 +287,16 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
             // Request name in Request table is a drop down menu with certain options
             String serviceId;
-            Map<String, String> reportFieldValues = new HashMap<>();
+            Map<String, String> reportFieldValues;
+            Set<String> requestsSeviceIds = new HashSet<>();
 
-            reportFieldValues.put("note", requestId);
-            reportFieldValues.put("serviceQuantity", serviceQuantity);
-            reportFieldValues.put("purchasedOn", purchaseDate);
-            reportFieldValues.put("serviceRequestId", );
-            reportFieldValues.put("ownerEmail", ownerEmail);
-            reportFieldValues.put("pIEmail", piEmail);
-            chargeInfoRecords.add(reportFieldValues);
 
             if(serviceType.contains("DNA") && serviceType.contains("Extraction")) {
                 serviceId = serviceInfoMap.get(serviceType);
-                reportFieldValues.put("serviceId", serviceId);
+                // All the sample and request level condition checks occur here to figure out the appropriate set of
+                // service ids for each service
+                requestsSeviceIds.add(serviceId);
+
             }
             if(serviceType.contains("RNA") && serviceType.contains("Extraction")) {
 
@@ -518,6 +515,20 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             if(serviceType.equals("TCRSeq-IGO")) {
 
             }
+
+            for(String eachServiceId : requestsSeviceIds) {
+                reportFieldValues = new HashMap<>();
+                reportFieldValues.put("serviceId", eachServiceId);
+                reportFieldValues.put("note", requestId);
+                reportFieldValues.put("serviceQuantity", serviceQuantity);
+                reportFieldValues.put("purchasedOn", purchaseDate);
+                reportFieldValues.put("serviceRequestId", );
+                reportFieldValues.put("ownerEmail", ownerEmail);
+                reportFieldValues.put("pIEmail", piEmail);
+                chargeInfoRecords.add(reportFieldValues);
+            }
+
+
         } catch (IoError | RemoteException | NotFound e) {
             logError("An exception occurred while  retrieving first sample's request info");
         }
