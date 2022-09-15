@@ -92,7 +92,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         serviceInfoMap.put("DLP Sequencing - 1 quadrant", "490188"); // DLP Sequencing
 
         serviceInfoMap.put("DNA Extraction - Blood", "256034"); // Available request names: DNAExtraction and PATH-DNAExtraction, Sample origin: Blood?
-        serviceInfoMap.put("DNA Extraction - FFPE", "256048"); // Available request names: DNAExtraction and PATH-DNAExtraction, Sample Preservation: FFPE?
+        serviceInfoMap.put("DNA Extraction - FFPE", "256048"); // Available request names: DNAExtraction and PATH-DNAExtraction, Sample origin: FFPE?
         serviceInfoMap.put("DNA Extraction - Fresh/Frozen", "256043"); // Available request names: DNAExtraction and PATH-DNAExtraction, Sample preservation: Fresh/Frozen
         serviceInfoMap.put("DNA Extraction - Nails", "288528"); // Available request names: DNAExtraction and PATH-DNAExtraction, What property is Nails?
         serviceInfoMap.put("DNA Extraction - Viably Frozen", "490136"); // Available request names: DNAExtraction and PATH-DNAExtraction, What is Viably Frozen?
@@ -129,7 +129,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         serviceInfoMap.put("RiboDepletion Library Prep", "490512"); // Lib prep
         //serviceInfoMap.put("RNA Extraction + COVID19 Testing", "490141"); // Request name: RNAExtraction-COVIDScreen
 
-        serviceInfoMap.put("RNA Extraction - FFPE", "256100"); // Where does FFPE come from? Sample preservation?
+        serviceInfoMap.put("RNA Extraction - FFPE", "256100"); // Where does FFPE come from? Sample origin?
         serviceInfoMap.put("RNA Extraction - Fresh/Frozen", "256097"); // Fresh/ Frozen -> sample properties: Sample preservation?
         serviceInfoMap.put("RNA Extraction - Viably Frozen", "490137"); // Viably Frozen -> sample property: Sample preservation?
 
@@ -187,8 +187,8 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
         serviceInfoMap.put("Shallow WGS", "341254"); // Human Whole Genome/ Mouse Whole Genome/ Whole Genome?
 
-        serviceInfoMap.put("Slide Dissection", "260643"); // Where is it included?
-        serviceInfoMap.put("Slide Scraping", "296697"); // Where is it included?
+        serviceInfoMap.put("Slide Dissection", "260643"); // Where is it included? Pathology
+        serviceInfoMap.put("Slide Scraping", "296697"); // Where is it included? Pathology
 
         serviceInfoMap.put("SMARTer Amplification", "261859"); // Request name: RNASeq-SMARTerAmp
 
@@ -240,9 +240,8 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
      * */
     public PluginResult run() throws Throwable {
         // Illumina Sequencing Workflow last step has FlowCellSamples attached to it, which are pools
-        // need to access initial samples and their parent the request to publish: project_id, number of samples, investigator email
-        // address, PI email address, Date of request, service_request_id?
         List<DataRecord> flowCellSamples = activeTask.getAttachedDataRecords("NormalizationPooledLibProtocol", user);
+        // On igo-lims04 I checked sample for normalization of pooled libraries datatype allowable parent
         Set<String> uniqueRequestsOnTheFlowCell = new HashSet<>();
         for(DataRecord eachSample : flowCellSamples) {
             DataRecord firstSampleOfEachRequest = eachSample.getParentsOfType("Sample", user).get(0);
@@ -281,7 +280,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             String assay = firstSample.getStringVal("Assay", user);
             String origin = firstSample.getStringVal("SampleOrigin", user);
 
-            // Sequencing Requirements
+            // Sequencing Requirements: on igo-lims04 I checked sample as allowable parent for sequencing requirement datatype
             DataRecord [] seqRequeirements = firstSample.getChildrenOfType("SeqRequirement", user);
             String maxNumOfReads = seqRequeirements[0].getStringVal("RequestedReads", user);
             String covrage = seqRequeirements[0].getStringVal("CoverageTarget", user);
@@ -289,18 +288,22 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
             // Request name in Request table is a drop down menu with certain options
             String serviceId;
-            Map<String, String> reportFieldValues;
+            Map<String, String> chargesFieldValues;
             Set<String> requestsSeviceIds = new HashSet<>();
 
 
-            if(serviceType.contains("DNA") && serviceType.contains("Extraction")) {
+            if(serviceType.equals("DNAExtraction")) {
+                // Preservation & Origin
+                // DNA QC?
                 serviceId = serviceInfoMap.get(serviceType);
                 // All the sample and request level condition checks occur here to figure out the appropriate set of
                 // service ids for each service
                 requestsSeviceIds.add(serviceId);
 
             }
-            if(serviceType.contains("RNA") && serviceType.contains("Extraction")) {
+            if(serviceType.equals("RNAExtraction")) {
+                // Preservation & Origin
+                // RNA QC?
 
             }
 //            if(serviceType.equals("RNAExtraction-COVIDScreen")) {
@@ -313,6 +316,8 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
             }
             if(serviceType.equals("DNA/RNASimultaneous")) {
+                serviceId = serviceInfoMap.get("DNA/RNA Dual Extraction");
+                requestsSeviceIds.add(serviceId);
 
             }
             if(serviceType.equals("PATH-DNAExtraction")) {
@@ -325,6 +330,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
             }
             if(serviceType.equals("BloodExtraction")) {
+                // "DNA Extraction - Blood"?
 
             }
             if(serviceType.equals("DNA-QC")) {
@@ -336,6 +342,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             if(serviceType.equals("Library-QC")) {
 
             }
+            // IMPACT: Spicies: Mouse? Tumor/Normal?
             if(serviceType.equals("IMPACT341")) {
 
             }
@@ -361,24 +368,54 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
             }
             if(serviceType.equals("HemePACT_v3")) {
+                // Tumor/Normal
 
             }
             if(serviceType.equals("HemePACT_v3+")) {
+                // Tumor/Normal
 
             }
             if(serviceType.equals("HemePACT_v4")) {
+                // Tumor/Normal
 
             }
             if(serviceType.equals("CustomCapture")) {
 
             }
             if(serviceType.equals("MSK-ACCESS_v1")) {
+                // Tumor/Normal
 
             }
             if(serviceType.equals("MissionBio")) {
 
             }
             if(serviceType.equals("RNASeq-TruSeqPolyA")) {
+                // "PolyA Library Prep", "490511"
+
+                if (Integer.parseInt(maxNumOfReads) < 20) {
+                    // "RNASeq - polyA - 10-20M", "490506"
+                }
+                else if (Integer.parseInt(maxNumOfReads) < 30) {
+                    // "RNASeq - polyA - 20-30M", "404330"
+                }
+                else if (Integer.parseInt(maxNumOfReads) < 40) {
+                    // "RNASeq - polyA - 30-40M", "404331"
+                }
+                else if (Integer.parseInt(maxNumOfReads) < 50) {
+                    // "RNASeq - polyA - 40-50M", "487566"
+                }
+                else if (Integer.parseInt(maxNumOfReads) < 60) {
+                    // "RNASeq - polyA - 50-60M", "404332"
+                }
+                else if (Integer.parseInt(maxNumOfReads) < 80) {
+                    //"RNASeq - polyA - 60-80M", "490144"
+                }
+                else if (Integer.parseInt(maxNumOfReads) < 100) {
+                    // "RNASeq - polyA - 80-100M", "404334"
+                }
+                else {
+                    // "RNASeq - polyA - 100M+", "490507"
+                }
 
             }
             if(serviceType.equals("RNASeq-KAPAmRNAStranded")) {
@@ -397,6 +434,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
             }
             if(serviceType.equals("Archer")) {
+                // How to pick from one of three above?
 
             }
             if(serviceType.equals("NanoString")) {
@@ -491,43 +529,53 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 // sequencing only
             }
             if(serviceType.equals("ddPCR")) {
+                // Assays picklist
 
             }
             if(serviceType.equals("DLP")) {
+                // "DLP Library - 800 cells", "490187" DLP Lib Prep
+                // "DLP Sequencing - 1 quadrant", "490188" DLP Sequencing
 
             }
             if(serviceType.equals("PED-PEG")) {
 
             }
-            if(serviceType.equals("IGO-Test")) {
+            if(serviceType.equals("IGO-Test")) { // Any charge?!
 
             }
             if(serviceType.equals("FragmentAnalysis")) {
 
             }
             if(serviceType.equals("CellLineAuthentication")) {
+                //
+                serviceId = serviceInfoMap.get("Cell Line Authentication");
+                requestsSeviceIds.add(serviceId);
 
             }
             if(serviceType.equals("SingleCellCNV")) {
 
             }
             if(serviceType.equals("CMO-CH")) {
+                // "CMO-CH", "492855"
+                // If analysis requested: "Data Analysis - CMO-CH", "495937"
 
             }
             if(serviceType.equals("TCRSeq-IGO")) {
+                // "TCRSeq-IGO", "498671"
+                // "TCRSeq-IGO", "498671"
 
             }
 
             for(String eachServiceId : requestsSeviceIds) {
-                reportFieldValues = new HashMap<>();
-                reportFieldValues.put("serviceId", eachServiceId);
-                reportFieldValues.put("note", requestId);
-                reportFieldValues.put("serviceQuantity", serviceQuantity);
-                reportFieldValues.put("purchasedOn", purchaseDate);
-                reportFieldValues.put("serviceRequestId", );
-                reportFieldValues.put("ownerEmail", ownerEmail);
-                reportFieldValues.put("pIEmail", piEmail);
-                chargeInfoRecords.add(reportFieldValues);
+                chargesFieldValues = new HashMap<>();
+                chargesFieldValues.put("serviceId", eachServiceId);
+                chargesFieldValues.put("note", requestId);
+                chargesFieldValues.put("serviceQuantity", serviceQuantity);
+                chargesFieldValues.put("purchasedOn", purchaseDate);
+                chargesFieldValues.put("serviceRequestId", );
+                chargesFieldValues.put("ownerEmail", ownerEmail);
+                chargesFieldValues.put("pIEmail", piEmail);
+                chargeInfoRecords.add(chargesFieldValues);
             }
         } catch (IoError | RemoteException | NotFound e) {
             logError("An exception occurred while  retrieving first sample's request info");
@@ -541,7 +589,6 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
      * */
     private void generateiLabChargeSheet() {
         // Make the sheet with 7 columns
-        //List<Map<String, String>> dataValues;
         List<String[]> dataLines = new LinkedList<>();
         String[] headersArray = new String[headerValues.size()];
         int i = 0;
