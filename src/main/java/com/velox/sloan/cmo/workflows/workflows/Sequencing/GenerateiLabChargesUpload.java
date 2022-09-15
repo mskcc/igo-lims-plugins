@@ -24,7 +24,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
     public List<Map<String, String>> dataValues = new LinkedList<>();
     // SampleReceving Request Type pick list ID
 
-    private static final Map<String, String> serviceInfoMap = new HashMap<>();
+    private static final Map<String, String> serviceInfoMap = new HashMap<>(); // or reading from the file on iLabs in case of any update
     static { // Make the map of Service Name -> Service ID
         //QC
         serviceInfoMap.put("QC - Agilent", "256044"); // DNA? RNA? Library?
@@ -160,7 +160,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         serviceInfoMap.put("Sequencing - 10M Reads - 10X Standard", "490149");
         serviceInfoMap.put("Sequencing - 10M Reads - PE100", "490147");
         serviceInfoMap.put("Sequencing - 10M Reads - PE150", "490148");
-        serviceInfoMap.put("Sequencing - 11000M Reads - 200c", "490173");
+        serviceInfoMap.put("Sequencing - 11000M Reads - 200c", "490173"); // What is 200c?
         serviceInfoMap.put("Sequencing - 11000M Reads - 300c", "490174");
         serviceInfoMap.put("Sequencing - 1800M Reads - 100c", "490165");
         serviceInfoMap.put("Sequencing - 1800M Reads - 200c", "490166");
@@ -231,7 +231,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
     @Override
     public boolean shouldRun() throws RemoteException {
         return activeTask.getTask().getTaskOptions().containsKey("GENERATE ILAB CHARGES SHEET") &&
-                !this.activeTask.getTask().getTaskOptions().containsKey("GENERATE ILAB CHARGES SHEET GENERATED");
+                !this.activeTask.getTask().getTaskOptions().containsKey("ILAB CHARGES SHEET GENERATED");
     }
 
     /**
@@ -252,6 +252,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             }
             dataValues.clear();
         }
+        this.activeTask.getTask().getTaskOptions().put("ILAB CHARGES SHEET GENERATED", "");
         return new PluginResult(true);
     }
 
