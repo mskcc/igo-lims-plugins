@@ -27,12 +27,12 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
     private static final Map<String, String> serviceInfoMap = new HashMap<>(); // or reading from the file on iLabs in case of any update
     static { // Make the map of Service Name -> Service ID
         //QC
-        serviceInfoMap.put("QC - Agilent", "256044"); // DNA? RNA? Library?
-        serviceInfoMap.put("QC - Quant-it", "259492"); // DNA? RNA? Library?
+        serviceInfoMap.put("QC - Agilent", "256044"); // DLP
+        serviceInfoMap.put("QC - Quant-it", "259492"); // DDPCR
         serviceInfoMap.put("QC - Quantity + Quality", "256029"); // DNA? RNA? Library?
         // DDPCR Non-Sequencing
         serviceInfoMap.put("ddPCR (1 reaction)", "256041"); // Request name: DDPCR
-        serviceInfoMap.put("ddPCR Assay Design", "288524"); // Where do this property
+        serviceInfoMap.put("ddPCR Assay Design", "288524"); // assay ignore
         serviceInfoMap.put("ddPCR Assay Order - CNV", "290735"); // Pick list ID: ddPCR Assay Type
         serviceInfoMap.put("ddPCR Assay Order - Mutation/GEX", "288525"); // Pick list ID: ddPCR Assay Type
         serviceInfoMap.put("ddPCR Human % Assay", "490143"); // Pick list ID: ddPCR Species
@@ -119,7 +119,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         serviceInfoMap.put("KAPA WGS Library Prep - PCR+", "490516"); // Available request name: WholeExome-KAPALib and RNASeq-KAPAmRNAStranded
         serviceInfoMap.put("KAPA WGS Library Prep - PCR-free", "490515"); // Available request name: WholeExome-KAPALib and RNASeq-KAPAmRNAStranded
 
-        serviceInfoMap.put("Micronic Tube", "308755"); // Where is it included?
+        serviceInfoMap.put("Micronic Tube", "308755"); // Where is it included? could be ignored
 
         serviceInfoMap.put("PlateSeq Library Prep", "490185");
         serviceInfoMap.put("PlateSeq Sequencing - 1 column", "490186");
@@ -129,7 +129,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         serviceInfoMap.put("RiboDepletion Library Prep", "490512"); // Lib prep
         //serviceInfoMap.put("RNA Extraction + COVID19 Testing", "490141"); // Request name: RNAExtraction-COVIDScreen
 
-        serviceInfoMap.put("RNA Extraction - FFPE", "256100"); // Where does FFPE come from? Sample origin?
+        serviceInfoMap.put("RNA Extraction - FFPE", "256100"); // Where does FFPE come from? Sample preservation?
         serviceInfoMap.put("RNA Extraction - Fresh/Frozen", "256097"); // Fresh/ Frozen -> sample properties: Sample preservation?
         serviceInfoMap.put("RNA Extraction - Viably Frozen", "490137"); // Viably Frozen -> sample property: Sample preservation?
 
@@ -187,16 +187,16 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
         serviceInfoMap.put("Shallow WGS", "341254"); // Human Whole Genome/ Mouse Whole Genome/ Whole Genome?
 
-        serviceInfoMap.put("Slide Dissection", "260643"); // Where is it included? Pathology
-        serviceInfoMap.put("Slide Scraping", "296697"); // Where is it included? Pathology
+        serviceInfoMap.put("Slide Dissection", "260643"); // Where is it included? Pathology, PATH-DNA/RNA/simultaious Extraction
+        serviceInfoMap.put("Slide Scraping", "296697"); // Where is it included? Pathology, PATH-DNA/RNA/simultaious Extraction
 
         serviceInfoMap.put("SMARTer Amplification", "261859"); // Request name: RNASeq-SMARTerAmp
 
-        serviceInfoMap.put("Special Processing -- Extraction", "487571"); // ?
+        serviceInfoMap.put("Special Processing -- Extraction", "487571"); // exceptional, ignore
 
         serviceInfoMap.put("TCRSeq-IGO", "498671");
 
-        serviceInfoMap.put("UMI Library Prep", "351940"); // ?
+        serviceInfoMap.put("UMI Library Prep", "351940"); // ACCESS, CMO-CH
 
         serviceInfoMap.put("WES - 100X", "289981"); // WholeExomeKapaLib + coverage
         serviceInfoMap.put("WES - 150X", "289982");
@@ -205,7 +205,8 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         serviceInfoMap.put("WES - 30X", "289979");
         serviceInfoMap.put("WES - 70X", "289980");
 
-        serviceInfoMap.put("WGS - PCR+ - 100X", "490204"); // PCR information?
+        serviceInfoMap.put("WGS - PCR+ - 100X", "490204"); // PCR information? [WholeGenomeLibProtocol3]: PCR cycles
+
         serviceInfoMap.put("WGS - PCR+ - 10X", "495934");
         serviceInfoMap.put("WGS - PCR+ - 150X", "490205");
         serviceInfoMap.put("WGS - PCR+ - 30X", "490199");
