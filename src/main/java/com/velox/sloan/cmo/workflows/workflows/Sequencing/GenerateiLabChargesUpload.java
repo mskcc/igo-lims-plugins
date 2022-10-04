@@ -593,12 +593,6 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 serviceId = serviceInfoMap.get("CRISPR-Seq");
                 requestsSeviceIds.add(serviceId);
             }
-//            if(serviceType.equals("shRNAScreen")) {
-//                // user prepared library
-//            }
-//            if(serviceType.equals("RiboProfileSeq")) {
-//
-//            }
             if(serviceType.equals("ATACSeq")) { // seq req <= 50M reads no addional seq charge
                 if (Integer.parseInt(maxNumOfReads) <= 50) {
                     serviceId = serviceInfoMap.get("ATAC-Seq");
@@ -682,7 +676,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 chargesFieldValues.put("note", requestId);
                 chargesFieldValues.put("serviceQuantity", serviceQuantity);
                 chargesFieldValues.put("purchasedOn", purchaseDate);
-                chargesFieldValues.put("serviceRequestId", ); // from iLab!
+                chargesFieldValues.put("serviceRequestId", requestId); // from iLab!
                 chargesFieldValues.put("ownerEmail", ownerEmail);
                 chargesFieldValues.put("pIEmail", piEmail);
                 chargeInfoRecords.add(chargesFieldValues);
