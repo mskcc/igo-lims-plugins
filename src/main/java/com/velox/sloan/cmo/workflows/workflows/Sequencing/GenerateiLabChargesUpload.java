@@ -62,8 +62,8 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         serviceInfoMap.put("10X Multiome Sequencing - 1K nuclei", "490183");
 
         serviceInfoMap.put("10X VDJ Library", "490178"); // Lib Prep?
-        serviceInfoMap.put("10X VDJ/FB Sequencing - 10K cells", "490180"); // Sequencing, VDJ/FB?
-        serviceInfoMap.put("10X VDJ/FB Sequencing - 1K cells", "490179"); // Sequencing, VDJ/FB?
+        serviceInfoMap.put("10X VDJ/FB Sequencing - 10K cells", "490180");
+        serviceInfoMap.put("10X VDJ/FB Sequencing - 1K cells", "490179");
 
         serviceInfoMap.put("10X Visium Library", "490190"); // Lib Prep?
         serviceInfoMap.put("10X Visium Optimization", "490189"); // What property is "Optimization"?
@@ -73,14 +73,11 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
         serviceInfoMap.put("ACCESS - Normal", "406820"); //Tumor or normal in sample
         serviceInfoMap.put("ACCESS - Tumor", "406821");
-//        serviceInfoMap.put("Adaptive immunoSEQ - Deep", "490139"); // Where to find Deep/ Survey/ Ultradeep?
-//        serviceInfoMap.put("Adaptive immunoSEQ - Survey", "490138");
-//        serviceInfoMap.put("Adaptive immunoSEQ - Ultradeep", "490504");
         serviceInfoMap.put("AmpliconSeq", "490510"); // Request name: AmpliconSeq
 
-        serviceInfoMap.put("Archer Fusion - Heme Panel", "334267"); // Request name: Archer
-        serviceInfoMap.put("Archer Fusion - Solid Tumor (MSK) Panel", "334266"); // Request name: Archer
-        serviceInfoMap.put("Archer Immunoverse", "490140"); // Request name: Archer
+        serviceInfoMap.put("Archer Fusion - Heme Panel", "334267");
+        serviceInfoMap.put("Archer Fusion - Solid Tumor (MSK) Panel", "334266");
+        serviceInfoMap.put("Archer Immunoverse", "490140");
 
         serviceInfoMap.put("ATAC Library Prep", "490513"); // IGO Internal
         serviceInfoMap.put("ATAC-Seq", "483257"); // Request name: ATACSeq
@@ -183,7 +180,6 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         serviceInfoMap.put("Sequencing - MiSeq Micro 300c", "490152");
         serviceInfoMap.put("Sequencing - MiSeq Nano 300c", "490150");
         serviceInfoMap.put("Sequencing - MiSeq Nano 500c", "490151");
-
         // End of Sequencing Only
 
         serviceInfoMap.put("Shallow WGS", "341254"); // Human Whole Genome/ Mouse Whole Genome/ Whole Genome?
@@ -249,9 +245,10 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         List<DataRecord> flowCellSamples = activeTask.getAttachedDataRecords("NormalizationPooledLibProtocol", user);
         // On igo-lims04 I checked sample for normalization of pooled libraries datatype allowable parent
         Set<String> uniqueRequestsOnTheFlowCell = new HashSet<>();
-        for(DataRecord eachSample : flowCellSamples) {
-            DataRecord firstSampleOfEachRequest = eachSample.getParentsOfType("Sample", user).get(0);
-            String requestId = firstSampleOfEachRequest.getParentsOfType("Request", user).get(0).getStringVal("RequestId", user);
+        for(DataRecord eachPool : flowCellSamples) {
+            DataRecord firstSampleOfEachRequest = eachPool.getParentsOfType("Sample", user).get(0);
+            String requestId = firstSampleOfEachRequest.getAncestorsOfType("Request", user).get(0)
+                    .getStringVal("RequestId", user);
             if (uniqueRequestsOnTheFlowCell.add(requestId)) {
                 dataValues = outputChargesInfo(firstSampleOfEachRequest);
                 generateiLabChargeSheet();
@@ -271,15 +268,15 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
         List<Map<String, String>> chargeInfoRecords = new LinkedList<>();
         try {
-            String serviceType = firstSample.getParentsOfType("Request", user).get(0)
-                    .getStringVal("RequestName", user);
             // Request level information
-            DataRecord requestRecord = firstSample.getParentsOfType("Request", user).get(0);
+            DataRecord requestRecord = firstSample.getAncestorsOfType("Request", user).get(0);
+            String serviceType = requestRecord.getStringVal("RequestName", user);
+
             String ownerEmail = requestRecord.getStringVal("ProjectOwner", user);
             String piEmail = requestRecord.getStringVal("PIemail", user);
             String requestId = requestRecord.getStringVal("RequestId", user);
-            String purchaseDate = requestRecord.getStringVal("RequestDate", user);
-            String serviceQuantity = requestRecord.getStringVal("SampleNumber", user);
+            String purchaseDate = requestRecord.getDataField("RequestDate", user).toString();
+            String serviceQuantity = requestRecord.getDataField("SampleNumber", user).toString();
             // Sample level information
             String species = firstSample.getStringVal("Species", user);
             String preservation = firstSample.getStringVal("Preservation", user);
@@ -287,12 +284,14 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             String assay = firstSample.getStringVal("Assay", user);
             String origin = firstSample.getStringVal("SampleOrigin", user);
             String sampleType = firstSample.getStringVal("SampleType", user);
+            String recipe = firstSample.getStringVal("Recipe", user);
 
             // Sequencing Requirements: on igo-lims04 I checked sample as allowable parent for sequencing requirement datatype
-            DataRecord [] seqRequeirements = firstSample.getChildrenOfType("SeqRequirement", user);
-            String maxNumOfReads = seqRequeirements[0].getStringVal("RequestedReads", user);
-            String covrage = seqRequeirements[0].getStringVal("CoverageTarget", user);
-            String SequencingRunType = seqRequeirements[0].getStringVal("SequencingRunType", user);
+            DataRecord [] seqRequeirements = firstSample.getChildrenOfType("SeqRequirementPooled", user);
+            String numOfReads = seqRequeirements[0].getDataField("RequestedReads", user).toString();
+            String maxNumOfReads = numOfReads.substring(0, numOfReads.length() - 2);
+            //String covrage = seqRequeirements[0].getDataField("CoverageTarget", user).toString();
+            String SequencingRunType = seqRequeirements[0].getDataField("SequencingRunType", user).toString();
 
             //DDPCR: DdPcrProtocol2 is a potential child of sample: to be marked in LIMS
             DataRecord[] ddpcrProtocol2s = firstSample.getChildrenOfType("DdPcrProtocol2", user);
@@ -305,91 +304,78 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             // Pathology info
             // PathologyProtocol1 is a potential child of sample: to be marked in LIMS
             DataRecord[] pathRecords = firstSample.getChildrenOfType("PathologyProtocol1", user);
-            Boolean pathScrapping = pathRecords[0].getBooleanVal("ScrapingCurlsRequired", user);
-            Boolean pathMicrodissection = pathRecords[0].getBooleanVal("MicrodissectionRequired", user);
+            Boolean pathScrapping = false;
+            Boolean pathMicrodissection = false;
+            if (pathRecords.length > 0) {
+                pathScrapping = pathRecords[0].getBooleanVal("ScrapingCurlsRequired", user);
+                pathMicrodissection = pathRecords[0].getBooleanVal("MicrodissectionRequired", user);
+            }
+
 
             // Request name in Request table is a drop down menu with certain options
             String serviceId;
             Map<String, String> chargesFieldValues;
             Set<String> requestsSeviceIds = new HashSet<>();
 
-            serviceId = serviceInfoMap.get("QC - Quantity + Quality");
-            requestsSeviceIds.add(serviceId);
+            requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
 
             if(serviceType.equals("DNAExtraction")) {
                 if (sampleType.toLowerCase().contains("cfdna")) {
-                    serviceId = serviceInfoMap.get("cfDNA Extraction - Plasma");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("cfDNA Extraction - Plasma"));
                 } else if (preservation.toLowerCase().contains("ffpe")) {
-                    serviceId = serviceInfoMap.get("DNA Extraction - FFPE");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("DNA Extraction - FFPE"));
                 }
                 else {
-                    serviceId = serviceInfoMap.get("DNA Extraction - Viably Frozen");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("DNA Extraction - Viably Frozen"));
                 }
             }
             if(serviceType.equals("RNAExtraction")) {
-                serviceId = serviceInfoMap.get("RNA Extraction - FFPE");
-                requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("RNA Extraction - FFPE"));
             }
 
             if(serviceType.equals("DNA/RNASimultaneous")) {
-                serviceId = serviceInfoMap.get("DNA/RNA Dual Extraction");
-                requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("DNA/RNA Dual Extraction"));
 
             }
             if(serviceType.equals("PATH-DNAExtraction")) {
                 if (sampleType.toLowerCase().contains("cfdna")) {
-                    serviceId = serviceInfoMap.get("cfDNA Extraction - Plasma");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("cfDNA Extraction - Plasma"));
                 } else if (preservation.toLowerCase().contains("ffpe")) {
-                    serviceId = serviceInfoMap.get("DNA Extraction - FFPE");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("DNA Extraction - FFPE"));
                 }
                 else {
-                    serviceId = serviceInfoMap.get("DNA Extraction - Viably Frozen");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("DNA Extraction - Viably Frozen"));
                 }
 
                 if (pathScrapping) {
-                    serviceId = serviceInfoMap.get("Slide Scraping");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("Slide Scraping"));
                 }
                 else if (pathMicrodissection) {
-                    serviceId = serviceInfoMap.get("Slide Dissection");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("Slide Dissection"));
                 }
 
             }
             if(serviceType.equals("PATH-RNAExtraction")) {
-                serviceId = serviceInfoMap.get("RNA Extraction - FFPE");
-                requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("RNA Extraction - FFPE"));
                 if (pathScrapping) {
-                    serviceId = serviceInfoMap.get("Slide Scraping");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("Slide Scraping"));
                 }
                 else if (pathMicrodissection) {
-                    serviceId = serviceInfoMap.get("Slide Dissection");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("Slide Dissection"));
                 }
             }
             if(serviceType.equals("PATH-DNA/RNASimultaneous")) {
-                serviceId = serviceInfoMap.get("DNA/RNA Dual Extraction");
-                requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("DNA/RNA Dual Extraction"));
                 if (pathScrapping) {
-                    serviceId = serviceInfoMap.get("Slide Scraping");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("Slide Scraping"));
                 }
                 else if (pathMicrodissection) {
-                    serviceId = serviceInfoMap.get("Slide Dissection");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("Slide Dissection"));
                 }
             }
             if(serviceType.equals("IMPACT505")) {
                 if (tumorOrNormal.toLowerCase().contains("normal")) {
-                    serviceId = serviceInfoMap.get("IMPACT - Normal");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("IMPACT - Normal"));
                 }
                 else {
                     serviceId = serviceInfoMap.get("IMPACT - Tumor");
@@ -397,39 +383,26 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 }
             }
             if(serviceType.equals("M-IMPACT")) {
-                serviceId = serviceInfoMap.get("IMPACT - Mouse");
-                requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("IMPACT - Mouse"));
             }
             if(serviceType.equals("HemePACT_v4")) {
                 if (tumorOrNormal.toLowerCase().contains("tumor")) {
-                    serviceId = serviceInfoMap.get("HemePACT - Tumor");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("HemePACT - Tumor"));
                 }
                 else {
-                    serviceId = serviceInfoMap.get("HemePACT - Normal");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("HemePACT - Normal"));
                 }
             }
-//            if(serviceType.equals("CustomCapture")) { Complex
-//
-//            }
             if(serviceType.equals("MSK-ACCESS_v1")) {
                 if (tumorOrNormal.toLowerCase().contains("tumor")) {
-                    serviceId = serviceInfoMap.get("ACCESS - Tumor");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("ACCESS - Tumor"));
                 }
                 else {
-                    serviceId = serviceInfoMap.get("ACCESS - Normal");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("ACCESS - Normal"));
                 }
             }
-//            if(serviceType.equals("MissionBio")) { //Easy to bill manually
-//                // depends on panel
-//
-//            }
             if(serviceType.equals("RNASeq-TruSeqPolyA")) { // seq req might be under source sample id
-                serviceId = serviceInfoMap.get("PolyA Library Prep");
-                requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("PolyA Library Prep"));
 
                 if (Integer.parseInt(maxNumOfReads) < 20) {
                     serviceId = serviceInfoMap.get("RNASeq - polyA - 10-20M");
@@ -458,8 +431,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 requestsSeviceIds.add(serviceId);
             }
             if(serviceType.equals("RNASeq-TruSeqRiboDeplete")) {
-                serviceId = serviceInfoMap.get("RiboDepletion Library Prep");
-                requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("RiboDepletion Library Prep"));
 
                 if (Integer.parseInt(maxNumOfReads) < 20) {
                     serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 10-20M");
@@ -488,16 +460,22 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 requestsSeviceIds.add(serviceId);
             }
             if(serviceType.equals("RNASeq-SMARTerAmp")) {
-                serviceId = serviceInfoMap.get("SMARTer Amplification");
-                requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("SMARTer Amplification"));
 
             }
-            if(serviceType.equals("Rapid-RCC")) { // Single price, ask Neeman
-
-            }
+//            if(serviceType.equals("Rapid-RCC")) { // Single price, ask Neeman
+//
+//            }
             if(serviceType.equals("Archer")) {
-
-
+                if (recipe.toLowerCase().contains("Archer-HemePanel")) {
+                    requestsSeviceIds.add(serviceInfoMap.get("Archer Fusion - Heme Panel"));
+                }
+                else if (recipe.toLowerCase().contains("Archer-SolidTumorPanel")) {
+                    requestsSeviceIds.add(serviceInfoMap.get("Archer Fusion - Solid Tumor (MSK) Panel"));
+                }
+                else if (recipe.toLowerCase().contains("Archer-Immunoverse")) {
+                    requestsSeviceIds.add(serviceInfoMap.get("Archer Immunoverse"));
+                }
             }
             if(serviceType.equals("10XGenomics_GeneExpression")) { // Cassidy will provide
 
@@ -506,21 +484,18 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
             }
             if(serviceType.equals("10XGenomics_FeatureBarcoding")) {
-                //490181
-
+                requestsSeviceIds.add(serviceInfoMap.get("10X FB Library"));
+                if (Integer.parseInt(maxNumOfReads) >= 50) {
+                    serviceId = serviceInfoMap.get("10X VDJ/FB Sequencing - 10K cells");
+                }
+                else {
+                    serviceId = serviceInfoMap.get("10X VDJ/FB Sequencing - 1K cells");
+                }
+                requestsSeviceIds.add(serviceId);
             }
             if(serviceType.equals("10XGenomics_Multiome")) { // use seq req
 
             }
-            if(serviceType.equals("10XGenomics_Visium")) { // use seq req
-                serviceId = serviceInfoMap.get("10X Visium Library");
-                requestsSeviceIds.add(serviceId);
-                serviceInfoMap.get("10X Visium Optimization");
-                requestsSeviceIds.add(serviceId);
-            }
-//            if(serviceType.equals("WholeExome + IMPACT")) { // not often
-//
-//            }
             if(serviceType.equals("WholeExome-KAPALib")) { // preservation: FFPE or non FFPE + seqreq: coverage
                 if (preservation.toLowerCase().contains("ffpe")) {
 
@@ -576,51 +551,67 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 requestsSeviceIds.add(serviceId);
             }
             if(serviceType.equals("sWGS")) { // QC + one price
-                serviceId = serviceInfoMap.get("Shallow WGS");
-                requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("Shallow WGS"));
             }
             if(serviceType.equals("ChIPSeq")) { // similar to wholegenome
-                serviceId = serviceInfoMap.get("ChIP-Seq/CUT&RUN");
-                requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("ChIP-Seq/CUT&RUN"));
                 int remainigReadsRequestedToCharge = Integer.parseInt(maxNumOfReads) - 10;
 
             }
             if(serviceType.equals("MethylSeq")) {
-                serviceId = serviceInfoMap.get("EPIC Methyl Capture");
-                requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("EPIC Methyl Capture"));
             }
             if(serviceType.equals("CRISPRSeq")) {
-                serviceId = serviceInfoMap.get("CRISPR-Seq");
-                requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("CRISPR-Seq"));
             }
             if(serviceType.equals("ATACSeq")) { // seq req <= 50M reads no addional seq charge
-                if (Integer.parseInt(maxNumOfReads) <= 50) {
-                    serviceId = serviceInfoMap.get("ATAC-Seq");
-                    requestsSeviceIds.add(serviceId);
-                }
-                else {
+                requestsSeviceIds.add(serviceInfoMap.get("ATAC-Seq"));
+                if (Integer.parseInt(maxNumOfReads) > 50) {
                     int remainigReadsRequestedToCharge = Integer.parseInt(maxNumOfReads) - 50;
-                }
+                    int seqReadsService = remainigReadsRequestedToCharge / 10;
+                    requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE100"));
 
+                    if (seqReadsService < 20) {
+                        serviceId = serviceInfoMap.get("");
+                    }
+                    else if (seqReadsService < 30) {
+                        serviceId = serviceInfoMap.get("");
+                    }
+                    else if (seqReadsService < 40) {
+                        serviceId = serviceInfoMap.get("");
+                    }
+                    else if (seqReadsService < 50) {
+                        serviceId = serviceInfoMap.get("");
+                    }
+                    else if (seqReadsService < 60) {
+                        serviceId = serviceInfoMap.get("");
+                    }
+                    else if (seqReadsService < 80) {
+                        serviceId = serviceInfoMap.get("");
+                    }
+                    else if (seqReadsService < 100) {
+                        serviceId = serviceInfoMap.get("");
+                    }
+                    else {
+                        serviceId = serviceInfoMap.get("");
+                    }
+                    requestsSeviceIds.add(serviceId);
+
+                }
             }
             if(serviceType.equals("AmpliconSeq")) { // seq req: requested read length, only if PE100, else do it manually
+                requestsSeviceIds.add(serviceInfoMap.get("AmpliconSeq"));
                 if (SequencingRunType.equals("PE100")) {
-                    serviceId = serviceInfoMap.get("AmpliconSeq");
-                    requestsSeviceIds.add(serviceId);
+                    requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE100"));
+
+                } else if (SequencingRunType.equals("PE150")) {
+                    requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE150"));
                 }
             }
-            // Dropped for now
-    //            if(serviceType.equals("Investigator Prepared Libraries")) {
-    //                // sequencing only
-    //            }
-    //            if(serviceType.equals("Investigator Prepared Pools")) { // number of micronic tubes = # pools
-    //                // sequencing only
-    //            }
             if(serviceType.equals("ddPCR")) {
                 // Assays picklist
                 //QC- Quant-it
-                serviceId = serviceInfoMap.get("QC - Quant-it");
-                requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("QC - Quant-it"));
                 //ddPCR (1 reaction)
                 serviceId = serviceInfoMap.get("ddPCR (1 reaction)");
                 for (int i  = 0; i < numOfReplicates; i++) {
@@ -638,36 +629,28 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
             }
             if(serviceType.equals("DLP")) {
-                serviceId = serviceInfoMap.get("DLP Library - 800 cells");
-                requestsSeviceIds.add(serviceId);
-                serviceId = serviceInfoMap.get("DLP Sequencing - 1 quadrant");
-                requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("DLP Library - 800 cells"));
+                requestsSeviceIds.add(serviceInfoMap.get("DLP Sequencing - 1 quadrant"));
             }
-            if(serviceType.equals("PED-PEG")) { // Single price, ask Neeman
-
-            }
+//            if(serviceType.equals("PED-PEG")) { // Single price, ask Neeman
+//
+//            }
             if(serviceType.equals("FragmentAnalysis")) {
                 //Custom Fragment Analysis
-                serviceId = serviceInfoMap.get("Custom Fragment Analysis");
-                requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("Custom Fragment Analysis"));
 
             }
             if(serviceType.equals("CellLineAuthentication")) {
-                serviceId = serviceInfoMap.get("Cell Line Authentication");
-                requestsSeviceIds.add(serviceId);
-                serviceId = serviceInfoMap.get("QC - Quant-it");
-                requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("Cell Line Authentication"));
+                requestsSeviceIds.add(serviceInfoMap.get("QC - Quant-it"));
 
             }
             if(serviceType.equals("CMO-CH")) {
-                serviceId = serviceInfoMap.get("CMO-CH");
-                requestsSeviceIds.add(serviceId);
-                // "Data Analysis - CMO-CH", "495937"
-
+                requestsSeviceIds.add(serviceInfoMap.get("CMO-CH"));
+                requestsSeviceIds.add(serviceInfoMap.get("Data Analysis - CMO-CH"));
             }
             if(serviceType.equals("TCRSeq-IGO")) {
-               serviceId = serviceInfoMap.get("TCRSeq-IGO");
-               requestsSeviceIds.add(serviceId);
+                requestsSeviceIds.add(serviceInfoMap.get("TCRSeq-IGO"));
             }
 
             for(String eachServiceId : requestsSeviceIds) {
@@ -728,8 +711,10 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             }
             bytes = allData.toString().getBytes();
             ExemplarConfig exemplarConfig = new ExemplarConfig(managerContext);
-            String iLabChargeUpload = exemplarConfig.getExemplarConfigValues().get("").toString();
+            String iLabChargeUpload = exemplarConfig.getExemplarConfigValues().get("iLabBulkUploadChargesPath").toString();
             //"/pskis34/vialelab/LIMS/iLabBulkUploadCharges"
+
+            // Check for permission to write into shared drive
 
             try (OutputStream fos = new FileOutputStream(outFile, false)){
                 fos.write(bytes);
