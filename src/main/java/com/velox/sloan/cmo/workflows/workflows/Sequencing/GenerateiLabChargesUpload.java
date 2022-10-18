@@ -272,8 +272,9 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             DataRecord requestRecord = firstSample.getAncestorsOfType("Request", user).get(0);
             String serviceType = requestRecord.getStringVal("RequestName", user);
 
-            String ownerEmail = requestRecord.getStringVal("ProjectOwner", user);
-            String piEmail = requestRecord.getStringVal("PIemail", user);
+            String requestName = requestRecord.getStringVal("RequestName", user);
+            String ownerEmail = requestRecord.getStringVal("Investigatoremail", user); //LabHeadEmail
+            String piEmail = requestRecord.getStringVal("LabHeadEmail", user); //PIemail
             String requestId = requestRecord.getStringVal("RequestId", user);
             String purchaseDate = requestRecord.getDataField("RequestDate", user).toString();
             String serviceQuantity = requestRecord.getDataField("SampleNumber", user).toString();
@@ -656,7 +657,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             for(String eachServiceId : requestsSeviceIds) {
                 chargesFieldValues = new HashMap<>();
                 chargesFieldValues.put("serviceId", eachServiceId);
-                chargesFieldValues.put("note", requestId);
+                chargesFieldValues.put("note", requestName);
                 chargesFieldValues.put("serviceQuantity", serviceQuantity);
                 chargesFieldValues.put("purchasedOn", purchaseDate);
                 chargesFieldValues.put("serviceRequestId", requestId); // from iLab!
@@ -684,12 +685,15 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         }
         dataLines.add(headersArray);
         i = 0;
+        String request = "";
         String[] dataInfoArray = new String[headerValues.size()];
         for(Map<String, String> row : dataValues) {
+            dataInfoArray[i++] = row.get("serviceId");
             dataInfoArray[i++] = row.get("note");
             dataInfoArray[i++] = row.get("serviceQuantity");
             dataInfoArray[i++] = row.get("purchasedOn");
             dataInfoArray[i++] = row.get("serviceRequestId");
+            request = row.get("serviceRequestId");
             dataInfoArray[i++] = row.get("ownerEmail");
             dataInfoArray[i++] = row.get("pIEmail");
             dataLines.add(dataInfoArray);
@@ -697,14 +701,15 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             i = 0;
         }
 
-
+        logInfo("Inside generateiLabChargeSheet method");
         ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
         try {
-            File outFile = null;
+            File outFile;
             StringBuffer allData = new StringBuffer();
             byte[] bytes;
             for (String[] eachLine: dataLines) {
                 for (String eachCell : eachLine) {
+                    logInfo("each cell is: " + eachCell);
                     allData.append(eachCell + ",");
                 }
                 allData.append("\n");
@@ -713,12 +718,13 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             ExemplarConfig exemplarConfig = new ExemplarConfig(managerContext);
             String iLabChargeUpload = exemplarConfig.getExemplarConfigValues().get("iLabBulkUploadChargesPath").toString();
             //"/pskis34/vialelab/LIMS/iLabBulkUploadCharges"
-
+            outFile = new File(iLabChargeUpload + "/" + request + "_ilabcharge.csv");
+            clientCallback.writeBytes(bytes, outFile.getName());
             // Check for permission to write into shared drive
 
             try (OutputStream fos = new FileOutputStream(outFile, false)){
                 fos.write(bytes);
-                outFile.setReadOnly();
+                //outFile.setReadOnly();
                 byteStream.close();
             } catch (Exception e) {
                 logInfo("Error in writing to shared drive: " + e.getMessage());
