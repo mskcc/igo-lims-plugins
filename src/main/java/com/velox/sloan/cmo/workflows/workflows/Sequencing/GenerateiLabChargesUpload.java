@@ -1,5 +1,6 @@
 package com.velox.sloan.cmo.workflows.workflows.Sequencing;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
@@ -9,7 +10,6 @@ import com.velox.sapio.commons.exemplar.plugin.PluginOrder;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.utilities.ExemplarConfig;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.mockito.internal.matchers.Null;
 
 import java.io.*;
 import java.rmi.RemoteException;
@@ -238,17 +238,25 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
     public PluginResult run() throws Throwable {
         // Illumina Sequencing Workflow last step has FlowCellSamples attached to it, which are pools
         List<DataRecord> flowCellSamples = activeTask.getAttachedDataRecords("NormalizationPooledLibProtocol", user);
+        logInfo("After checking for the step attachments!!");
         // On igo-lims04 I checked sample for normalization of pooled libraries datatype allowable parent
         Set<String> uniqueRequestsOnTheFlowCell = new HashSet<>();
-        for(DataRecord eachPool : flowCellSamples) {
-            DataRecord firstSampleOfEachRequest = eachPool.getParentsOfType("Sample", user).get(0);
-            String requestId = firstSampleOfEachRequest.getAncestorsOfType("Request", user).get(0)
-                    .getStringVal("RequestId", user);
-            if (uniqueRequestsOnTheFlowCell.add(requestId)) {
-                dataValues = outputChargesInfo(firstSampleOfEachRequest);
-                generateiLabChargeSheet();
+        if (flowCellSamples != null && flowCellSamples.size() > 0) {
+            for (DataRecord eachPool : flowCellSamples) {
+                List<DataRecord> samplesOfEachPool = eachPool.getAncestorsOfType("Sample", user);
+                for (DataRecord sampleOfAPool : samplesOfEachPool) {
+                    List<DataRecord> requests = sampleOfAPool.getParentsOfType("Request", user);
+                    for (DataRecord request : requests) {
+                        DataRecord firstSampleOfEachRequest = request.getChildrenOfType("Sample", user)[0];
+                        String requestId = request.getStringVal("RequestId", user);
+                        if (uniqueRequestsOnTheFlowCell.add(requestId)) {
+                            dataValues = outputChargesInfo(firstSampleOfEachRequest);
+                            generateiLabChargeSheet();
+                        }
+                        dataValues.clear();
+                    }
+                }
             }
-            dataValues.clear();
         }
         this.activeTask.getTask().getTaskOptions().put("ILAB CHARGES SHEET GENERATED", "");
         return new PluginResult(true);
@@ -268,9 +276,9 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             String serviceType = requestRecord.getStringVal("RequestName", user);
 
             String requestName = requestRecord.getStringVal("RequestName", user);
-            String ownerEmail = requestRecord.getStringVal("Investigatoremail", user); //LabHeadEmail
-            String piEmail = requestRecord.getStringVal("LabHeadEmail", user); //PIemail
-            String requestId = requestRecord.getStringVal("RequestId", user);
+            String ownerEmail = requestRecord.getStringVal("Investigatoremail", user);
+            String piEmail = requestRecord.getStringVal("LabHeadEmail", user);
+            String requestId = requestRecord.getStringVal("iLabServiceRequestId", user);
             Long purchaseDate = requestRecord.getDateVal("RequestDate", user);
             String serviceQuantity = requestRecord.getDataField("SampleNumber", user).toString();
             // Sample level information
@@ -283,18 +291,22 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             String recipe = firstSample.getStringVal("Recipe", user);
 
             // Sequencing Requirements: on igo-lims04 I checked sample as allowable parent for sequencing requirement datatype
-            DataRecord [] seqRequeirements = firstSample.getChildrenOfType("SeqRequirementPooled", user);
-            String numOfReads = seqRequeirements[0].getDataField("RequestedReads", user).toString();
-            String maxNumOfReads = numOfReads.substring(0, numOfReads.length() - 2);
-            //logInfo("seqRequeirements length is: " + seqRequeirements.length);
+            DataRecord [] seqRequeirements = firstSample.getChildrenOfType("SeqRequirement", user);
+            String numOfReads = "";
+            String maxNumOfReads = "";
+            String SequencingRunType = "";
             int coverage = 0;
-            if (seqRequeirements[0].getStringVal("CoverageTarget", user) != null) {
-                logInfo("seqRequeirements[0] CoverageTarget is: " + seqRequeirements[0].getStringVal("CoverageTarget", user));
-                coverage = seqRequeirements[0].getIntegerVal("CoverageTarget", user);
+            if (seqRequeirements.length > 0) {
+                numOfReads = seqRequeirements[0].getDataField("RequestedReads", user).toString();
+                maxNumOfReads = numOfReads.substring(0, numOfReads.length() - 2);
+                logInfo("seqRequeirements length is: " + seqRequeirements.length);
+                if (seqRequeirements[0].getDataField("CoverageTarget", user) != null) {
+                    logInfo("seqRequeirements[0] CoverageTarget is: " + seqRequeirements[0].getDataField(
+                            "CoverageTarget", user).toString());
+                    coverage = seqRequeirements[0].getIntegerVal("CoverageTarget", user);
+                    SequencingRunType = seqRequeirements[0].getDataField("SequencingRunType", user).toString();
+                }
             }
-
-            String SequencingRunType = seqRequeirements[0].getDataField("SequencingRunType", user).toString();
-
             //DDPCR: DdPcrProtocol2 is a potential child of sample: to be marked in LIMS
             DataRecord[] ddpcrProtocol2s = firstSample.getChildrenOfType("DdPcrProtocol2", user);
             int numOfReplicates = 0;
@@ -465,96 +477,85 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                     requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
                 }
                 requestsSeviceIds.add(serviceInfoMap.get("PolyA Library Prep"));
-
-                if (Integer.parseInt(maxNumOfReads) <= 20) {
-                    serviceId = serviceInfoMap.get("RNASeq - polyA - 10-20M");
+                if (!maxNumOfReads.equals("")) {
+                    if (Integer.parseInt(maxNumOfReads) <= 20) {
+                        serviceId = serviceInfoMap.get("RNASeq - polyA - 10-20M");
+                    }
+                    else if (Integer.parseInt(maxNumOfReads) <= 30) {
+                        serviceId = serviceInfoMap.get("RNASeq - polyA - 20-30M");
+                    }
+                    else if (Integer.parseInt(maxNumOfReads) <= 40) {
+                        serviceId = serviceInfoMap.get("RNASeq - polyA - 30-40M");
+                    }
+                    else if (Integer.parseInt(maxNumOfReads) <= 50) {
+                        serviceId = serviceInfoMap.get("RNASeq - polyA - 40-50M");
+                    }
+                    else if (Integer.parseInt(maxNumOfReads) <= 60) {
+                        serviceId = serviceInfoMap.get("RNASeq - polyA - 50-60M");
+                    }
+                    else if (Integer.parseInt(maxNumOfReads) <= 80) {
+                        serviceId = serviceInfoMap.get("RNASeq - polyA - 60-80M");
+                    }
+                    else if (Integer.parseInt(maxNumOfReads) <= 100) {
+                        serviceId = serviceInfoMap.get("RNASeq - polyA - 80-100M");
+                    }
+                    else {
+                        serviceId = serviceInfoMap.get("RNASeq - polyA - 100M+");
+                    }
+                    requestsSeviceIds.add(serviceId);
                 }
-                else if (Integer.parseInt(maxNumOfReads) <= 30) {
-                    serviceId = serviceInfoMap.get("RNASeq - polyA - 20-30M");
-                }
-                else if (Integer.parseInt(maxNumOfReads) <= 40) {
-                    serviceId = serviceInfoMap.get("RNASeq - polyA - 30-40M");
-                }
-                else if (Integer.parseInt(maxNumOfReads) <= 50) {
-                    serviceId = serviceInfoMap.get("RNASeq - polyA - 40-50M");
-                }
-                else if (Integer.parseInt(maxNumOfReads) <= 60) {
-                    serviceId = serviceInfoMap.get("RNASeq - polyA - 50-60M");
-                }
-                else if (Integer.parseInt(maxNumOfReads) <= 80) {
-                    serviceId = serviceInfoMap.get("RNASeq - polyA - 60-80M");
-                }
-                else if (Integer.parseInt(maxNumOfReads) <= 100) {
-                    serviceId = serviceInfoMap.get("RNASeq - polyA - 80-100M");
-                }
-                else {
-                    serviceId = serviceInfoMap.get("RNASeq - polyA - 100M+");
-                }
-                requestsSeviceIds.add(serviceId);
             }
             if(serviceType.equals("RNASeq-TruSeqRiboDeplete")) {
                 if (firstSample.getChildrenOfType("QcReportRna", user).length > 0) {
                     requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
                 }
                 requestsSeviceIds.add(serviceInfoMap.get("RiboDepletion Library Prep"));
-
-                if (Integer.parseInt(maxNumOfReads) <= 20) {
-                    serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 10-20M");
+                if (!maxNumOfReads.equals("")) {
+                    if (Integer.parseInt(maxNumOfReads) <= 20) {
+                        serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 10-20M");
+                    } else if (Integer.parseInt(maxNumOfReads) <= 30) {
+                        serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 20-30M");
+                    } else if (Integer.parseInt(maxNumOfReads) <= 40) {
+                        serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 30-40M");
+                    } else if (Integer.parseInt(maxNumOfReads) <= 50) {
+                        serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 40-50M");
+                    } else if (Integer.parseInt(maxNumOfReads) <= 60) {
+                        serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 50-60M");
+                    } else if (Integer.parseInt(maxNumOfReads) <= 80) {
+                        serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 60-80M");
+                    } else if (Integer.parseInt(maxNumOfReads) <= 100) {
+                        serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 80-100M");
+                    } else {
+                        serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 100M+");
+                    }
+                    requestsSeviceIds.add(serviceId);
                 }
-                else if (Integer.parseInt(maxNumOfReads) <= 30) {
-                    serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 20-30M");
-                }
-                else if (Integer.parseInt(maxNumOfReads) <= 40) {
-                    serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 30-40M");
-                }
-                else if (Integer.parseInt(maxNumOfReads) <= 50) {
-                    serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 40-50M");
-                }
-                else if (Integer.parseInt(maxNumOfReads) <= 60) {
-                    serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 50-60M");
-                }
-                else if (Integer.parseInt(maxNumOfReads) <= 80) {
-                    serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 60-80M");
-                }
-                else if (Integer.parseInt(maxNumOfReads) <= 100) {
-                    serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 80-100M");
-                }
-                else {
-                    serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 100M+");
-                }
-                requestsSeviceIds.add(serviceId);
             }
             if(serviceType.equals("RNASeq-SMARTerAmp")) {
                 if (firstSample.getChildrenOfType("QcReportRna", user).length > 0) {
                     requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
                 }
                 requestsSeviceIds.add(serviceInfoMap.get("SMARTer Amplification"));
-
-                if (Integer.parseInt(maxNumOfReads) <= 20) {
-                    serviceId = serviceInfoMap.get("RNASeq - SMARTer - 10-20M");
+                if (!maxNumOfReads.equals("")) {
+                    if (Integer.parseInt(maxNumOfReads) <= 20) {
+                        serviceId = serviceInfoMap.get("RNASeq - SMARTer - 10-20M");
+                    } else if (Integer.parseInt(maxNumOfReads) <= 30) {
+                        serviceId = serviceInfoMap.get("RNASeq - SMARTer - 20-30M");
+                    } else if (Integer.parseInt(maxNumOfReads) <= 40) {
+                        serviceId = serviceInfoMap.get("RNASeq - SMARTer - 30-40M");
+                    } else if (Integer.parseInt(maxNumOfReads) <= 50) {
+                        serviceId = serviceInfoMap.get("RNASeq - SMARTer - 40-50M");
+                    } else if (Integer.parseInt(maxNumOfReads) <= 60) {
+                        serviceId = serviceInfoMap.get("RNASeq - SMARTer - 50-60M");
+                    } else if (Integer.parseInt(maxNumOfReads) <= 80) {
+                        serviceId = serviceInfoMap.get("RNASeq - SMARTer - 60-80M");
+                    } else if (Integer.parseInt(maxNumOfReads) <= 100) {
+                        serviceId = serviceInfoMap.get("RNASeq - SMARTer - 80-100M");
+                    } else {
+                        serviceId = serviceInfoMap.get("RNASeq - SMARTer - 100M+");
+                    }
+                    requestsSeviceIds.add(serviceId);
                 }
-                else if (Integer.parseInt(maxNumOfReads) <= 30) {
-                    serviceId = serviceInfoMap.get("RNASeq - SMARTer - 20-30M");
-                }
-                else if (Integer.parseInt(maxNumOfReads) <= 40) {
-                    serviceId = serviceInfoMap.get("RNASeq - SMARTer - 30-40M");
-                }
-                else if (Integer.parseInt(maxNumOfReads) <= 50) {
-                    serviceId = serviceInfoMap.get("RNASeq - SMARTer - 40-50M");
-                }
-                else if (Integer.parseInt(maxNumOfReads) <= 60) {
-                    serviceId = serviceInfoMap.get("RNASeq - SMARTer - 50-60M");
-                }
-                else if (Integer.parseInt(maxNumOfReads) <= 80) {
-                    serviceId = serviceInfoMap.get("RNASeq - SMARTer - 60-80M");
-                }
-                else if (Integer.parseInt(maxNumOfReads) <= 100) {
-                    serviceId = serviceInfoMap.get("RNASeq - SMARTer - 80-100M");
-                }
-                else {
-                    serviceId = serviceInfoMap.get("RNASeq - SMARTer - 100M+");
-                }
-                requestsSeviceIds.add(serviceId);
             }
 //            if(serviceType.equals("Rapid-RCC")) {
 //
@@ -572,7 +573,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             }
             if(serviceType.equals("10XGenomics_GeneExpression")) {
                 requestsSeviceIds.add((serviceInfoMap.get("10X GEX Library")));
-                if (Integer.parseInt(maxNumOfReads) >= 200) {
+                if (!maxNumOfReads.equals("") && Integer.parseInt(maxNumOfReads) >= 200) {
                     requestsSeviceIds.add((serviceInfoMap.get("10X GEX Sequencing - 10K cells")));
                     if (Integer.parseInt(maxNumOfReads) > 200) {
                         int remainingReadsToCharge = (Integer.parseInt(maxNumOfReads) - 200) / 10;
@@ -590,50 +591,52 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             }
             if(serviceType.equals("10XGenomics_VDJ")) {
                 requestsSeviceIds.add(serviceInfoMap.get("10X VDJ Library"));
-                if (Integer.parseInt(maxNumOfReads) >= 50) {
-                    requestsSeviceIds.add(serviceInfoMap.get("10X VDJ/FB Sequencing - 10K cells"));
-                    if (Integer.parseInt(maxNumOfReads) > 50) {
-                        int remainingReadsToCharge = (Integer.parseInt(maxNumOfReads) - 50) / 10;
-                        for (int i = 0; i < remainingReadsToCharge; i++) {
-                            requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - 10X Standard"));
+                if (!maxNumOfReads.equals("")) {
+                    if (Integer.parseInt(maxNumOfReads) >= 50) {
+                        requestsSeviceIds.add(serviceInfoMap.get("10X VDJ/FB Sequencing - 10K cells"));
+                        if (Integer.parseInt(maxNumOfReads) > 50) {
+                            int remainingReadsToCharge = (Integer.parseInt(maxNumOfReads) - 50) / 10;
+                            for (int i = 0; i < remainingReadsToCharge; i++) {
+                                requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - 10X Standard"));
+                            }
+                        }
+                    } else {
+                        int numOfAdditions = Integer.parseInt(maxNumOfReads) / 5;
+                        for (int i = 0; i < numOfAdditions; i++) {
+                            requestsSeviceIds.add(serviceInfoMap.get("10X VDJ/FB Sequencing - 1K cells"));
                         }
                     }
                 }
-                else {
-                    int numOfAdditions = Integer.parseInt(maxNumOfReads) / 5;
-                    for (int i= 0; i < numOfAdditions; i++) {
-                        requestsSeviceIds.add(serviceInfoMap.get("10X VDJ/FB Sequencing - 1K cells"));
-                    }
-                }
-
             }
             if(serviceType.equals("10XGenomics_FeatureBarcoding")) {
                 requestsSeviceIds.add(serviceInfoMap.get("10X FB Library"));
-                if (Integer.parseInt(maxNumOfReads) >= 50) {
-                    requestsSeviceIds.add(serviceInfoMap.get("10X VDJ/FB Sequencing - 10K cells"));
-                    if (Integer.parseInt(maxNumOfReads) > 50) {
-                        int remainingReadsToCharge = (Integer.parseInt(maxNumOfReads) - 50) / 10;
-                        for (int i = 0; i < remainingReadsToCharge; i++) {
-                            requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - 10X Standard"));
+                if (!maxNumOfReads.equals("")) {
+                    if (Integer.parseInt(maxNumOfReads) >= 50) {
+                        requestsSeviceIds.add(serviceInfoMap.get("10X VDJ/FB Sequencing - 10K cells"));
+                        if (Integer.parseInt(maxNumOfReads) > 50) {
+                            int remainingReadsToCharge = (Integer.parseInt(maxNumOfReads) - 50) / 10;
+                            for (int i = 0; i < remainingReadsToCharge; i++) {
+                                requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - 10X Standard"));
+                            }
                         }
-                    }
-                }
-                else {
-                    int countOfAdditions = Integer.parseInt(maxNumOfReads) / 5;
-                    for (int i = 0; i < countOfAdditions; i++) {
-                        requestsSeviceIds.add(serviceInfoMap.get("10X VDJ/FB Sequencing - 1K cells"));
+                    } else {
+                        int countOfAdditions = Integer.parseInt(maxNumOfReads) / 5;
+                        for (int i = 0; i < countOfAdditions; i++) {
+                            requestsSeviceIds.add(serviceInfoMap.get("10X VDJ/FB Sequencing - 1K cells"));
+                        }
                     }
                 }
             }
             if(serviceType.equals("10XGenomics_Multiome")) {
                 requestsSeviceIds.add(serviceInfoMap.get("10X Multiome Library"));
-                if (Integer.parseInt(maxNumOfReads) >= 200) {
-                    requestsSeviceIds.add(serviceInfoMap.get("10X Multiome Sequencing - 10K nuclei"));
-                }
-                else {
-                    int numberOfAdditions = Integer.parseInt(maxNumOfReads) / 20;
-                    for (int i = 0; i < numberOfAdditions; i++) {
-                        requestsSeviceIds.add(serviceInfoMap.get("10X Multiome Sequencing - 1K nuclei"));
+                if (!maxNumOfReads.equals("")) {
+                    if (Integer.parseInt(maxNumOfReads) >= 200) {
+                        requestsSeviceIds.add(serviceInfoMap.get("10X Multiome Sequencing - 10K nuclei"));
+                    } else {
+                        int numberOfAdditions = Integer.parseInt(maxNumOfReads) / 20;
+                        for (int i = 0; i < numberOfAdditions; i++) {
+                            requestsSeviceIds.add(serviceInfoMap.get("10X Multiome Sequencing - 1K nuclei"));
+                        }
                     }
                 }
             }
@@ -772,10 +775,12 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             if(serviceType.equals("ChIPSeq")) {
                 requestsSeviceIds.add(serviceInfoMap.get("ChIP-Seq/CUT&RUN"));
                 requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE100"));
-                int remainigReadsRequestedToCharge = Integer.parseInt(maxNumOfReads) - 10;
-                int seqReadsService = remainigReadsRequestedToCharge / 10;
-                for (int i = 0; i < seqReadsService; i++) {
-                    requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE100"));
+                if (!maxNumOfReads.equals("")) {
+                    int remainigReadsRequestedToCharge = Integer.parseInt(maxNumOfReads) - 10;
+                    int seqReadsService = remainigReadsRequestedToCharge / 10;
+                    for (int i = 0; i < seqReadsService; i++) {
+                        requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE100"));
+                    }
                 }
             }
             if(serviceType.equals("MethylSeq")) {
@@ -786,7 +791,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             }
             if(serviceType.equals("ATACSeq")) {
                 requestsSeviceIds.add(serviceInfoMap.get("ATAC-Seq"));
-                if (Integer.parseInt(maxNumOfReads) > 50) {
+                if (!maxNumOfReads.equals("") && Integer.parseInt(maxNumOfReads) > 50) {
                     requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE100"));
                     int remainigReadsRequestedToCharge = Integer.parseInt(maxNumOfReads) - 50;
                     int seqReadsService = remainigReadsRequestedToCharge / 10;
@@ -858,7 +863,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd-hh.mm.ss");
                 String formattedDate = formatter.format(date);
                 chargesFieldValues.put("purchasedOn", formattedDate);
-                chargesFieldValues.put("serviceRequestId", requestId); // from iLab!
+                chargesFieldValues.put("serviceRequestId", requestId);
                 chargesFieldValues.put("ownerEmail", ownerEmail);
                 chargesFieldValues.put("pIEmail", piEmail);
                 chargeInfoRecords.add(chargesFieldValues);
