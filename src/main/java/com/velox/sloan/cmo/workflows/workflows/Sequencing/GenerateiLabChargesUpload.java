@@ -237,23 +237,33 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
      * */
     public PluginResult run() throws Throwable {
         // Illumina Sequencing Workflow last step has FlowCellSamples attached to it, which are pools
-        List<DataRecord> flowCellSamples = activeTask.getAttachedDataRecords("NormalizationPooledLibProtocol", user);
-        logInfo("After checking for the step attachments!!");
+        List<DataRecord> flowCellPools = activeTask.getAttachedDataRecords("NormalizationPooledLibProtocol", user);
+        logInfo("Step attachments found.");
         // On igo-lims04 I checked sample for normalization of pooled libraries datatype allowable parent
         Set<String> uniqueRequestsOnTheFlowCell = new HashSet<>();
-        if (flowCellSamples != null && flowCellSamples.size() > 0) {
-            for (DataRecord eachPool : flowCellSamples) {
+        if (flowCellPools != null && flowCellPools.size() > 0) {
+            for (DataRecord eachPool : flowCellPools) {
                 List<DataRecord> samplesOfEachPool = eachPool.getAncestorsOfType("Sample", user);
                 for (DataRecord sampleOfAPool : samplesOfEachPool) {
                     List<DataRecord> requests = sampleOfAPool.getParentsOfType("Request", user);
-                    for (DataRecord request : requests) {
-                        DataRecord firstSampleOfEachRequest = request.getChildrenOfType("Sample", user)[0];
-                        String requestId = request.getStringVal("RequestId", user);
-                        if (uniqueRequestsOnTheFlowCell.add(requestId)) {
-                            dataValues = outputChargesInfo(firstSampleOfEachRequest);
-                            generateiLabChargeSheet();
+                    if(requests != null && requests.size() > 0) {
+                        for (DataRecord request : requests) {
+                        // skipping the loop, assuming every sample is in only 1 request
+                            DataRecord firstSampleOfEachRequest = request.getChildrenOfType("Sample", user)[0];
+                            String requestId = request.getStringVal("RequestId", user);
+                            logInfo("request id is: " + requestId);
+                            String iLabServiceRequestId = request.getStringVal("iLabServiceRequestId", user);
+                            logInfo("iLabServiceRequestId is: " + iLabServiceRequestId);
+                            // Below: checking for processing every request only once and if whether there is an iLab form filled out for the request
+                            if (uniqueRequestsOnTheFlowCell.add(requestId) && iLabServiceRequestId != null &&
+                                    !iLabServiceRequestId.trim().equals("")) {
+                                dataValues = outputChargesInfo(firstSampleOfEachRequest);
+                                if(dataValues.size() > 0) {
+                                    generateiLabChargeSheet();
+                                }
+                            }
+                            dataValues.clear();
                         }
-                        dataValues.clear();
                     }
                 }
             }
@@ -272,13 +282,16 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         List<Map<String, String>> chargeInfoRecords = new LinkedList<>();
         try {
             // Request level information
-            DataRecord requestRecord = firstSample.getAncestorsOfType("Request", user).get(0);
+            logInfo("First sample igo id is: " + firstSample.getDataField("SampleId", user));
+            DataRecord requestRecord = firstSample.getParentsOfType("Request", user).get(0);
+            logInfo("request project id is: " + requestRecord.getDataField("RequestId", user));
             String serviceType = requestRecord.getStringVal("RequestName", user);
-
+            logInfo("service type is: " + serviceType);
             String requestName = requestRecord.getStringVal("RequestName", user);
             String ownerEmail = requestRecord.getStringVal("Investigatoremail", user);
             String piEmail = requestRecord.getStringVal("LabHeadEmail", user);
             String requestId = requestRecord.getStringVal("iLabServiceRequestId", user);
+            logInfo("ilab service req id = " + requestId);
             Long purchaseDate = requestRecord.getDateVal("RequestDate", user);
             String serviceQuantity = requestRecord.getDataField("SampleNumber", user).toString();
             // Sample level information
@@ -287,11 +300,12 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             String tumorOrNormal = firstSample.getStringVal("TumorOrNormal", user);
             String assay = firstSample.getStringVal("Assay", user);
             String origin = firstSample.getStringVal("SampleOrigin", user);
-            String sampleType = firstSample.getStringVal("SampleType", user);
+            String sampleType = firstSample.getStringVal("ExemplarSampleType", user);
             String recipe = firstSample.getStringVal("Recipe", user);
 
             // Sequencing Requirements: on igo-lims04 I checked sample as allowable parent for sequencing requirement datatype
-            DataRecord [] seqRequeirements = firstSample.getChildrenOfType("SeqRequirement", user);
+            DataRecord [] seqRequeirements = firstSample.getChildrenOfType("SeqRequirementPooled", user);
+            logInfo("seqRequeirements size is: " + seqRequeirements.length);
             String numOfReads = "";
             String maxNumOfReads = "";
             String SequencingRunType = "";
@@ -299,6 +313,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             if (seqRequeirements.length > 0) {
                 numOfReads = seqRequeirements[0].getDataField("RequestedReads", user).toString();
                 maxNumOfReads = numOfReads.substring(0, numOfReads.length() - 2);
+                logInfo("maxNumOfReads = " + maxNumOfReads);
                 logInfo("seqRequeirements length is: " + seqRequeirements.length);
                 if (seqRequeirements[0].getDataField("CoverageTarget", user) != null) {
                     logInfo("seqRequeirements[0] CoverageTarget is: " + seqRequeirements[0].getDataField(
@@ -344,9 +359,9 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             Map<String, String> chargesFieldValues;
             List<String> requestsSeviceIds = new LinkedList<>();
 
-            requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
 
             if(serviceType.equals("DNAExtraction")) {
+                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
                 if (sampleType.toLowerCase().contains("cfdna")) {
                     requestsSeviceIds.add(serviceInfoMap.get("cfDNA Extraction - Plasma"));
                 } else if (preservation.toLowerCase().contains("ffpe")) {
@@ -357,10 +372,12 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 }
             }
             if(serviceType.equals("RNAExtraction")) {
+                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
                 requestsSeviceIds.add(serviceInfoMap.get("RNA Extraction - FFPE"));
             }
 
             if(serviceType.equals("DNA/RNASimultaneous")) {
+                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
                 if (preservation.toLowerCase().contains("ffpe")) {
                     requestsSeviceIds.add(serviceInfoMap.get("DNA/RNA Dual Extraction - FFPE"));
                 }
@@ -371,6 +388,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
             }
             if(serviceType.equals("PATH-DNAExtraction")) {
+                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
                 if (HERequired) {
                     requestsSeviceIds.add(serviceInfoMap.get("H&E Stain"));
                 }
@@ -394,6 +412,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 //                }
             }
             if(serviceType.equals("PATH-RNAExtraction")) {
+                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
                 if (HERequired) {
                     requestsSeviceIds.add(serviceInfoMap.get("H&E Stain"));
                 }
@@ -408,6 +427,8 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 }
             }
             if(serviceType.equals("PATH-DNA/RNASimultaneous")) {
+                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
                 if (HERequired) {
                     requestsSeviceIds.add(serviceInfoMap.get("H&E Stain"));
                 }
@@ -561,6 +582,9 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 //
 //            }
             if(serviceType.equals("Archer")) {
+                if (firstSample.getChildrenOfType("QcReportRna", user).length > 0) {
+                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+                }
                 if (recipe.toLowerCase().contains("Archer-HemePanel")) {
                     requestsSeviceIds.add(serviceInfoMap.get("Archer Fusion - Heme Panel"));
                 }
@@ -784,6 +808,9 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 }
             }
             if(serviceType.equals("MethylSeq")) {
+                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+                }
                 requestsSeviceIds.add(serviceInfoMap.get("EPIC Methyl Capture"));
             }
             if(serviceType.equals("CRISPRSeq")) {
@@ -802,6 +829,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 }
             }
             if(serviceType.equals("AmpliconSeq")) { // seq req: requested read length, only if PE100, else do it manually
+                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
                 requestsSeviceIds.add(serviceInfoMap.get("AmpliconSeq"));
                 if (SequencingRunType.equals("PE100")) {
                     requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE100"));
@@ -830,7 +858,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             }
             if(serviceType.equals("DLP")) {
                 requestsSeviceIds.add(serviceInfoMap.get("DLP Library - 800 cells"));
-                requestsSeviceIds.add(serviceInfoMap.get("DLP Sequencing - 1 quadrant"));
+                requestsSeviceIds.add(serviceInfoMap.get("DLP Sequencing - 800 cells"));
             }
 //            if(serviceType.equals("PED-PEG")) {
 //
@@ -845,28 +873,36 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
             }
             if(serviceType.equals("CMO-CH")) {
+                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+                }
                 requestsSeviceIds.add(serviceInfoMap.get("CMO-CH"));
                 requestsSeviceIds.add(serviceInfoMap.get("Data Analysis - CMO-CH"));
             }
             if(serviceType.equals("TCRSeq-IGO")) {
+                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+                }
                 requestsSeviceIds.add(serviceInfoMap.get("TCRSeq-IGO"));
             }
 
-            for(String eachServiceId : requestsSeviceIds) {
-                chargesFieldValues = new HashMap<>();
-                chargesFieldValues.put("serviceId", eachServiceId);
-                chargesFieldValues.put("note", requestName);
-                chargesFieldValues.put("serviceQuantity", serviceQuantity);
+            if(requestsSeviceIds.size() > 0) {
+                for (String eachServiceId : requestsSeviceIds) {
+                    chargesFieldValues = new HashMap<>();
+                    chargesFieldValues.put("serviceId", eachServiceId);
+                    chargesFieldValues.put("note", requestName);
+                    chargesFieldValues.put("serviceQuantity", serviceQuantity);
 
-                Date date = new Date();
-                date.setTime(purchaseDate);
-                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd-hh.mm.ss");
-                String formattedDate = formatter.format(date);
-                chargesFieldValues.put("purchasedOn", formattedDate);
-                chargesFieldValues.put("serviceRequestId", requestId);
-                chargesFieldValues.put("ownerEmail", ownerEmail);
-                chargesFieldValues.put("pIEmail", piEmail);
-                chargeInfoRecords.add(chargesFieldValues);
+                    Date date = new Date();
+                    date.setTime(purchaseDate);
+                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd-hh.mm.ss");
+                    String formattedDate = formatter.format(date);
+                    chargesFieldValues.put("purchasedOn", formattedDate);
+                    chargesFieldValues.put("serviceRequestId", requestId);
+                    chargesFieldValues.put("ownerEmail", ownerEmail);
+                    chargesFieldValues.put("pIEmail", piEmail);
+                    chargeInfoRecords.add(chargesFieldValues);
+                }
             }
         } catch (IoError | RemoteException | NotFound e) {
             logError("An exception occurred while  retrieving first sample's request info");
