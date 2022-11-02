@@ -18,7 +18,7 @@ import java.util.*;
 
 public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
     private List<String> headerValues = Arrays.asList("service_id", "note", "service_quantity", "purchased_on",
-            "service_request_id", "owner_email", "pi_email_or_group_id");
+            "service_request_id", "owner_email", "pi_email_or_group_id", "payment_number");
     public List<Map<String, String>> dataValues = new LinkedList<>();
 
     private static final Map<String, String> serviceInfoMap = new HashMap<>(); // or reading from the file on iLabs in case of any update
@@ -901,6 +901,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                     chargesFieldValues.put("serviceRequestId", requestId);
                     chargesFieldValues.put("ownerEmail", ownerEmail);
                     chargesFieldValues.put("pIEmail", piEmail);
+                    chargesFieldValues.put("paymentNumber", "");
                     chargeInfoRecords.add(chargesFieldValues);
                 }
             }
@@ -934,6 +935,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             request = row.get("serviceRequestId");
             dataInfoArray[i++] = row.get("ownerEmail");
             dataInfoArray[i++] = row.get("pIEmail");
+            dataInfoArray[i++] = row.get("paymentNumber");
             dataLines.add(dataInfoArray);
             dataInfoArray = new String[headerValues.size()];
             i = 0;
