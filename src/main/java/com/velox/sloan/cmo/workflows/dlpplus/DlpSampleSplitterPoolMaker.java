@@ -605,39 +605,29 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             for (Row row : sampleDataRows) {
                 String chipRow = row.getCell(headerValuesMap.get("Row")).toString();
                 String chipColumn = row.getCell(headerValuesMap.get("Column")).toString();
+                String condition = row.getCell(headerValuesMap.get("Condition")).toString();
                 if (isValidChipSpotToProcess(chipRow, chipColumn) && isValidCellTypeToProcess(row, headerValuesMap, cellTypeToProcess)) {
                     String newSampleId;
                     String newOtherSampleId;
                     boolean isControl = false;
                     Map<String, Object> dlpRecordValues = new HashMap<>();
-                    switch (chipColumn) {
-                        case "3.0":
-                            negativeControlIncrement += 1;
-                            newSampleId = "DLPNegativeCONTROL" + "-" + negativeControlIncrement;
-                            newOtherSampleId = "DLPNegativeCONTROL" + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
-                            altId = newSampleId;
-                            isControl = true;
-                            break;
-                        case "4.0":
-                            salControlIncrement += 1;
-                            newSampleId = "DLPSalCONTROL" + "-" + salControlIncrement;
-                            newOtherSampleId = "DLPSalCONTROL" + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
-                            isControl = true;
-                            break;
-                        case "5.0":
+                    switch (condition.trim().toLowerCase()) {
+                        case "184htert":
                             gmControlIncrement += 1;
                             newSampleId = "DLPGmCONTROL" + "-" + gmControlIncrement;
                             newOtherSampleId = "DLPGmCONTROL" + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
                             altId = newSampleId;
                             isControl = true;
                             break;
-                        case "6.0":
-                            noCellControlIncrement += 1;
-                            newSampleId = "DLPNoCellCONTROL" + "-" + noCellControlIncrement;
-                            newOtherSampleId = "DLPNoCellCONTROL" + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
+
+                        case "ntc":
+                            negativeControlIncrement += 1;
+                            newSampleId = "DLPNegativeCONTROL" + "-" + negativeControlIncrement;
+                            newOtherSampleId = "DLPNegativeCONTROL" + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
                             altId = newSampleId;
                             isControl = true;
                             break;
+
                         default:
                             newSampleId = nextAliquotSampleId + "_" + aliquotIncrementValue;
                             newOtherSampleId = otherSampleId + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
