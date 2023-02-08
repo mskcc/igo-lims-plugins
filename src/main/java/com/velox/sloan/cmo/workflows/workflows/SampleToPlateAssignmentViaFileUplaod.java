@@ -54,7 +54,8 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
                 logInfo("User did not load pooling sheet. Plate assignment GUI will be rendered instead for manual assignment.");
                 return new PluginResult(true);
             }
-            List<String> fileData = util.readDataFromCsvFile(clientCallback.readBytes(poolingFileName));
+            byte [] fileBytes = clientCallback.readBytes(poolingFileName);
+            List<String> fileData = util.readDataFromCsvFile(fileBytes);
             Map<String, Integer> headerColumnLocationMap = util.getCsvHeaderValueMap(fileData);
             if (!isValidCsvFile(poolingFileName, fileData, requiredHeaderValues)) {
                 return new PluginResult(false);
@@ -76,6 +77,13 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
             }
             getUpdatedFieldValueList(fileData, headerColumnLocationMap, protocolRecords);
             //clientCallback.displayInfo(String.format("%s, %s, %s, %s, %s, %s, %s", destinationPlateIdFieldName, destinationWellFieldName, sourceMassToUseFieldName, sourceVolumeToUseFieldName, targetConcFieldName, targetMassFieldName, targetVolFieldName));
+
+            logInfo("Saving .csv to the attachment file table - " + poolingFileName);
+            DataRecord attachment = activeTask.getAllAttachedDataRecords(user).get(0).addChild("Attachment", user);
+            attachment.setDataField("AttachmentId", poolingFileName, user);
+            attachment.setDataField("ActiveTaskId", activeTask.getActiveTaskId(), user);
+            //attachment.setDataField("FilePath", file.getFilePath(), user);
+            dataMgmtServer.getDataManager(user).uploadAttachment(user, attachment, fileBytes, poolingFileName, null);
 
         } catch (Exception e) {
             logInfo(Arrays.toString(e.getStackTrace()));
