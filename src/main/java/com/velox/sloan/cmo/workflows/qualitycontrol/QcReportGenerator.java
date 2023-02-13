@@ -691,11 +691,9 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 }
                 if (A260230 > 0) {
                     qcRecord.put("A260230", A260230);
-                    logInfo("A260230 is assigned to " + A260230);
                 }
                 if (A260280 > 0) {
                     qcRecord.put("A260280", A260280);
-                    logInfo("A260280 is assigned to " + A260280);
                 }
                 if (rqnValue > 0) {
                     qcRecord.put("RQN", rqnValue);
