@@ -31,8 +31,9 @@ public class QcReportGenerator extends DefaultGenericPlugin {
     private final String QC_TYPE_FOR_RIN = "bioanalyzer rna pico, bioanalyzer rna nano, tapestation rna screentape hisense sample table, tapestation rna screentape sample table";
     private final String QC_TYPE_FOR_A260280 = "nanodrop nano";
     private final String QC_TYPE_FOR_A260230 = "nanodrop nano";
-    private final String QC_TYPE_FOR_AVERAGE_BP_SIZE = "TapeStation Compact Peak Table, TapeStation Compact Pico Region Table, " +
-            "TapeStation D1000 Compact Region Table, TapeStation D1000 HiSense Compact Region Table, Bioanalyzer DNA High Sens Region Table";
+    private final String TAPESTATION_QC_FOR_AVERAGE_BP_SIZE = "TapeStation Compact Peak Table, TapeStation Compact Pico Region Table, " +
+            "TapeStation D1000 Compact Region Table, TapeStation D1000 HiSense Compact Region Table";
+    private final String BIOA_QC_FOR_AVERAGE_BP_SIZE = "Bioanalyzer DNA High Sens Region Table";
     private final List<String> DNA_SAMPLE_TYPES = Arrays.asList("cdna", "cfdna", "dna");
     private final List<String> RNA_SAMPLE_TYPES = Arrays.asList("rna");
     private final List<String> LIBRARY_SAMPLE_TYPES = Arrays.asList("dna library", "pooled library", "cdna library", "protein library");
@@ -547,7 +548,24 @@ public class QcReportGenerator extends DefaultGenericPlugin {
      * @throws ServerException
      */
     private Double getAverageLibrarySizeValue(String sampleId, List<DataRecord> qcRecords) {
-        List<DataRecord> qcRecordsWithAvgBpSizeForSample = getQcRecordsByQcType(sampleId, qcRecords, QC_TYPE_FOR_AVERAGE_BP_SIZE);
+        String[] stringListOfQcFiles = {"BioAnalyzer", "TapeStation"};
+        int selectedQcFile = 0;
+        try {
+            selectedQcFile = clientCallback.showOptionDialog("Selecting QC Average Size Bp",
+                    "Which QC file average size bp would you like to use: ", stringListOfQcFiles, 0);
+        }
+        catch (ServerException se) {
+            this.logError(String.valueOf(se.getStackTrace()));
+        }
+        List<DataRecord> qcRecordsWithAvgBpSizeForSample;
+        if (selectedQcFile == 0) {
+            qcRecordsWithAvgBpSizeForSample = getQcRecordsByQcType(sampleId, qcRecords, BIOA_QC_FOR_AVERAGE_BP_SIZE);
+        }
+        else {
+            qcRecordsWithAvgBpSizeForSample = getQcRecordsByQcType(sampleId, qcRecords, TAPESTATION_QC_FOR_AVERAGE_BP_SIZE);
+        }
+
+
         Double averageBasePairSize = 0.0;
         try {
             if (!qcRecordsWithAvgBpSizeForSample.isEmpty()) {
