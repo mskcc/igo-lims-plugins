@@ -29,6 +29,8 @@ public class QcReportGenerator extends DefaultGenericPlugin {
     private final String QC_TYPE_FOR_RQN = "fragment analyzer rna quality, fragment analyzer peak table";
     private final String QC_TYPE_FOR_DV200 = "fragment analyzer smear table, bioanalyzer rna pico, bioanalyzer rna nano, tapestation rna screentape hisense compactregion table, tapestation rna screentape compactregion table";
     private final String QC_TYPE_FOR_RIN = "bioanalyzer rna pico, bioanalyzer rna nano, tapestation rna screentape hisense sample table, tapestation rna screentape sample table";
+    private final String QC_TYPE_FOR_A260280 = "nanodrop nano";
+    private final String QC_TYPE_FOR_A260230 = "nanodrop nano";
     private final String QC_TYPE_FOR_AVERAGE_BP_SIZE = "TapeStation Compact Peak Table, TapeStation Compact Pico Region Table, " +
             "TapeStation D1000 Compact Region Table, TapeStation D1000 HiSense Compact Region Table, Bioanalyzer DNA High Sens Region Table";
     private final List<String> DNA_SAMPLE_TYPES = Arrays.asList("cdna", "cfdna", "dna");
@@ -229,7 +231,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
     }
 
     /**
-     * get most recently added QCDarum record for a sample
+     * get most recently added QCDatum record for a sample
      *
      * @param qcRecords
      * @return DataRecord
@@ -388,6 +390,58 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             logError(String.format("ServerException while getting DV200 Value for sample with Sample ID %s:\n%s", sampleId, ExceptionUtils.getStackTrace(se)));
         }
         return dv200Value;
+    }
+
+    private Double getA260280FromQcRecord(String sampleId, List<DataRecord> qcRecords) {
+        List<DataRecord> qcRecordswithA260280ForSample = getQcRecordsByQcType(sampleId, qcRecords, QC_TYPE_FOR_A260280);
+        Double A260280 = 0.00;
+        try {
+            if (!qcRecordswithA260280ForSample.isEmpty()) {
+                for (DataRecord qcRecord : qcRecordswithA260280ForSample) {
+                    if (qcRecord.getValue("A260280", user) != null) {
+                        A260280 = qcRecord.getDoubleVal("A260280", user);
+                    }
+                }
+            }
+            if (qcRecordswithA260280ForSample.isEmpty() || A260280.isNaN() || A260280 <= 0) {
+                clientCallback.displayWarning(String.format("A260280 value not found for '%s'.", sampleId));
+                logError(String.format("WARNING: A260280 value not found for '%s'.", sampleId));
+                return 0.00;
+            }
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException while getting A260280 Value for sample with Sample ID %s:\n%s", sampleId, ExceptionUtils.getStackTrace(e)));
+        } catch (NotFound notFound) {
+            logError(String.format("NotFound -> Missing A260280 Value for sample with Sample ID %s:\n%s", sampleId, ExceptionUtils.getStackTrace(notFound)));
+        } catch (ServerException se) {
+            logError(String.format("ServerException while getting A260280 Value for sample with Sample ID %s:\n%s", sampleId, ExceptionUtils.getStackTrace(se)));
+        }
+        return A260280;
+    }
+
+    private Double getA260230FromQcRecord(String sampleId, List<DataRecord> qcRecords) {
+        List<DataRecord> qcRecordswithA260230ForSample = getQcRecordsByQcType(sampleId, qcRecords, QC_TYPE_FOR_A260230);
+        Double A260230 = 0.00;
+        try {
+            if (!qcRecordswithA260230ForSample.isEmpty()) {
+                for (DataRecord qcRecord : qcRecordswithA260230ForSample) {
+                    if (qcRecord.getValue("A260230", user) != null) {
+                        A260230 = qcRecord.getDoubleVal("A260230", user);
+                    }
+                }
+            }
+            if (qcRecordswithA260230ForSample.isEmpty() || A260230.isNaN() || A260230 <= 0) {
+                clientCallback.displayWarning(String.format("A260230 value not found for '%s'.", sampleId));
+                logError(String.format("WARNING: A260280 value not found for '%s'.", sampleId));
+                return 0.00;
+            }
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException while getting A260230 Value for sample with Sample ID %s:\n%s", sampleId, ExceptionUtils.getStackTrace(e)));
+        } catch (NotFound notFound) {
+            logError(String.format("NotFound -> Missing A260230 Value for sample with Sample ID %s:\n%s", sampleId, ExceptionUtils.getStackTrace(notFound)));
+        } catch (ServerException se) {
+            logError(String.format("ServerException while getting A260230 Value for sample with Sample ID %s:\n%s", sampleId, ExceptionUtils.getStackTrace(se)));
+        }
+        return A260230;
     }
 
     /**
@@ -553,10 +607,20 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                     qcRecord.put("SourceSampleId", listOfSamplesAncestors.get(0).getValue("SampleId", user));
                 }
                 Double dinValue = getDinValueFromQcRecord(sampleId, qcDataRecords);
+                Double A260280 = getA260280FromQcRecord(sampleId, qcDataRecords);
+                Double A260230 = getA260230FromQcRecord(sampleId, qcDataRecords);
                 String igoRecommendation = getIgoRecommendationValue(sampleId, qcProtocolRecords);
                 String comments = getQcCommentsValue(sampleId, qcProtocolRecords);
                 if (dinValue > 0) {
                     qcRecord.put("DIN", dinValue);
+                }
+                if (A260230 > 0) {
+                    qcRecord.put("A260230", A260230);
+                    logInfo("A260230 is assigned to " + A260230);
+                }
+                if (A260280 > 0) {
+                    qcRecord.put("A260280", A260280);
+                    logInfo("A260280 is assigned to " + A260280);
                 }
                 if (!StringUtils.isBlank(igoRecommendation)) {
                     qcRecord.put("IgoQcRecommendation", igoRecommendation);
@@ -614,6 +678,8 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 }
                 String rinValue = getRinValueFromQcRecord(sampleId, qcRecords);
                 Double dv200Value = getDv200ValueFromQcRecord(sampleId, qcRecords);
+                Double A260280 = getA260280FromQcRecord(sampleId, qcRecords);
+                Double A260230 = getA260230FromQcRecord(sampleId, qcRecords);
                 Double rqnValue = getRqnValueFromQcRecord(sampleId, qcRecords);
                 String igoRecommendation = getIgoRecommendationValue(sampleId, qcProtocolRecords);
                 String comments = getQcCommentsValue(sampleId, qcProtocolRecords);
@@ -622,6 +688,12 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 }
                 if (dv200Value > 0) {
                     qcRecord.put("DV200", dv200Value);
+                }
+                if (A260230 > 0) {
+                    qcRecord.put("A260230", A260230);
+                }
+                if (A260280 > 0) {
+                    qcRecord.put("A260280", A260280);
                 }
                 if (rqnValue > 0) {
                     qcRecord.put("RQN", rqnValue);
