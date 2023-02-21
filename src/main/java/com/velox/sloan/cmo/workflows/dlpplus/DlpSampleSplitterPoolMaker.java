@@ -22,15 +22,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * This plugin is designed to split a DLP Plus sample into multiple sample aliquots based on the smartchip app excel file import. If a sample in the excel input is indicated as dead or alive,
- * a child sample record is created for the sample in the excel row. The plugin also creates the AssignedIndex record for each child sample created based on the row and column location indicated in the
+ * This plugin is designed to split a DLP Plus sample into multiple sample aliquots based on the smartchip app excel file import.
+ * If a sample in the excel input is indicated as dead or alive, a child sample record is created for the sample in the excel row.
+ * The plugin also creates the AssignedIndex record for each child sample created based on the row and column location indicated in the
  * excel file. Finally all the aliquots created by this plugin are linked to a Sample Pool. Sample pools are created based on quadrants.
  * Created by sharmaa1 on 7/23/19.
  */
 public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
 
-    private final List<String> DLP_UPLOAD_SHEET_EXPECTED_HEADERS = Arrays.asList("Sample", "Row", "Column", "Img_Col", "File_Ch1", "File_Ch2", "Fld_Section", "Fld_Index", "Num_Live", "Num_Dead", "Num_Other",
-            "Rev_Live", "Rev_Dead", "Rev_Other", "Rev_Class", "Condition", "Index_I7", "Primer_I7", "Index_I5", "Primer_I5", "Pick_Met", "Spot_Well", "Num_Drops");
+    private final List<String> DLP_UPLOAD_SHEET_EXPECTED_HEADERS = Arrays.asList("Sample", "Row", "Column", "Img_Col",
+            "File_Ch1", "File_Ch2", "Fld_Section", "Fld_Index", "Num_Live", "Num_Dead", "Num_Other", "Rev_Live", "Rev_Dead",
+            "Rev_Other", "Rev_Class", "Condition", "Index_I7", "Primer_I7", "Index_I5", "Primer_I5", "Pick_Met", "Spot_Well", "Num_Drops");
 
     // As of 7/9/21 we are allowing spotting on all coordinates b/c 11881_B & 11881_C required more areas to spot
     private final List<String> ROW_NUMBERS_TO_SKIP = Arrays.asList(); // these are the row numbers on DLP chip edges that are not spotted with samples and must be skipped.
@@ -600,7 +602,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             String altId = sample.getStringVal("AltId", user);
             String sequencingRunType = getSequencingRunType(sample);
             List<Row> sampleDataRows = rowsSeparatedBySampleMap.get(sampleId);
-            String nextAliquotSampleId = getNextSampleId(sampleId); // This will provode the next sample ID that we can use to start creating aliquot ID's. If the sample is being reporcessed, the aliquot ID's may exist, and we need to find next aliquot sample ID.
+            String nextAliquotSampleId = getNextSampleId(sampleId); // This will provide the next sample ID that we can use to start creating aliquot ID's. If the sample is being reporcessed, the aliquot ID's may exist, and we need to find next aliquot sample ID.
             int aliquotIncrementValue = 1;
             for (Row row : sampleDataRows) {
                 String chipRow = row.getCell(headerValuesMap.get("Row")).toString();
