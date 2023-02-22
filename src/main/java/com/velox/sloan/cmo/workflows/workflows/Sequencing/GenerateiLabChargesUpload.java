@@ -304,7 +304,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             String recipe = firstSample.getStringVal("Recipe", user);
 
             // Sequencing Requirements: on igo-lims04 I checked sample as allowable parent for sequencing requirement datatype
-            DataRecord [] seqRequeirements = firstSample.getChildrenOfType("SeqRequirementPooled", user);
+            DataRecord [] seqRequeirements = firstSample.getChildrenOfType("SeqRequirement", user);
             logInfo("seqRequeirements size is: " + seqRequeirements.length);
             String numOfReads = "";
             String maxNumOfReads = "";
@@ -322,37 +322,37 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                     SequencingRunType = seqRequeirements[0].getDataField("SequencingRunType", user).toString();
                 }
             }
-            //DDPCR: DdPcrProtocol2 is a potential child of sample: to be marked in LIMS
-            DataRecord[] ddpcrProtocol2s = firstSample.getChildrenOfType("DdPcrProtocol2", user);
-            int numOfReplicates = 0;
-            for (DataRecord ddpcrProtocol2 : ddpcrProtocol2s) {
-                numOfReplicates += ddpcrProtocol2.getIntegerVal("NumberOfReplicates", user);
-            }
-            DataRecord[] ddpcrProtocol1s = firstSample.getChildrenOfType("DdPcrProtocol1", user);
-            String Ch1Target = "";
-            if (ddpcrProtocol1s.length > 0) {
-                Ch1Target = ddpcrProtocol1s[0].getStringVal("Ch1Target", user);
-            }
+//            //DDPCR: DdPcrProtocol2 is a potential child of sample: to be marked in LIMS
+//            DataRecord[] ddpcrProtocol2s = firstSample.getChildrenOfType("DdPcrProtocol2", user);
+//            int numOfReplicates = 0;
+//            for (DataRecord ddpcrProtocol2 : ddpcrProtocol2s) {
+//                numOfReplicates += ddpcrProtocol2.getIntegerVal("NumberOfReplicates", user);
+//            }
+//            DataRecord[] ddpcrProtocol1s = firstSample.getChildrenOfType("DdPcrProtocol1", user);
+//            String Ch1Target = "";
+//            if (ddpcrProtocol1s.length > 0) {
+//                Ch1Target = ddpcrProtocol1s[0].getStringVal("Ch1Target", user);
+//            }
 
-            // Pathology info
-            // PathologyProtocol1 is a potential child of sample: to be marked in LIMS
-            DataRecord[] pathRecords = firstSample.getChildrenOfType("PathologyProtocol1", user);
-            Boolean scrappingCurls = false;
-            Boolean microdissection = false;
-            Boolean HERequired = false;
-            Boolean SectioningRequired = false;
-            if (pathRecords.length > 0) {
-                scrappingCurls = pathRecords[0].getBooleanVal("ScrapingCurlsRequired", user);
-                microdissection = pathRecords[0].getBooleanVal("MicrodissectionRequired", user);
-                HERequired = pathRecords[0].getBooleanVal("HERequired", user);
-                SectioningRequired = pathRecords[0].getBooleanVal("SectioningRequired", user);
-            }
-
-            DataRecord[] wholeGenomeLib = firstSample.getChildrenOfType("WholeGenomeLibProtocol3", user);
-            String pcrCycles = "";
-            if (wholeGenomeLib.length > 0) {
-                pcrCycles = wholeGenomeLib[0].getStringVal("NumberPCRCycles", user);
-            }
+//            // Pathology info
+//            // PathologyProtocol1 is a potential child of sample: to be marked in LIMS
+//            DataRecord[] pathRecords = firstSample.getChildrenOfType("PathologyProtocol1", user);
+//            Boolean scrappingCurls = false;
+//            Boolean microdissection = false;
+//            Boolean HERequired = false;
+//            Boolean SectioningRequired = false;
+//            if (pathRecords.length > 0) {
+//                scrappingCurls = pathRecords[0].getBooleanVal("ScrapingCurlsRequired", user);
+//                microdissection = pathRecords[0].getBooleanVal("MicrodissectionRequired", user);
+//                HERequired = pathRecords[0].getBooleanVal("HERequired", user);
+//                SectioningRequired = pathRecords[0].getBooleanVal("SectioningRequired", user);
+//            }
+//
+//            DataRecord[] wholeGenomeLib = firstSample.getChildrenOfType("WholeGenomeLibProtocol3", user);
+//            String pcrCycles = "";
+//            if (wholeGenomeLib.length > 0) {
+//                pcrCycles = wholeGenomeLib[0].getStringVal("NumberPCRCycles", user);
+//            }
 
             // Request name in Request table is a drop down menu with certain options
             String serviceId;
@@ -360,138 +360,141 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             List<String> requestsSeviceIds = new LinkedList<>();
 
 
-            if(serviceType.equals("DNAExtraction")) {
-                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                if (sampleType.toLowerCase().contains("cfdna")) {
-                    requestsSeviceIds.add(serviceInfoMap.get("cfDNA Extraction - Plasma"));
-                } else if (preservation.toLowerCase().contains("ffpe")) {
-                    requestsSeviceIds.add(serviceInfoMap.get("DNA Extraction - FFPE"));
-                }
-                else {
-                    requestsSeviceIds.add(serviceInfoMap.get("DNA Extraction"));
-                }
-            }
-            if(serviceType.equals("RNAExtraction")) {
-                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                requestsSeviceIds.add(serviceInfoMap.get("RNA Extraction - FFPE"));
-            }
-
-            if(serviceType.equals("DNA/RNASimultaneous")) {
-                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                if (preservation.toLowerCase().contains("ffpe")) {
-                    requestsSeviceIds.add(serviceInfoMap.get("DNA/RNA Dual Extraction - FFPE"));
-                }
-                else {
-                    requestsSeviceIds.add(serviceInfoMap.get("DNA/RNA Dual Extraction"));
-                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                }
-
-            }
-            if(serviceType.equals("PATH-DNAExtraction")) {
-                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                if (HERequired) {
-                    requestsSeviceIds.add(serviceInfoMap.get("H&E Stain"));
-                }
-                if (SectioningRequired) {
-                    requestsSeviceIds.add(serviceInfoMap.get("FFPE Sectioning"));
-                }
-                if (scrappingCurls) {
-                    requestsSeviceIds.add(serviceInfoMap.get("Slide Scraping"));
-                }
-                if (microdissection) {
-                    requestsSeviceIds.add(serviceInfoMap.get("DNA Extraction - FFPE"));
-                }
-
+//            if(serviceType.equals("DNAExtraction")) {
+//                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
 //                if (sampleType.toLowerCase().contains("cfdna")) {
 //                    requestsSeviceIds.add(serviceInfoMap.get("cfDNA Extraction - Plasma"));
 //                } else if (preservation.toLowerCase().contains("ffpe")) {
 //                    requestsSeviceIds.add(serviceInfoMap.get("DNA Extraction - FFPE"));
 //                }
 //                else {
-//                    requestsSeviceIds.add(serviceInfoMap.get("DNA Extraction - Viably Frozen"));
+//                    requestsSeviceIds.add(serviceInfoMap.get("DNA Extraction"));
 //                }
-            }
-            if(serviceType.equals("PATH-RNAExtraction")) {
-                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                if (HERequired) {
-                    requestsSeviceIds.add(serviceInfoMap.get("H&E Stain"));
-                }
-                if (SectioningRequired) {
-                    requestsSeviceIds.add(serviceInfoMap.get("FFPE Sectioning"));
-                }
-                if (scrappingCurls) {
-                    requestsSeviceIds.add(serviceInfoMap.get("Slide Scraping"));
-                }
-                if (microdissection) {
-                    requestsSeviceIds.add(serviceInfoMap.get("RNA Extraction - FFPE"));
-                }
-            }
-            if(serviceType.equals("PATH-DNA/RNASimultaneous")) {
-                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                if (HERequired) {
-                    requestsSeviceIds.add(serviceInfoMap.get("H&E Stain"));
-                }
-                if (SectioningRequired) {
-                    requestsSeviceIds.add(serviceInfoMap.get("FFPE Sectioning"));
-                }
-                if (scrappingCurls) {
-                    requestsSeviceIds.add(serviceInfoMap.get("Slide Scraping"));
-                }
-                if (microdissection) {
-                    requestsSeviceIds.add(serviceInfoMap.get("DNA/RNA Extraction - FFPE"));
-                }
-            }
-            if(serviceType.equals("IMPACT505")) {
-                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
-                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quant-it"));
-                }
-                if (firstSample.getChildrenOfType("QcReportLibrary", user).length > 0) {
-                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                }
-                if (tumorOrNormal.toLowerCase().contains("normal")) {
-                    requestsSeviceIds.add(serviceInfoMap.get("IMPACT - Normal"));
-                }
-                else {
-                    serviceId = serviceInfoMap.get("IMPACT - Tumor");
-                    requestsSeviceIds.add(serviceId);
-                }
-            }
-            if(serviceType.equals("M-IMPACT")) {
-                requestsSeviceIds.add(serviceInfoMap.get("IMPACT - Mouse"));
-                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
-                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                }
-            }
-            if(serviceType.equals("HemePACT_v4")) {
-                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
-                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quant-it"));
-                }
-                else if (firstSample.getChildrenOfType("QcReportLibrary", user).length > 0) {
-                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                }
-                if (tumorOrNormal.toLowerCase().contains("tumor")) {
-                    requestsSeviceIds.add(serviceInfoMap.get("HemePACT - Tumor"));
-                }
-                else {
-                    requestsSeviceIds.add(serviceInfoMap.get("HemePACT - Normal"));
-                }
-            }
-            if(serviceType.equals("MSK-ACCESS_v1")) {
-                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
-                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quant-it"));
-                }
-                if (firstSample.getChildrenOfType("QcReportLibrary", user).length > 0) {
-                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                }
-                if (tumorOrNormal.toLowerCase().contains("tumor")) {
-                    requestsSeviceIds.add(serviceInfoMap.get("ACCESS - Tumor"));
-                    requestsSeviceIds.add(serviceInfoMap.get("Data Analysis - ACCESS (T)"));
-                }
-                else {
-                    requestsSeviceIds.add(serviceInfoMap.get("ACCESS - Normal"));
-                    requestsSeviceIds.add(serviceInfoMap.get("Data Analysis - ACCESS (N)"));
-                }
+//            }
+//            if(serviceType.equals("RNAExtraction")) {
+//                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                requestsSeviceIds.add(serviceInfoMap.get("RNA Extraction - FFPE"));
+//            }
+//
+//            if(serviceType.equals("DNA/RNASimultaneous")) {
+//                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                if (preservation.toLowerCase().contains("ffpe")) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("DNA/RNA Dual Extraction - FFPE"));
+//                }
+//                else {
+//                    requestsSeviceIds.add(serviceInfoMap.get("DNA/RNA Dual Extraction"));
+//                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                }
+//
+//            }
+//            if(serviceType.equals("PATH-DNAExtraction")) {
+//                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                if (HERequired) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("H&E Stain"));
+//                }
+//                if (SectioningRequired) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("FFPE Sectioning"));
+//                }
+//                if (scrappingCurls) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("Slide Scraping"));
+//                }
+//                if (microdissection) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("DNA Extraction - FFPE"));
+//                }
+//
+////                if (sampleType.toLowerCase().contains("cfdna")) {
+////                    requestsSeviceIds.add(serviceInfoMap.get("cfDNA Extraction - Plasma"));
+////                } else if (preservation.toLowerCase().contains("ffpe")) {
+////                    requestsSeviceIds.add(serviceInfoMap.get("DNA Extraction - FFPE"));
+////                }
+////                else {
+////                    requestsSeviceIds.add(serviceInfoMap.get("DNA Extraction - Viably Frozen"));
+////                }
+//            }
+//            if(serviceType.equals("PATH-RNAExtraction")) {
+//                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                if (HERequired) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("H&E Stain"));
+//                }
+//                if (SectioningRequired) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("FFPE Sectioning"));
+//                }
+//                if (scrappingCurls) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("Slide Scraping"));
+//                }
+//                if (microdissection) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("RNA Extraction - FFPE"));
+//                }
+//            }
+//            if(serviceType.equals("PATH-DNA/RNASimultaneous")) {
+//                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                if (HERequired) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("H&E Stain"));
+//                }
+//                if (SectioningRequired) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("FFPE Sectioning"));
+//                }
+//                if (scrappingCurls) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("Slide Scraping"));
+//                }
+//                if (microdissection) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("DNA/RNA Extraction - FFPE"));
+//                }
+//            }
+//            if(serviceType.equals("IMPACT505")) {
+//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quant-it"));
+//                }
+//                if (firstSample.getChildrenOfType("QcReportLibrary", user).length > 0) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                }
+//                if (tumorOrNormal.toLowerCase().contains("normal")) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("IMPACT - Normal"));
+//                }
+//                else {
+//                    serviceId = serviceInfoMap.get("IMPACT - Tumor");
+//                    requestsSeviceIds.add(serviceId);
+//                }
+//            }
+//            if(serviceType.equals("M-IMPACT")) {
+//                requestsSeviceIds.add(serviceInfoMap.get("IMPACT - Mouse"));
+//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                }
+//            }
+//            if(serviceType.equals("HemePACT_v4")) {
+//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quant-it"));
+//                }
+//                else if (firstSample.getChildrenOfType("QcReportLibrary", user).length > 0) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                }
+//                if (tumorOrNormal.toLowerCase().contains("tumor")) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("HemePACT - Tumor"));
+//                }
+//                else {
+//                    requestsSeviceIds.add(serviceInfoMap.get("HemePACT - Normal"));
+//                }
+//            }
+//            if(serviceType.equals("MSK-ACCESS_v1")) {
+//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quant-it"));
+//                }
+//                if (firstSample.getChildrenOfType("QcReportLibrary", user).length > 0) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                }
+//                if (tumorOrNormal.toLowerCase().contains("tumor")) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("ACCESS - Tumor"));
+//                    requestsSeviceIds.add(serviceInfoMap.get("Data Analysis - ACCESS (T)"));
+//                }
+//                else {
+//                    requestsSeviceIds.add(serviceInfoMap.get("ACCESS - Normal"));
+//                    requestsSeviceIds.add(serviceInfoMap.get("Data Analysis - ACCESS (N)"));
+//                }
+//            }
+            if(serviceType.equals("Investigator Prepared Libraries")) {
+
             }
             if(serviceType.equals("RNASeq-TruSeqPolyA")) { // seq req might be under source sample id
                 if (firstSample.getChildrenOfType("QcReportRna", user).length > 0) {
@@ -581,20 +584,20 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 //            if(serviceType.equals("Rapid-RCC")) {
 //
 //            }
-            if(serviceType.equals("Archer")) {
-                if (firstSample.getChildrenOfType("QcReportRna", user).length > 0) {
-                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                }
-                if (recipe.toLowerCase().contains("Archer-HemePanel")) {
-                    requestsSeviceIds.add(serviceInfoMap.get("Archer Fusion - Heme Panel"));
-                }
-                else if (recipe.toLowerCase().contains("Archer-SolidTumorPanel")) {
-                    requestsSeviceIds.add(serviceInfoMap.get("Archer Fusion - Solid Tumor (MSK) Panel"));
-                }
-                else if (recipe.toLowerCase().contains("Archer-Immunoverse")) {
-                    requestsSeviceIds.add(serviceInfoMap.get("Archer Immunoverse"));
-                }
-            }
+//            if(serviceType.equals("Archer")) {
+//                if (firstSample.getChildrenOfType("QcReportRna", user).length > 0) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                }
+//                if (recipe.toLowerCase().contains("Archer-HemePanel")) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("Archer Fusion - Heme Panel"));
+//                }
+//                else if (recipe.toLowerCase().contains("Archer-SolidTumorPanel")) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("Archer Fusion - Solid Tumor (MSK) Panel"));
+//                }
+//                else if (recipe.toLowerCase().contains("Archer-Immunoverse")) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("Archer Immunoverse"));
+//                }
+//            }
             if(serviceType.equals("10XGenomics_GeneExpression")) {
                 requestsSeviceIds.add((serviceInfoMap.get("10X GEX Library")));
                 if (!maxNumOfReads.equals("") && Integer.parseInt(maxNumOfReads) >= 200) {
@@ -704,69 +707,69 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                     }
                 }
             }
-            if(serviceType.equals("HumanWholeGenome") || serviceType.equals("MouseWholeGenome")) {
-                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
-                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                }
-                if (Integer.parseInt(pcrCycles) > 0) {
-                    if (coverage== 10) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 10X"));
-                    }
-                    else if (coverage == 30) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 30X"));
-                    }
-                    else if (coverage == 40) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 40X"));
-                    }
-                    else if (coverage == 50) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 50X"));
-                    }
-                    else if (coverage == 60) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 60X"));
-                    }
-                    else if (coverage == 70) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 70X"));
-                    }
-                    else if (coverage == 80) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 80X"));
-                    }
-                    else if (coverage == 100) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 100X"));
-                    }
-                    else if (coverage == 120) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 120X"));
-                    }
-                }
-                else { // PCR Free
-                    if (coverage == 10) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 10X"));
-                    }
-                    else if (coverage == 30) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 30X"));
-                    }
-                    else if (coverage == 40) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 40X"));
-                    }
-                    else if (coverage == 50) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 50X"));
-                    }
-                    else if (coverage == 60) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 60X"));
-                    }
-                    else if (coverage == 70) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 70X"));
-                    }
-                    else if (coverage == 80) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 80X"));
-                    }
-                    else if (coverage == 100) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 100X"));
-                    }
-                    else if (coverage == 120) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 120X"));
-                    }
-                }
-            }
+//            if(serviceType.equals("HumanWholeGenome") || serviceType.equals("MouseWholeGenome")) {
+//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                }
+//                if (Integer.parseInt(pcrCycles) > 0) {
+//                    if (coverage== 10) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 10X"));
+//                    }
+//                    else if (coverage == 30) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 30X"));
+//                    }
+//                    else if (coverage == 40) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 40X"));
+//                    }
+//                    else if (coverage == 50) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 50X"));
+//                    }
+//                    else if (coverage == 60) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 60X"));
+//                    }
+//                    else if (coverage == 70) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 70X"));
+//                    }
+//                    else if (coverage == 80) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 80X"));
+//                    }
+//                    else if (coverage == 100) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 100X"));
+//                    }
+//                    else if (coverage == 120) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR+ - 120X"));
+//                    }
+//                }
+//                else { // PCR Free
+//                    if (coverage == 10) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 10X"));
+//                    }
+//                    else if (coverage == 30) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 30X"));
+//                    }
+//                    else if (coverage == 40) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 40X"));
+//                    }
+//                    else if (coverage == 50) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 50X"));
+//                    }
+//                    else if (coverage == 60) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 60X"));
+//                    }
+//                    else if (coverage == 70) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 70X"));
+//                    }
+//                    else if (coverage == 80) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 80X"));
+//                    }
+//                    else if (coverage == 100) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 100X"));
+//                    }
+//                    else if (coverage == 120) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("WGS - PCR-free - 120X"));
+//                    }
+//                }
+//            }
 //            if(serviceType.equals("MouseWholeGenome")) { // preservation: FFPE or non FFPE + seqreq: coverage
 //                if (preservation.toLowerCase().contains("ffpe")) {
 //
@@ -775,27 +778,27 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 //
 //                }
 //            }
-            if(serviceType.equals("WholeGenome")) {
-                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
-                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                    requestsSeviceIds.add(serviceInfoMap.get("Shallow WGS"));
-
-                }
-                int remainigReadsRequestedToCharge = Integer.parseInt(maxNumOfReads) - 10;
-                int seqReadsService = remainigReadsRequestedToCharge / 10;
-
-                for (int i = 0; i < seqReadsService; i++) {
-                    requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE100"));
-                }
-            }
-            if(serviceType.equals("sWGS")) {
-                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0 ||
-                        firstSample.getChildrenOfType("QcReportLibrary", user).length > 0) {
-                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-
-                }
-                requestsSeviceIds.add(serviceInfoMap.get("Shallow WGS"));
-            }
+//            if(serviceType.equals("WholeGenome")) {
+//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                    requestsSeviceIds.add(serviceInfoMap.get("Shallow WGS"));
+//
+//                }
+//                int remainigReadsRequestedToCharge = Integer.parseInt(maxNumOfReads) - 10;
+//                int seqReadsService = remainigReadsRequestedToCharge / 10;
+//
+//                for (int i = 0; i < seqReadsService; i++) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE100"));
+//                }
+//            }
+//            if(serviceType.equals("sWGS")) {
+//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0 ||
+//                        firstSample.getChildrenOfType("QcReportLibrary", user).length > 0) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//
+//                }
+//                requestsSeviceIds.add(serviceInfoMap.get("Shallow WGS"));
+//            }
             if(serviceType.equals("ChIPSeq")) {
                 requestsSeviceIds.add(serviceInfoMap.get("ChIP-Seq/CUT&RUN"));
                 requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE100"));
@@ -828,63 +831,63 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                     }
                 }
             }
-            if(serviceType.equals("AmpliconSeq")) { // seq req: requested read length, only if PE100, else do it manually
-                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                requestsSeviceIds.add(serviceInfoMap.get("AmpliconSeq"));
-                if (SequencingRunType.equals("PE100")) {
-                    requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE100"));
-
-                } else if (SequencingRunType.equals("PE150")) {
-                    requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE150"));
-                }
-            }
-            if(serviceType.equals("ddPCR")) {
-                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0 ||
-                    firstSample.getChildrenOfType("QcReportLibrary", user).length > 0 ||
-                        firstSample.getChildrenOfType("QcReportRna", user).length > 0) {
-                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-
-                }
-                //requestsSeviceIds.add(serviceInfoMap.get("QC - Quant-it"));
-                //ddPCR Human % Assay
-                if(Ch1Target.toLowerCase().contains("Mouse_Human_CNV_PTGER2")) {
-                    serviceId = serviceInfoMap.get("ddPCR Human % Assay");
-                }
-                else if (numOfReplicates > 1) {
-                    for (int i  = 0; i < numOfReplicates; i++) {
-                        requestsSeviceIds.add(serviceInfoMap.get("ddPCR (1 reaction)"));
-                    }
-                }
-            }
-            if(serviceType.equals("DLP")) {
-                requestsSeviceIds.add(serviceInfoMap.get("DLP Library - 800 cells"));
-                requestsSeviceIds.add(serviceInfoMap.get("DLP Sequencing - 800 cells"));
-            }
-//            if(serviceType.equals("PED-PEG")) {
+//            if(serviceType.equals("AmpliconSeq")) { // seq req: requested read length, only if PE100, else do it manually
+//                requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                requestsSeviceIds.add(serviceInfoMap.get("AmpliconSeq"));
+//                if (SequencingRunType.equals("PE100")) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE100"));
+//
+//                } else if (SequencingRunType.equals("PE150")) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE150"));
+//                }
+//            }
+//            if(serviceType.equals("ddPCR")) {
+//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0 ||
+//                    firstSample.getChildrenOfType("QcReportLibrary", user).length > 0 ||
+//                        firstSample.getChildrenOfType("QcReportRna", user).length > 0) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//
+//                }
+//                //requestsSeviceIds.add(serviceInfoMap.get("QC - Quant-it"));
+//                //ddPCR Human % Assay
+//                if(Ch1Target.toLowerCase().contains("Mouse_Human_CNV_PTGER2")) {
+//                    serviceId = serviceInfoMap.get("ddPCR Human % Assay");
+//                }
+//                else if (numOfReplicates > 1) {
+//                    for (int i  = 0; i < numOfReplicates; i++) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("ddPCR (1 reaction)"));
+//                    }
+//                }
+//            }
+//            if(serviceType.equals("DLP")) {
+//                requestsSeviceIds.add(serviceInfoMap.get("DLP Library - 800 cells"));
+//                requestsSeviceIds.add(serviceInfoMap.get("DLP Sequencing - 800 cells"));
+//            }
+////            if(serviceType.equals("PED-PEG")) {
+////
+////            }
+//            if(serviceType.equals("FragmentAnalysis")) {
+//                requestsSeviceIds.add(serviceInfoMap.get("Custom Fragment Analysis"));
 //
 //            }
-            if(serviceType.equals("FragmentAnalysis")) {
-                requestsSeviceIds.add(serviceInfoMap.get("Custom Fragment Analysis"));
-
-            }
-            if(serviceType.equals("CellLineAuthentication")) {
-                requestsSeviceIds.add(serviceInfoMap.get("Cell Line Authentication"));
-                requestsSeviceIds.add(serviceInfoMap.get("QC - Quant-it"));
-
-            }
-            if(serviceType.equals("CMO-CH")) {
-                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
-                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                }
-                requestsSeviceIds.add(serviceInfoMap.get("CMO-CH"));
-                requestsSeviceIds.add(serviceInfoMap.get("Data Analysis - CMO-CH"));
-            }
-            if(serviceType.equals("TCRSeq-IGO")) {
-                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
-                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
-                }
-                requestsSeviceIds.add(serviceInfoMap.get("TCRSeq-IGO"));
-            }
+//            if(serviceType.equals("CellLineAuthentication")) {
+//                requestsSeviceIds.add(serviceInfoMap.get("Cell Line Authentication"));
+//                requestsSeviceIds.add(serviceInfoMap.get("QC - Quant-it"));
+//
+//            }
+//            if(serviceType.equals("CMO-CH")) {
+//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                }
+//                requestsSeviceIds.add(serviceInfoMap.get("CMO-CH"));
+//                requestsSeviceIds.add(serviceInfoMap.get("Data Analysis - CMO-CH"));
+//            }
+//            if(serviceType.equals("TCRSeq-IGO")) {
+//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+//                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
+//                }
+//                requestsSeviceIds.add(serviceInfoMap.get("TCRSeq-IGO"));
+//            }
 
             if(requestsSeviceIds.size() > 0) {
                 for (String eachServiceId : requestsSeviceIds) {
