@@ -11,6 +11,7 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.utilities.ExemplarConfig;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
+import javax.xml.crypto.Data;
 import java.io.*;
 import java.rmi.RemoteException;
 import java.text.SimpleDateFormat;
@@ -20,6 +21,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
     private List<String> headerValues = Arrays.asList("service_id", "note", "service_quantity", "purchased_on",
             "service_request_id", "owner_email", "pi_email_or_group_id", "payment_number");
     public List<Map<String, String>> dataValues = new LinkedList<>();
+    private Map<String, String> requestsToNumOfNonFalilingSamples = new HashMap<>();
 
     private static final Map<String, String> serviceInfoMap = new HashMap<>(); // or reading from the file on iLabs in case of any update
     static { // Make the map of Service Name -> Service ID
@@ -238,6 +240,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
     public PluginResult run() throws Throwable {
         // Illumina Sequencing Workflow last step has FlowCellSamples attached to it, which are pools
         List<DataRecord> flowCellPools = activeTask.getAttachedDataRecords("NormalizationPooledLibProtocol", user);
+
         logInfo("Step attachments found.");
         // On igo-lims04 I checked sample for normalization of pooled libraries datatype allowable parent
         Set<String> uniqueRequestsOnTheFlowCell = new HashSet<>();
@@ -246,10 +249,12 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 List<DataRecord> samplesOfEachPool = eachPool.getAncestorsOfType("Sample", user);
                 for (DataRecord sampleOfAPool : samplesOfEachPool) {
                     List<DataRecord> requests = sampleOfAPool.getParentsOfType("Request", user);
+                    requestsToNumOfNonFalilingSamples.put(requests.get(0).getValue("requestId", user).toString(),
+                            String.valueOf(samplesOfEachPool.size()));
                     if(requests != null && requests.size() > 0) {
                         for (DataRecord request : requests) {
                         // skipping the loop, assuming every sample is in only 1 request
-                            DataRecord firstSampleOfEachRequest = request.getChildrenOfType("Sample", user)[0];
+                            DataRecord [] samplesOfEachRequest = request.getChildrenOfType("Sample", user);
                             String requestId = request.getStringVal("RequestId", user);
                             logInfo("request id is: " + requestId);
                             String iLabServiceRequestId = request.getStringVal("iLabServiceRequestId", user);
@@ -257,7 +262,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                             // Below: checking for processing every request only once and if whether there is an iLab form filled out for the request
                             if (uniqueRequestsOnTheFlowCell.add(requestId) && iLabServiceRequestId != null &&
                                     !iLabServiceRequestId.trim().equals("")) {
-                                dataValues = outputChargesInfo(firstSampleOfEachRequest);
+                                dataValues = outputChargesInfo(samplesOfEachRequest);
                                 if(dataValues.size() > 0) {
                                     generateiLabChargeSheet();
                                 }
@@ -265,6 +270,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                             dataValues.clear();
                         }
                     }
+
                 }
             }
         }
@@ -274,24 +280,26 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
     /**
      * Logic for charges corresponding to different service types
-     * @param firstSample
+     * @param samplesOfaRequest
      * @return all iLab template sheet information for the bulk charge upload
      * */
-    private List<Map<String, String>> outputChargesInfo(DataRecord firstSample) {
+    private List<Map<String, String>> outputChargesInfo(DataRecord [] samplesOfaRequest) {
 
         List<Map<String, String>> chargeInfoRecords = new LinkedList<>();
         try {
             // Request level information
+            DataRecord firstSample = samplesOfaRequest[0];
             logInfo("First sample igo id is: " + firstSample.getDataField("SampleId", user));
             DataRecord requestRecord = firstSample.getParentsOfType("Request", user).get(0);
+            String requestId = requestRecord.getStringVal("RequestId", user);
             logInfo("request project id is: " + requestRecord.getDataField("RequestId", user));
             String serviceType = requestRecord.getStringVal("RequestName", user);
             logInfo("service type is: " + serviceType);
             String requestName = requestRecord.getStringVal("RequestName", user);
             String ownerEmail = requestRecord.getStringVal("Investigatoremail", user);
             String piEmail = requestRecord.getStringVal("LabHeadEmail", user);
-            String requestId = requestRecord.getStringVal("iLabServiceRequestId", user);
-            logInfo("ilab service req id = " + requestId);
+            String iLabServiceRequestId = requestRecord.getStringVal("iLabServiceRequestId", user);
+            logInfo("ilab service req id = " + iLabServiceRequestId);
             Long purchaseDate = requestRecord.getDateVal("RequestDate", user);
             String serviceQuantity = requestRecord.getDataField("SampleNumber", user).toString();
             // Sample level information
@@ -304,31 +312,28 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             String recipe = firstSample.getStringVal("Recipe", user);
 
             // Sequencing Requirements: on igo-lims04 I checked sample as allowable parent for sequencing requirement datatype
-            DataRecord [] seqRequeirements = firstSample.getChildrenOfType("SeqRequirement", user);
-            logInfo("seqRequeirements size is: " + seqRequeirements.length);
+            List<DataRecord []> allSeqRequeirements = new LinkedList<>();
             String numOfReads = "";
             String maxNumOfReads = "";
             String SequencingRunType = "";
             int coverage = 0;
-            if (seqRequeirements.length > 0) {
-                numOfReads = seqRequeirements[0].getDataField("RequestedReads", user).toString();
-                maxNumOfReads = numOfReads.substring(0, numOfReads.length() - 2);
-                logInfo("maxNumOfReads = " + maxNumOfReads);
-                logInfo("seqRequeirements length is: " + seqRequeirements.length);
-                if (seqRequeirements[0].getDataField("CoverageTarget", user) != null) {
-                    logInfo("seqRequeirements[0] CoverageTarget is: " + seqRequeirements[0].getDataField(
-                            "CoverageTarget", user).toString());
-                    coverage = seqRequeirements[0].getIntegerVal("CoverageTarget", user);
-                    SequencingRunType = seqRequeirements[0].getDataField("SequencingRunType", user).toString();
+            for (DataRecord sample : samplesOfaRequest) {
+                DataRecord [] seqRequeirements = sample.getChildrenOfType("SeqRequirement", user);
+                allSeqRequeirements.add(seqRequeirements);
+                logInfo("seqRequeirements size is: " + seqRequeirements.length);
+                if (seqRequeirements.length > 0) {
+                    if (seqRequeirements[0].getDataField("CoverageTarget", user) != null) {
+                        SequencingRunType = seqRequeirements[0].getDataField("SequencingRunType", user).toString();
+                    }
                 }
             }
 //            //DDPCR: DdPcrProtocol2 is a potential child of sample: to be marked in LIMS
-//            DataRecord[] ddpcrProtocol2s = firstSample.getChildrenOfType("DdPcrProtocol2", user);
+//            DataRecord[] ddpcrProtocol2s = samplesOfaRequest.getChildrenOfType("DdPcrProtocol2", user);
 //            int numOfReplicates = 0;
 //            for (DataRecord ddpcrProtocol2 : ddpcrProtocol2s) {
 //                numOfReplicates += ddpcrProtocol2.getIntegerVal("NumberOfReplicates", user);
 //            }
-//            DataRecord[] ddpcrProtocol1s = firstSample.getChildrenOfType("DdPcrProtocol1", user);
+//            DataRecord[] ddpcrProtocol1s = samplesOfaRequest.getChildrenOfType("DdPcrProtocol1", user);
 //            String Ch1Target = "";
 //            if (ddpcrProtocol1s.length > 0) {
 //                Ch1Target = ddpcrProtocol1s[0].getStringVal("Ch1Target", user);
@@ -336,7 +341,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
 //            // Pathology info
 //            // PathologyProtocol1 is a potential child of sample: to be marked in LIMS
-//            DataRecord[] pathRecords = firstSample.getChildrenOfType("PathologyProtocol1", user);
+//            DataRecord[] pathRecords = samplesOfaRequest.getChildrenOfType("PathologyProtocol1", user);
 //            Boolean scrappingCurls = false;
 //            Boolean microdissection = false;
 //            Boolean HERequired = false;
@@ -348,16 +353,17 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 //                SectioningRequired = pathRecords[0].getBooleanVal("SectioningRequired", user);
 //            }
 //
-//            DataRecord[] wholeGenomeLib = firstSample.getChildrenOfType("WholeGenomeLibProtocol3", user);
+//            DataRecord[] wholeGenomeLib = samplesOfaRequest.getChildrenOfType("WholeGenomeLibProtocol3", user);
 //            String pcrCycles = "";
 //            if (wholeGenomeLib.length > 0) {
 //                pcrCycles = wholeGenomeLib[0].getStringVal("NumberPCRCycles", user);
 //            }
 
             // Request name in Request table is a drop down menu with certain options
-            String serviceId;
+            String serviceId = "";
             Map<String, String> chargesFieldValues;
             List<String> requestsSeviceIds = new LinkedList<>();
+            Map<String, Integer> serviceIdsToQuantity = new HashMap<>();
 
 
 //            if(serviceType.equals("DNAExtraction")) {
@@ -443,10 +449,10 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 //                }
 //            }
 //            if(serviceType.equals("IMPACT505")) {
-//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+//                if (samplesOfaRequest.getChildrenOfType("QcReportDna", user).length > 0) {
 //                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quant-it"));
 //                }
-//                if (firstSample.getChildrenOfType("QcReportLibrary", user).length > 0) {
+//                if (samplesOfaRequest.getChildrenOfType("QcReportLibrary", user).length > 0) {
 //                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
 //                }
 //                if (tumorOrNormal.toLowerCase().contains("normal")) {
@@ -459,15 +465,15 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 //            }
 //            if(serviceType.equals("M-IMPACT")) {
 //                requestsSeviceIds.add(serviceInfoMap.get("IMPACT - Mouse"));
-//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+//                if (samplesOfaRequest.getChildrenOfType("QcReportDna", user).length > 0) {
 //                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
 //                }
 //            }
 //            if(serviceType.equals("HemePACT_v4")) {
-//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+//                if (samplesOfaRequest.getChildrenOfType("QcReportDna", user).length > 0) {
 //                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quant-it"));
 //                }
-//                else if (firstSample.getChildrenOfType("QcReportLibrary", user).length > 0) {
+//                else if (samplesOfaRequest.getChildrenOfType("QcReportLibrary", user).length > 0) {
 //                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
 //                }
 //                if (tumorOrNormal.toLowerCase().contains("tumor")) {
@@ -478,10 +484,10 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 //                }
 //            }
 //            if(serviceType.equals("MSK-ACCESS_v1")) {
-//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+//                if (samplesOfaRequest.getChildrenOfType("QcReportDna", user).length > 0) {
 //                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quant-it"));
 //                }
-//                if (firstSample.getChildrenOfType("QcReportLibrary", user).length > 0) {
+//                if (samplesOfaRequest.getChildrenOfType("QcReportLibrary", user).length > 0) {
 //                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
 //                }
 //                if (tumorOrNormal.toLowerCase().contains("tumor")) {
@@ -497,95 +503,103 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 
             }
             if(serviceType.equals("RNASeq-TruSeqPolyA")) { // seq req might be under source sample id
-                if (firstSample.getChildrenOfType("QcReportRna", user).length > 0) {
+                if (samplesOfaRequest[0].getChildrenOfType("QcReportRna", user).length > 0) {
                     requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
                 }
                 requestsSeviceIds.add(serviceInfoMap.get("PolyA Library Prep"));
-                if (!maxNumOfReads.equals("")) {
-                    if (Integer.parseInt(maxNumOfReads) <= 20) {
-                        serviceId = serviceInfoMap.get("RNASeq - polyA - 10-20M");
+                for (DataRecord[] seqReq : allSeqRequeirements) {
+                    numOfReads = seqReq[0].getDataField("RequestedReads", user).toString(); // each sample has one sequencing requirement record
+                    maxNumOfReads = numOfReads.substring(0, numOfReads.length() - 2);
+                    logInfo("maxNumOfReads = " + maxNumOfReads);
+                    if (!maxNumOfReads.equals("")) {
+                        if (Integer.parseInt(maxNumOfReads) <= 20) {
+                            serviceId = serviceInfoMap.get("RNASeq - polyA - 10-20M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 30) {
+                            serviceId = serviceInfoMap.get("RNASeq - polyA - 20-30M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 40) {
+                            serviceId = serviceInfoMap.get("RNASeq - polyA - 30-40M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 50) {
+                            serviceId = serviceInfoMap.get("RNASeq - polyA - 40-50M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 60) {
+                            serviceId = serviceInfoMap.get("RNASeq - polyA - 50-60M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 80) {
+                            serviceId = serviceInfoMap.get("RNASeq - polyA - 60-80M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 100) {
+                            serviceId = serviceInfoMap.get("RNASeq - polyA - 80-100M");
+                        } else {
+                            serviceId = serviceInfoMap.get("RNASeq - polyA - 100M+");
+                        }
+                        serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
                     }
-                    else if (Integer.parseInt(maxNumOfReads) <= 30) {
-                        serviceId = serviceInfoMap.get("RNASeq - polyA - 20-30M");
-                    }
-                    else if (Integer.parseInt(maxNumOfReads) <= 40) {
-                        serviceId = serviceInfoMap.get("RNASeq - polyA - 30-40M");
-                    }
-                    else if (Integer.parseInt(maxNumOfReads) <= 50) {
-                        serviceId = serviceInfoMap.get("RNASeq - polyA - 40-50M");
-                    }
-                    else if (Integer.parseInt(maxNumOfReads) <= 60) {
-                        serviceId = serviceInfoMap.get("RNASeq - polyA - 50-60M");
-                    }
-                    else if (Integer.parseInt(maxNumOfReads) <= 80) {
-                        serviceId = serviceInfoMap.get("RNASeq - polyA - 60-80M");
-                    }
-                    else if (Integer.parseInt(maxNumOfReads) <= 100) {
-                        serviceId = serviceInfoMap.get("RNASeq - polyA - 80-100M");
-                    }
-                    else {
-                        serviceId = serviceInfoMap.get("RNASeq - polyA - 100M+");
-                    }
-                    requestsSeviceIds.add(serviceId);
                 }
             }
             if(serviceType.equals("RNASeq-TruSeqRiboDeplete")) {
-                if (firstSample.getChildrenOfType("QcReportRna", user).length > 0) {
+                if (samplesOfaRequest[0].getChildrenOfType("QcReportRna", user).length > 0) {
                     requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
                 }
                 requestsSeviceIds.add(serviceInfoMap.get("RiboDepletion Library Prep"));
-                if (!maxNumOfReads.equals("")) {
-                    if (Integer.parseInt(maxNumOfReads) <= 20) {
-                        serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 10-20M");
-                    } else if (Integer.parseInt(maxNumOfReads) <= 30) {
-                        serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 20-30M");
-                    } else if (Integer.parseInt(maxNumOfReads) <= 40) {
-                        serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 30-40M");
-                    } else if (Integer.parseInt(maxNumOfReads) <= 50) {
-                        serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 40-50M");
-                    } else if (Integer.parseInt(maxNumOfReads) <= 60) {
-                        serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 50-60M");
-                    } else if (Integer.parseInt(maxNumOfReads) <= 80) {
-                        serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 60-80M");
-                    } else if (Integer.parseInt(maxNumOfReads) <= 100) {
-                        serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 80-100M");
-                    } else {
-                        serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 100M+");
+                for (DataRecord[] seqReq : allSeqRequeirements) {
+                    numOfReads = seqReq[0].getDataField("RequestedReads", user).toString(); // each sample has one sequencing requirement record
+                    maxNumOfReads = numOfReads.substring(0, numOfReads.length() - 2);
+                    logInfo("maxNumOfReads = " + maxNumOfReads);
+                    if (!maxNumOfReads.equals("")) {
+                        if (Integer.parseInt(maxNumOfReads) <= 20) {
+                            serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 10-20M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 30) {
+                            serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 20-30M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 40) {
+                            serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 30-40M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 50) {
+                            serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 40-50M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 60) {
+                            serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 50-60M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 80) {
+                            serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 60-80M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 100) {
+                            serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 80-100M");
+                        } else {
+                            serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 100M+");
+                        }
+                        serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
                     }
-                    requestsSeviceIds.add(serviceId);
                 }
             }
             if(serviceType.equals("RNASeq-SMARTerAmp")) {
-                if (firstSample.getChildrenOfType("QcReportRna", user).length > 0) {
+                if (samplesOfaRequest[0].getChildrenOfType("QcReportRna", user).length > 0) {
                     requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
                 }
                 requestsSeviceIds.add(serviceInfoMap.get("SMARTer Amplification"));
-                if (!maxNumOfReads.equals("")) {
-                    if (Integer.parseInt(maxNumOfReads) <= 20) {
-                        serviceId = serviceInfoMap.get("RNASeq - SMARTer - 10-20M");
-                    } else if (Integer.parseInt(maxNumOfReads) <= 30) {
-                        serviceId = serviceInfoMap.get("RNASeq - SMARTer - 20-30M");
-                    } else if (Integer.parseInt(maxNumOfReads) <= 40) {
-                        serviceId = serviceInfoMap.get("RNASeq - SMARTer - 30-40M");
-                    } else if (Integer.parseInt(maxNumOfReads) <= 50) {
-                        serviceId = serviceInfoMap.get("RNASeq - SMARTer - 40-50M");
-                    } else if (Integer.parseInt(maxNumOfReads) <= 60) {
-                        serviceId = serviceInfoMap.get("RNASeq - SMARTer - 50-60M");
-                    } else if (Integer.parseInt(maxNumOfReads) <= 80) {
-                        serviceId = serviceInfoMap.get("RNASeq - SMARTer - 60-80M");
-                    } else if (Integer.parseInt(maxNumOfReads) <= 100) {
-                        serviceId = serviceInfoMap.get("RNASeq - SMARTer - 80-100M");
-                    } else {
-                        serviceId = serviceInfoMap.get("RNASeq - SMARTer - 100M+");
+                for (DataRecord[] seqReq : allSeqRequeirements) {
+                    numOfReads = seqReq[0].getDataField("RequestedReads", user).toString(); // each sample has one sequencing requirement record
+                    maxNumOfReads = numOfReads.substring(0, numOfReads.length() - 2);
+                    logInfo("maxNumOfReads = " + maxNumOfReads);
+                    if (!maxNumOfReads.equals("")) {
+                        if (Integer.parseInt(maxNumOfReads) <= 20) {
+                            serviceId = serviceInfoMap.get("RNASeq - SMARTer - 10-20M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 30) {
+                            serviceId = serviceInfoMap.get("RNASeq - SMARTer - 20-30M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 40) {
+                            serviceId = serviceInfoMap.get("RNASeq - SMARTer - 30-40M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 50) {
+                            serviceId = serviceInfoMap.get("RNASeq - SMARTer - 40-50M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 60) {
+                            serviceId = serviceInfoMap.get("RNASeq - SMARTer - 50-60M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 80) {
+                            serviceId = serviceInfoMap.get("RNASeq - SMARTer - 60-80M");
+                        } else if (Integer.parseInt(maxNumOfReads) <= 100) {
+                            serviceId = serviceInfoMap.get("RNASeq - SMARTer - 80-100M");
+                        } else {
+                            serviceId = serviceInfoMap.get("RNASeq - SMARTer - 100M+");
+                        }
+                        serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
                     }
-                    requestsSeviceIds.add(serviceId);
                 }
             }
 //            if(serviceType.equals("Rapid-RCC")) {
 //
 //            }
 //            if(serviceType.equals("Archer")) {
-//                if (firstSample.getChildrenOfType("QcReportRna", user).length > 0) {
+//                if (samplesOfaRequest.getChildrenOfType("QcReportRna", user).length > 0) {
 //                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
 //                }
 //                if (recipe.toLowerCase().contains("Archer-HemePanel")) {
@@ -598,117 +612,117 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 //                    requestsSeviceIds.add(serviceInfoMap.get("Archer Immunoverse"));
 //                }
 //            }
-            if(serviceType.equals("10XGenomics_GeneExpression")) {
-                requestsSeviceIds.add((serviceInfoMap.get("10X GEX Library")));
-                if (!maxNumOfReads.equals("") && Integer.parseInt(maxNumOfReads) >= 200) {
-                    requestsSeviceIds.add((serviceInfoMap.get("10X GEX Sequencing - 10K cells")));
-                    if (Integer.parseInt(maxNumOfReads) > 200) {
-                        int remainingReadsToCharge = (Integer.parseInt(maxNumOfReads) - 200) / 10;
-                        for (int i = 0; i < remainingReadsToCharge; i++) {
-                            requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - 10X Standard"));
-                        }
-                    }
-                }
-                else {
-                    int countOfAdditions = Integer.parseInt(maxNumOfReads) / 20;
-                    for (int i = 0; i < countOfAdditions; i++) {
-                        requestsSeviceIds.add((serviceInfoMap.get("10X GEX Sequencing - 1K cells")));
-                    }
-                }
-            }
-            if(serviceType.equals("10XGenomics_VDJ")) {
-                requestsSeviceIds.add(serviceInfoMap.get("10X VDJ Library"));
-                if (!maxNumOfReads.equals("")) {
-                    if (Integer.parseInt(maxNumOfReads) >= 50) {
-                        requestsSeviceIds.add(serviceInfoMap.get("10X VDJ/FB Sequencing - 10K cells"));
-                        if (Integer.parseInt(maxNumOfReads) > 50) {
-                            int remainingReadsToCharge = (Integer.parseInt(maxNumOfReads) - 50) / 10;
-                            for (int i = 0; i < remainingReadsToCharge; i++) {
-                                requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - 10X Standard"));
-                            }
-                        }
-                    } else {
-                        int numOfAdditions = Integer.parseInt(maxNumOfReads) / 5;
-                        for (int i = 0; i < numOfAdditions; i++) {
-                            requestsSeviceIds.add(serviceInfoMap.get("10X VDJ/FB Sequencing - 1K cells"));
-                        }
-                    }
-                }
-            }
-            if(serviceType.equals("10XGenomics_FeatureBarcoding")) {
-                requestsSeviceIds.add(serviceInfoMap.get("10X FB Library"));
-                if (!maxNumOfReads.equals("")) {
-                    if (Integer.parseInt(maxNumOfReads) >= 50) {
-                        requestsSeviceIds.add(serviceInfoMap.get("10X VDJ/FB Sequencing - 10K cells"));
-                        if (Integer.parseInt(maxNumOfReads) > 50) {
-                            int remainingReadsToCharge = (Integer.parseInt(maxNumOfReads) - 50) / 10;
-                            for (int i = 0; i < remainingReadsToCharge; i++) {
-                                requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - 10X Standard"));
-                            }
-                        }
-                    } else {
-                        int countOfAdditions = Integer.parseInt(maxNumOfReads) / 5;
-                        for (int i = 0; i < countOfAdditions; i++) {
-                            requestsSeviceIds.add(serviceInfoMap.get("10X VDJ/FB Sequencing - 1K cells"));
-                        }
-                    }
-                }
-            }
-            if(serviceType.equals("10XGenomics_Multiome")) {
-                requestsSeviceIds.add(serviceInfoMap.get("10X Multiome Library"));
-                if (!maxNumOfReads.equals("")) {
-                    if (Integer.parseInt(maxNumOfReads) >= 200) {
-                        requestsSeviceIds.add(serviceInfoMap.get("10X Multiome Sequencing - 10K nuclei"));
-                    } else {
-                        int numberOfAdditions = Integer.parseInt(maxNumOfReads) / 20;
-                        for (int i = 0; i < numberOfAdditions; i++) {
-                            requestsSeviceIds.add(serviceInfoMap.get("10X Multiome Sequencing - 1K nuclei"));
-                        }
-                    }
-                }
-            }
+//            if(serviceType.equals("10XGenomics_GeneExpression")) {
+//                requestsSeviceIds.add((serviceInfoMap.get("10X GEX Library")));
+//                if (!maxNumOfReads.equals("") && Integer.parseInt(maxNumOfReads) >= 200) {
+//                    requestsSeviceIds.add((serviceInfoMap.get("10X GEX Sequencing - 10K cells")));
+//                    if (Integer.parseInt(maxNumOfReads) > 200) {
+//                        int remainingReadsToCharge = (Integer.parseInt(maxNumOfReads) - 200) / 10;
+//                        for (int i = 0; i < remainingReadsToCharge; i++) {
+//                            requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - 10X Standard"));
+//                        }
+//                    }
+//                }
+//                else {
+//                    int countOfAdditions = Integer.parseInt(maxNumOfReads) / 20;
+//                    for (int i = 0; i < countOfAdditions; i++) {
+//                        requestsSeviceIds.add((serviceInfoMap.get("10X GEX Sequencing - 1K cells")));
+//                    }
+//                }
+//            }
+//            if(serviceType.equals("10XGenomics_VDJ")) {
+//                requestsSeviceIds.add(serviceInfoMap.get("10X VDJ Library"));
+//                if (!maxNumOfReads.equals("")) {
+//                    if (Integer.parseInt(maxNumOfReads) >= 50) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("10X VDJ/FB Sequencing - 10K cells"));
+//                        if (Integer.parseInt(maxNumOfReads) > 50) {
+//                            int remainingReadsToCharge = (Integer.parseInt(maxNumOfReads) - 50) / 10;
+//                            for (int i = 0; i < remainingReadsToCharge; i++) {
+//                                requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - 10X Standard"));
+//                            }
+//                        }
+//                    } else {
+//                        int numOfAdditions = Integer.parseInt(maxNumOfReads) / 5;
+//                        for (int i = 0; i < numOfAdditions; i++) {
+//                            requestsSeviceIds.add(serviceInfoMap.get("10X VDJ/FB Sequencing - 1K cells"));
+//                        }
+//                    }
+//                }
+//            }
+//            if(serviceType.equals("10XGenomics_FeatureBarcoding")) {
+//                requestsSeviceIds.add(serviceInfoMap.get("10X FB Library"));
+//                if (!maxNumOfReads.equals("")) {
+//                    if (Integer.parseInt(maxNumOfReads) >= 50) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("10X VDJ/FB Sequencing - 10K cells"));
+//                        if (Integer.parseInt(maxNumOfReads) > 50) {
+//                            int remainingReadsToCharge = (Integer.parseInt(maxNumOfReads) - 50) / 10;
+//                            for (int i = 0; i < remainingReadsToCharge; i++) {
+//                                requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - 10X Standard"));
+//                            }
+//                        }
+//                    } else {
+//                        int countOfAdditions = Integer.parseInt(maxNumOfReads) / 5;
+//                        for (int i = 0; i < countOfAdditions; i++) {
+//                            requestsSeviceIds.add(serviceInfoMap.get("10X VDJ/FB Sequencing - 1K cells"));
+//                        }
+//                    }
+//                }
+//            }
+//            if(serviceType.equals("10XGenomics_Multiome")) {
+//                requestsSeviceIds.add(serviceInfoMap.get("10X Multiome Library"));
+//                if (!maxNumOfReads.equals("")) {
+//                    if (Integer.parseInt(maxNumOfReads) >= 200) {
+//                        requestsSeviceIds.add(serviceInfoMap.get("10X Multiome Sequencing - 10K nuclei"));
+//                    } else {
+//                        int numberOfAdditions = Integer.parseInt(maxNumOfReads) / 20;
+//                        for (int i = 0; i < numberOfAdditions; i++) {
+//                            requestsSeviceIds.add(serviceInfoMap.get("10X Multiome Sequencing - 1K nuclei"));
+//                        }
+//                    }
+//                }
+//            }
             if(serviceType.equals("WholeExome-KAPALib")) {
-                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0 ||
-                        firstSample.getChildrenOfType("QcReportLibrary", user).length > 0) {
+                if (samplesOfaRequest[0].getChildrenOfType("QcReportDna", user).length > 0 ||
+                        samplesOfaRequest[0].getChildrenOfType("QcReportLibrary", user).length > 0) {
                     requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
                 }
-                if (preservation.toLowerCase().contains("ffpe")) {
-                    if (coverage == 30 || coverage == 70) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WES - FFPE - 70X"));
+                for (DataRecord[] seqReq : allSeqRequeirements) {
+                    if (seqReq[0].getDataField("CoverageTarget", user) != null) {
+                        logInfo("seqRequeirements[0] CoverageTarget is: " + seqReq[0].getDataField(
+                                "CoverageTarget", user).toString());
+                        coverage = seqReq[0].getIntegerVal("CoverageTarget", user);
+                        logInfo("coverage = " + coverage);
                     }
-                    else if (coverage == 100) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WES - FFPE - 100X"));
+                    if (preservation.toLowerCase().contains("ffpe")) {
+                        if (coverage == 30 || coverage == 70) {
+                            serviceId = serviceInfoMap.get("WES - FFPE - 70X");
+                        } else if (coverage == 100) {
+                            serviceId = serviceInfoMap.get("WES - FFPE - 100X");
+                        } else if (coverage == 150) {
+                            serviceId = serviceInfoMap.get("WES - FFPE - 150X");
+                        } else if (coverage == 200) {
+                            serviceId = serviceInfoMap.get("WES - FFPE - 200X");
+                        } else if (coverage == 250) {
+                            serviceId = serviceInfoMap.get("WES - FFPE - 250X");
+                        }
+                    } else if (preservation.toLowerCase().contains("frozen")) {
+                        if (coverage == 30 || coverage == 70) {
+                            serviceId = serviceInfoMap.get("WES - Frozen - 70X");
+                        } else if (coverage == 100) {
+                            serviceId = serviceInfoMap.get("WES - Frozen - 100X");
+                        } else if (coverage == 150) {
+                            serviceId = serviceInfoMap.get("WES - Frozen - 150X");
+                        } else if (coverage == 200) {
+                            serviceId = serviceInfoMap.get("WES - Frozen - 200X");
+                        } else if (coverage == 250) {
+                            serviceId = serviceInfoMap.get("WES - Frozen - 250X");
+                        }
                     }
-                    else if (coverage == 150) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WES - FFPE - 150X"));
-                    }
-                    else if (coverage == 200) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WES - FFPE - 200X"));
-                    }
-                    else if (coverage == 250) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WES - FFPE - 250X"));
-                    }
-                }
-                else if (preservation.toLowerCase().contains("frozen")) {
-                    if (coverage == 30 || coverage == 70) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WES - Frozen - 70X"));
-                    }
-                    else if (coverage== 100) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WES - Frozen - 100X"));
-                    }
-                    else if (coverage == 150) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WES - Frozen - 150X"));
-                    }
-                    else if (coverage == 200) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WES - Frozen - 200X"));
-                    }
-                    else if (coverage == 250) {
-                        requestsSeviceIds.add(serviceInfoMap.get("WES - Frozen - 250X"));
-                    }
+                    serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
                 }
             }
 //            if(serviceType.equals("HumanWholeGenome") || serviceType.equals("MouseWholeGenome")) {
-//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+//                if (samplesOfaRequest.getChildrenOfType("QcReportDna", user).length > 0) {
 //                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
 //                }
 //                if (Integer.parseInt(pcrCycles) > 0) {
@@ -779,7 +793,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 //                }
 //            }
 //            if(serviceType.equals("WholeGenome")) {
-//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+//                if (samplesOfaRequest.getChildrenOfType("QcReportDna", user).length > 0) {
 //                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
 //                    requestsSeviceIds.add(serviceInfoMap.get("Shallow WGS"));
 //
@@ -792,8 +806,8 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 //                }
 //            }
 //            if(serviceType.equals("sWGS")) {
-//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0 ||
-//                        firstSample.getChildrenOfType("QcReportLibrary", user).length > 0) {
+//                if (samplesOfaRequest.getChildrenOfType("QcReportDna", user).length > 0 ||
+//                        samplesOfaRequest.getChildrenOfType("QcReportLibrary", user).length > 0) {
 //                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
 //
 //                }
@@ -802,16 +816,22 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             if(serviceType.equals("ChIPSeq")) {
                 requestsSeviceIds.add(serviceInfoMap.get("ChIP-Seq/CUT&RUN"));
                 requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE100"));
-                if (!maxNumOfReads.equals("")) {
-                    int remainigReadsRequestedToCharge = Integer.parseInt(maxNumOfReads) - 10;
-                    int seqReadsService = remainigReadsRequestedToCharge / 10;
-                    for (int i = 0; i < seqReadsService; i++) {
-                        requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE100"));
+                for (DataRecord [] seqReq : allSeqRequeirements) {
+                    numOfReads = seqReq[0].getDataField("RequestedReads", user).toString();
+                    maxNumOfReads = numOfReads.substring(0, numOfReads.length() - 2);
+                    if (!maxNumOfReads.equals("")) {
+                        int remainigReadsRequestedToCharge = Integer.parseInt(maxNumOfReads) - 10;
+                        int seqReadsService = remainigReadsRequestedToCharge / 10;
+                        for (int i = 0; i < seqReadsService; i++) {
+                            serviceId = serviceInfoMap.get("Sequencing - 10M Reads - PE100");
+                        }
                     }
+                    serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
                 }
+
             }
             if(serviceType.equals("MethylSeq")) {
-                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+                if (samplesOfaRequest[0].getChildrenOfType("QcReportDna", user).length > 0) {
                     requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
                 }
                 requestsSeviceIds.add(serviceInfoMap.get("EPIC Methyl Capture"));
@@ -821,13 +841,18 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             }
             if(serviceType.equals("ATACSeq")) {
                 requestsSeviceIds.add(serviceInfoMap.get("ATAC-Seq"));
-                if (!maxNumOfReads.equals("") && Integer.parseInt(maxNumOfReads) > 50) {
-                    requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE100"));
-                    int remainigReadsRequestedToCharge = Integer.parseInt(maxNumOfReads) - 50;
-                    int seqReadsService = remainigReadsRequestedToCharge / 10;
-
-                    for (int i = 0; i < seqReadsService; i++) {
-                        requestsSeviceIds.add(serviceInfoMap.get("Sequencing - 10M Reads - PE100"));
+                for (DataRecord [] seqReq : allSeqRequeirements) {
+                    numOfReads = seqReq[0].getDataField("RequestedReads", user).toString();
+                    maxNumOfReads = numOfReads.substring(0, numOfReads.length() - 2);
+                    if (!maxNumOfReads.equals("") && Integer.parseInt(maxNumOfReads) > 50) {
+                        serviceId = serviceInfoMap.get("Sequencing - 10M Reads - PE100");
+                        int remainigReadsRequestedToCharge = Integer.parseInt(maxNumOfReads) - 50;
+                        int seqReadsService = remainigReadsRequestedToCharge / 10;
+                        serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
+                        for (int i = 0; i < seqReadsService; i++) {
+                            serviceId = serviceInfoMap.get("Sequencing - 10M Reads - PE100");
+                            serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
+                        }
                     }
                 }
             }
@@ -842,9 +867,9 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 //                }
 //            }
 //            if(serviceType.equals("ddPCR")) {
-//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0 ||
-//                    firstSample.getChildrenOfType("QcReportLibrary", user).length > 0 ||
-//                        firstSample.getChildrenOfType("QcReportRna", user).length > 0) {
+//                if (samplesOfaRequest.getChildrenOfType("QcReportDna", user).length > 0 ||
+//                    samplesOfaRequest.getChildrenOfType("QcReportLibrary", user).length > 0 ||
+//                        samplesOfaRequest.getChildrenOfType("QcReportRna", user).length > 0) {
 //                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
 //
 //                }
@@ -876,25 +901,43 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
 //
 //            }
 //            if(serviceType.equals("CMO-CH")) {
-//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+//                if (samplesOfaRequest.getChildrenOfType("QcReportDna", user).length > 0) {
 //                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
 //                }
 //                requestsSeviceIds.add(serviceInfoMap.get("CMO-CH"));
 //                requestsSeviceIds.add(serviceInfoMap.get("Data Analysis - CMO-CH"));
 //            }
 //            if(serviceType.equals("TCRSeq-IGO")) {
-//                if (firstSample.getChildrenOfType("QcReportDna", user).length > 0) {
+//                if (samplesOfaRequest.getChildrenOfType("QcReportDna", user).length > 0) {
 //                    requestsSeviceIds.add(serviceInfoMap.get("QC - Quantity + Quality"));
 //                }
 //                requestsSeviceIds.add(serviceInfoMap.get("TCRSeq-IGO"));
 //            }
 
+            chargesFieldValues = new HashMap<>();
             if(requestsSeviceIds.size() > 0) {
                 for (String eachServiceId : requestsSeviceIds) {
-                    chargesFieldValues = new HashMap<>();
                     chargesFieldValues.put("serviceId", eachServiceId);
                     chargesFieldValues.put("note", requestName);
-                    chargesFieldValues.put("serviceQuantity", serviceQuantity);
+                    chargesFieldValues.put("serviceQuantity", requestsToNumOfNonFalilingSamples.get(iLabServiceRequestId));
+
+                    Date date = new Date();
+                    date.setTime(purchaseDate);
+                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd-hh.mm.ss");
+                    String formattedDate = formatter.format(date);
+                    chargesFieldValues.put("purchasedOn", formattedDate);
+                    chargesFieldValues.put("serviceRequestId", requestId);
+                    chargesFieldValues.put("ownerEmail", ownerEmail);
+                    chargesFieldValues.put("pIEmail", piEmail);
+                    chargesFieldValues.put("paymentNumber", "");
+                    chargeInfoRecords.add(chargesFieldValues);
+                }
+            }
+            if (serviceIdsToQuantity.size() > 0) {
+                for (Map.Entry<String, Integer> entry : serviceIdsToQuantity.entrySet()) {
+                    chargesFieldValues.put("serviceId", entry.getKey());
+                    chargesFieldValues.put("note", requestName);
+                    chargesFieldValues.put("serviceQuantity", String.valueOf(serviceIdsToQuantity.get(entry.getKey())));
 
                     Date date = new Date();
                     date.setTime(purchaseDate);
