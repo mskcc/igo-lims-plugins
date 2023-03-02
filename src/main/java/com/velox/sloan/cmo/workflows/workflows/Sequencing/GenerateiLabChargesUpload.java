@@ -9,6 +9,7 @@ import com.velox.api.util.ServerException;
 import com.velox.sapio.commons.exemplar.plugin.PluginOrder;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.utilities.ExemplarConfig;
+import com.velox.sloan.cmo.generic.LoadGeneralInfomationButton;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import javax.xml.crypto.Data;
@@ -21,7 +22,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
     private List<String> headerValues = Arrays.asList("service_id", "note", "service_quantity", "purchased_on",
             "service_request_id", "owner_email", "pi_email_or_group_id", "payment_number");
     public List<Map<String, String>> dataValues = new LinkedList<>();
-    private Map<String, String> requestsToNumOfNonFalilingSamples = new HashMap<>();
+    private Map<String, Integer> requestsToNumOfNonFalilingSamples = new HashMap<>();
 
     private static final Map<String, String> serviceInfoMap = new HashMap<>(); // or reading from the file on iLabs in case of any update
     static { // Make the map of Service Name -> Service ID
@@ -247,10 +248,19 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
         if (flowCellPools != null && flowCellPools.size() > 0) {
             for (DataRecord eachPool : flowCellPools) {
                 List<DataRecord> samplesOfEachPool = eachPool.getAncestorsOfType("Sample", user);
+                logInfo("samplesOfEachPool.size() = " + samplesOfEachPool.size());
+                Set<DataRecord> requests = new HashSet<>();
                 for (DataRecord sampleOfAPool : samplesOfEachPool) {
-                    List<DataRecord> requests = sampleOfAPool.getParentsOfType("Request", user);
-                    requestsToNumOfNonFalilingSamples.put(requests.get(0).getValue("requestId", user).toString(),
-                            String.valueOf(samplesOfEachPool.size()));
+                    logInfo("at pool sample: " + sampleOfAPool.getStringVal("SampleId", user));
+                    DataRecord currectReqId = sampleOfAPool.getAncestorsOfType("Request", user).get(0);
+                    requests.add(currectReqId);
+                    logInfo("requests.size() = " + requests.size());
+                    if (requestsToNumOfNonFalilingSamples.containsKey(currectReqId)) {
+                        requestsToNumOfNonFalilingSamples.put(currectReqId.toString(), requestsToNumOfNonFalilingSamples.get(currectReqId) + 1);
+                    }
+                    else {
+                        requestsToNumOfNonFalilingSamples.put(currectReqId.toString(), 1);
+                    }
                     if(requests != null && requests.size() > 0) {
                         for (DataRecord request : requests) {
                         // skipping the loop, assuming every sample is in only 1 request
@@ -318,6 +328,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
             String SequencingRunType = "";
             int coverage = 0;
             for (DataRecord sample : samplesOfaRequest) {
+                logInfo("at sample " + sample.getStringVal("SampleId", user));
                 DataRecord [] seqRequeirements = sample.getChildrenOfType("SeqRequirement", user);
                 allSeqRequeirements.add(seqRequeirements);
                 logInfo("seqRequeirements size is: " + seqRequeirements.length);
@@ -560,7 +571,12 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                         } else {
                             serviceId = serviceInfoMap.get("RNASeq - Ribodeplete - 100M+");
                         }
-                        serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
+                        if (serviceIdsToQuantity.containsKey(serviceId)) {
+                            serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
+                        }
+                        else {
+                            serviceIdsToQuantity.put(serviceId, 1);
+                        }
                     }
                 }
             }
@@ -591,7 +607,12 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                         } else {
                             serviceId = serviceInfoMap.get("RNASeq - SMARTer - 100M+");
                         }
-                        serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
+                        if (serviceIdsToQuantity.containsKey(serviceId)) {
+                            serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
+                        }
+                        else {
+                            serviceIdsToQuantity.put(serviceId, 1);
+                        }
                     }
                 }
             }
@@ -718,7 +739,12 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                             serviceId = serviceInfoMap.get("WES - Frozen - 250X");
                         }
                     }
-                    serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
+                    if (serviceIdsToQuantity.containsKey(serviceId)) {
+                        serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
+                    }
+                    else {
+                        serviceIdsToQuantity.put(serviceId, 1);
+                    }
                 }
             }
 //            if(serviceType.equals("HumanWholeGenome") || serviceType.equals("MouseWholeGenome")) {
@@ -824,9 +850,14 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                         int seqReadsService = remainigReadsRequestedToCharge / 10;
                         for (int i = 0; i < seqReadsService; i++) {
                             serviceId = serviceInfoMap.get("Sequencing - 10M Reads - PE100");
+                            if (serviceIdsToQuantity.containsKey(serviceId)) {
+                                serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
+                            }
+                            else {
+                                serviceIdsToQuantity.put(serviceId, 1);
+                            }
                         }
                     }
-                    serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
                 }
 
             }
@@ -840,6 +871,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 requestsSeviceIds.add(serviceInfoMap.get("CRISPR-Seq"));
             }
             if(serviceType.equals("ATACSeq")) {
+                logInfo("Request is an atac");
                 requestsSeviceIds.add(serviceInfoMap.get("ATAC-Seq"));
                 for (DataRecord [] seqReq : allSeqRequeirements) {
                     numOfReads = seqReq[0].getDataField("RequestedReads", user).toString();
@@ -848,10 +880,20 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                         serviceId = serviceInfoMap.get("Sequencing - 10M Reads - PE100");
                         int remainigReadsRequestedToCharge = Integer.parseInt(maxNumOfReads) - 50;
                         int seqReadsService = remainigReadsRequestedToCharge / 10;
-                        serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
+                        if (serviceIdsToQuantity.containsKey(serviceId)) {
+                            serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
+                        }
+                        else {
+                            serviceIdsToQuantity.put(serviceId, 1);
+                        }
                         for (int i = 0; i < seqReadsService; i++) {
                             serviceId = serviceInfoMap.get("Sequencing - 10M Reads - PE100");
-                            serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
+                            if (serviceIdsToQuantity.containsKey(serviceId)) {
+                                serviceIdsToQuantity.put(serviceId, serviceIdsToQuantity.get(serviceId) + 1);
+                            }
+                            else {
+                                serviceIdsToQuantity.put(serviceId, 1);
+                            }
                         }
                     }
                 }
@@ -919,7 +961,7 @@ public class GenerateiLabChargesUpload extends DefaultGenericPlugin {
                 for (String eachServiceId : requestsSeviceIds) {
                     chargesFieldValues.put("serviceId", eachServiceId);
                     chargesFieldValues.put("note", requestName);
-                    chargesFieldValues.put("serviceQuantity", requestsToNumOfNonFalilingSamples.get(iLabServiceRequestId));
+                    chargesFieldValues.put("serviceQuantity", String.valueOf(requestsToNumOfNonFalilingSamples.get(requestId)));
 
                     Date date = new Date();
                     date.setTime(purchaseDate);
