@@ -1,6 +1,8 @@
 package com.velox.sloan.cmo.workflows.workflows;
 
+import com.velox.api.accession.AccessionCriteria;
 import com.velox.api.datafielddefinition.DataFieldDefinition;
+import com.velox.api.datamgmtserver.DataMgmtServer;
 import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.InvalidValue;
 import com.velox.api.datarecord.IoError;
@@ -79,11 +81,15 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
             //clientCallback.displayInfo(String.format("%s, %s, %s, %s, %s, %s, %s", destinationPlateIdFieldName, destinationWellFieldName, sourceMassToUseFieldName, sourceVolumeToUseFieldName, targetConcFieldName, targetMassFieldName, targetVolFieldName));
 
             logInfo("Saving .csv to the attachment file table - " + poolingFileName);
-            DataRecord attachment = activeTask.getAllAttachedDataRecords(user).get(0).addChild("Attachment", user);
+            //DataRecord attachment = activeTask.getAllAttachedDataRecords(user).get(0).addChild("Attachment", user);
+            String [] fileName = poolingFileName.split("\\\\");
+            DataRecord attachment = dataRecordManager.addDataRecord("Attachment", user);
+            activeTask.addAttachedDataRecord(attachment);
             attachment.setDataField("AttachmentId", poolingFileName, user);
             attachment.setDataField("ActiveTaskId", activeTask.getActiveTaskId(), user);
-            //attachment.setDataField("FilePath", file.getFilePath(), user);
-            dataMgmtServer.getDataManager(user).uploadAttachment(user, attachment, fileBytes, poolingFileName, null);
+            attachment.setDataField("FilePath", fileName[fileName.length - 1], user);
+            attachment.setDataField("HideFromSampleQC", Boolean.TRUE, user);
+            attachment.setAttachmentData(fileBytes, user);
 
         } catch (Exception e) {
             logInfo(Arrays.toString(e.getStackTrace()));
