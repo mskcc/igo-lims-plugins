@@ -592,6 +592,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         int negativeControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPNegativeCONTROL"));
         int salControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPSalCONTROL"));
         int gmControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPGmCONTROL"));
+        int cellControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPcellCONTROL"));
         int noCellControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPNoCellCONTROL"));
         recipe = samples.get(0).getStringVal("Recipe", user);
         for (DataRecord sample : samples) {
@@ -613,13 +614,13 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                     Map<String, Object> dlpRecordValues = new HashMap<>();
                     switch (condition.trim().toLowerCase()) {
                         case "184htert":
-                            gmControlIncrement += 1;
-                            newSampleId = "DLPGmCONTROL" + "-" + gmControlIncrement;
-                            newOtherSampleId = "DLPGmCONTROL" + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
+                        case "rpe1htert":
+                            cellControlIncrement += 1;
+                            newSampleId = "DLPcellCONTROL" + "-" + cellControlIncrement;
+                            newOtherSampleId = "DLPcellCONTROL" + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
                             altId = newSampleId;
                             isControl = true;
                             break;
-
                         case "ntc":
                             negativeControlIncrement += 1;
                             newSampleId = "DLPNegativeCONTROL" + "-" + negativeControlIncrement;
