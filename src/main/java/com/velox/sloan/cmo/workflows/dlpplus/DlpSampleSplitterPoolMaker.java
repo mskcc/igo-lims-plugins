@@ -12,10 +12,12 @@ import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.apache.poi.ss.usermodel.CellType;
-import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellAddress;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.rmi.RemoteException;
 import java.util.*;
@@ -41,6 +43,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     String recipe = ""; // Recipe to assign to new pool and new child records
     String chipId = ""; // DLP chip ID
     Map<String, String> seqRunTypeByQuadrant = new HashMap<>();
+    private final String DLP_SMARTCHIP_SHEET = "/skimcs/MohibullahLab/LIMS/DLP/SmartchipSheet/Date(YYMMDD)_SmartChipResults_LIMSsampleID_chipID_template.xls";
 
     public DlpSampleSplitterPoolMaker() {
         setTaskEntry(true);
@@ -55,20 +58,21 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
 
     public PluginResult run() throws ServerException {
         try {
-            String filesWithDlpData = clientCallback.showFileDialog("Please upload SmartChip output file", null);
-            if (StringUtils.isBlank(filesWithDlpData)) {
-                return new PluginResult(false);
-            }
-            if (!isValidExcelFile(filesWithDlpData)) {
-                return new PluginResult(false);
-            }
-            List<String> splitFileName = Arrays.asList(filesWithDlpData.replaceAll("\\s", "_").split("_|-|\\s"));
+            //String filesWithDlpData = clientCallback.showFileDialog("Please upload SmartChip output file", null);
+//            if (StringUtils.isBlank(filesWithDlpData)) {
+//                return new PluginResult(false);
+//            }
+//            if (!isValidExcelFile(filesWithDlpData)) {
+//                return new PluginResult(false);
+//            }
+            List<String> splitFileName = Arrays.asList(DLP_SMARTCHIP_SHEET.replaceAll("\\s", "_").split("_|-|\\s"));
             String endOfFileName = splitFileName.get(splitFileName.size() - 1);
             chipId = endOfFileName.split("\\.")[0];
-            byte[] excelFileData = clientCallback.readBytes(filesWithDlpData);
+            fillOutSmartChipSheet();
+            byte[] excelFileData = clientCallback.readBytes(DLP_SMARTCHIP_SHEET);
             List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
 
-            if (!fileHasData(rowData, filesWithDlpData) || !hasValidHeader(rowData, DLP_UPLOAD_SHEET_EXPECTED_HEADERS, filesWithDlpData)) {
+            if (!fileHasData(rowData, DLP_SMARTCHIP_SHEET) || !hasValidHeader(rowData, DLP_UPLOAD_SHEET_EXPECTED_HEADERS, DLP_SMARTCHIP_SHEET)) {
                 return new PluginResult(false);
             }
             clientCallback.displayInfo("This process Will take some time. Please be patient.");
@@ -779,5 +783,25 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         activeTask.addAttachedDataRecords(pooledSampleRecords);
         activeWorkflow.getNext(activeTask).addAttachedDataRecords(pooledSampleRecords);
         activeTask.getTask().getTaskOptions().put("_DLP SPOTTING FILE PARSED", "");
+    }
+
+    private void fillOutSmartChipSheet(String sampleId) {
+        try {
+            FileInputStream inputStream = new FileInputStream(DLP_SMARTCHIP_SHEET);
+            Workbook smatchipWorkBook = new HSSFWorkbook(inputStream);
+            Sheet summary = smatchipWorkBook.getSheetAt(0);
+            for (int i = 1; i <= 70; i++) {
+                for (int j = 1; j <= 70; j++) {
+                    Row row = summary.getRow(j);
+                    Cell cell = row.getCell(0, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+                    cell.setCellValue(sampleId);
+                }
+
+
+            }
+        }
+        catch (Exception e) {
+
+        }
     }
 }
