@@ -12,10 +12,12 @@ import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.poi.hpsf.SummaryInformation;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.ss.formula.functions.Column;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.ss.util.CellAddress;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -65,10 +67,16 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
 //            if (!isValidExcelFile(filesWithDlpData)) {
 //                return new PluginResult(false);
 //            }
+            List<DataRecord> samplesAttachedToTask = activeTask.getAttachedDataRecords("Sample", user);
+            if (samplesAttachedToTask.isEmpty()) {
+                clientCallback.displayError("No samples found attached to this task.");
+                return new PluginResult(false);
+            }
             List<String> splitFileName = Arrays.asList(DLP_SMARTCHIP_SHEET.replaceAll("\\s", "_").split("_|-|\\s"));
             String endOfFileName = splitFileName.get(splitFileName.size() - 1);
             chipId = endOfFileName.split("\\.")[0];
-            fillOutSmartChipSheet();
+            String sampleId = samplesAttachedToTask.get(0).getStringVal("SampleId", user);
+            fillOutSmartChipSheet(sampleId);
             byte[] excelFileData = clientCallback.readBytes(DLP_SMARTCHIP_SHEET);
             List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
 
@@ -77,11 +85,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             }
             clientCallback.displayInfo("This process Will take some time. Please be patient.");
             HashMap<String, Integer> headerValuesMap = utils.getHeaderValuesMapFromExcelRowData(rowData);
-            List<DataRecord> samplesAttachedToTask = activeTask.getAttachedDataRecords("Sample", user);
-            if (samplesAttachedToTask.isEmpty()) {
-                clientCallback.displayError("No samples found attached to this task.");
-                return new PluginResult(false);
-            }
+
             Map<String, List<Row>> rowsSeparatedBySampleMap = getRowsBySample(samplesAttachedToTask, rowData, headerValuesMap);
             if (rowsSeparatedBySampleMap.isEmpty()) {
                 clientCallback.displayError(String.format("Did not find matching SAMPLE ID's for samples attached to the task in the file %s.\nPlease make sure that file has correct Sample Info.", filesWithDlpData));
@@ -788,16 +792,23 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     private void fillOutSmartChipSheet(String sampleId) {
         try {
             FileInputStream inputStream = new FileInputStream(DLP_SMARTCHIP_SHEET);
-            Workbook smatchipWorkBook = new HSSFWorkbook(inputStream);
-            Sheet summary = smatchipWorkBook.getSheetAt(0);
-            for (int i = 1; i <= 70; i++) {
-                for (int j = 1; j <= 70; j++) {
-                    Row row = summary.getRow(j);
-                    Cell cell = row.getCell(0, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
-                    cell.setCellValue(sampleId);
+            Workbook smartChipWorkBook = new XSSFWorkbook(inputStream);
+            Sheet summary = smartChipWorkBook.getSheetAt(0);
+            // To change columns: sample: 1, Num_Live: 8, Num_Dead: 9, Num_other: 10, Condition: 15
+            for (int i = 1; i <= 4900 ; i++) {
+                Row row = summary.getRow(i);
+                row.getCell(0).setCellValue(sampleId);
+                row.getCell(8).setCellValue("1");
+                row.getCell(9).setCellValue("-1");
+                row.getCell(10).setCellValue("-1");
+                // Prefixed conditions
+                if (row.getCell(2).equals("3")) {
+                    row.getCell(15).setCellValue("ntc");
+                } else if (row.getCell(2).equals("5")) {
+                    row.getCell(15).setCellValue("184htert"); // "rpe1htert"
+                } else {
+                    row.getCell(15).setCellValue("~");
                 }
-
-
             }
         }
         catch (Exception e) {
