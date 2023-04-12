@@ -12,10 +12,7 @@ import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.poi.hpsf.SummaryInformation;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.apache.poi.ss.formula.functions.Column;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -72,11 +69,20 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                 clientCallback.displayError("No samples found attached to this task.");
                 return new PluginResult(false);
             }
+
             List<String> splitFileName = Arrays.asList(DLP_SMARTCHIP_SHEET.replaceAll("\\s", "_").split("_|-|\\s"));
             String endOfFileName = splitFileName.get(splitFileName.size() - 1);
-            chipId = endOfFileName.split("\\.")[0];
+            chipId = endOfFileName.split( "\\.")[0];
             String sampleId = samplesAttachedToTask.get(0).getStringVal("SampleId", user);
-            fillOutSmartChipSheet(sampleId);
+
+            boolean usualControlLocation = clientCallback.showYesNoDialog("Controls Locations", "Are the controls located at their usual spot?");
+            String positiveControlLoc = "";
+            String negativeControlLoc = "";
+            if (!usualControlLocation) {
+                positiveControlLoc = clientCallback.showInputDialog("Please enter the column where positive controls are located:");
+                negativeControlLoc = clientCallback.showInputDialog("Please enter the column where negative controls are located:");
+            }
+            fillOutSmartChipSheet(sampleId, usualControlLocation, positiveControlLoc, negativeControlLoc);
             byte[] excelFileData = clientCallback.readBytes(DLP_SMARTCHIP_SHEET);
             List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
 
@@ -88,7 +94,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
 
             Map<String, List<Row>> rowsSeparatedBySampleMap = getRowsBySample(samplesAttachedToTask, rowData, headerValuesMap);
             if (rowsSeparatedBySampleMap.isEmpty()) {
-                clientCallback.displayError(String.format("Did not find matching SAMPLE ID's for samples attached to the task in the file %s.\nPlease make sure that file has correct Sample Info.", filesWithDlpData));
+                clientCallback.displayError(String.format("Did not find matching SAMPLE ID's for samples attached to the task in the template file.\nPlease make sure that file has correct Sample Info."));
                 return new PluginResult(false);
             }
             List<String> cellTypeChoices = clientCallback.showListDialog("Please choose the cell type to process", CELL_TYPES_TO_PROCESS, false, user);
@@ -789,7 +795,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         activeTask.getTask().getTaskOptions().put("_DLP SPOTTING FILE PARSED", "");
     }
 
-    private void fillOutSmartChipSheet(String sampleId) {
+    private void fillOutSmartChipSheet(String sampleId, boolean usualControlLoc, String posCtrlLoc, String negCtrlLoc) {
         try {
             FileInputStream inputStream = new FileInputStream(DLP_SMARTCHIP_SHEET);
             Workbook smartChipWorkBook = new XSSFWorkbook(inputStream);
@@ -802,17 +808,28 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                 row.getCell(9).setCellValue("-1");
                 row.getCell(10).setCellValue("-1");
                 // Prefixed conditions
-                if (row.getCell(2).equals("3")) {
-                    row.getCell(15).setCellValue("ntc");
-                } else if (row.getCell(2).equals("5")) {
-                    row.getCell(15).setCellValue("184htert"); // "rpe1htert"
-                } else {
-                    row.getCell(15).setCellValue("~");
+                if (usualControlLoc) {
+                    if (row.getCell(2).equals("3")) { // negative control
+                        row.getCell(15).setCellValue("ntc");
+                    } else if (row.getCell(2).equals("5")) { // positive control
+                        row.getCell(15).setCellValue("184htert"); // "rpe1htert"
+                    } else {
+                        row.getCell(15).setCellValue("~");
+                    }
+                }
+                else {
+                    if (row.getCell(2).equals(negCtrlLoc)) { // negative control
+                        row.getCell(15).setCellValue("ntc");
+                    } else if (row.getCell(2).equals(posCtrlLoc)) { // positive control
+                        row.getCell(15).setCellValue("184htert"); // "rpe1htert"
+                    } else {
+                        row.getCell(15).setCellValue("~");
+                    }
                 }
             }
         }
         catch (Exception e) {
-
+            logInfo("An exception occurred when pre-populating SmartChip sheet", e);
         }
     }
 }
