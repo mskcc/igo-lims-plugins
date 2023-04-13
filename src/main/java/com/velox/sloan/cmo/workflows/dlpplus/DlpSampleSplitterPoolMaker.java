@@ -12,12 +12,20 @@ import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.util.IOUtils;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.mockito.internal.matchers.Null;
 
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -42,7 +50,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     String recipe = ""; // Recipe to assign to new pool and new child records
     String chipId = ""; // DLP chip ID
     Map<String, String> seqRunTypeByQuadrant = new HashMap<>();
-    private final String DLP_SMARTCHIP_SHEET = "/skimcs/MohibullahLab/LIMS/DLP/SmartchipSheet/Date(YYMMDD)_SmartChipResults_LIMSsampleID_chipID_template.xls";
+    private final String DLP_SMARTCHIP_SHEET = "/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet/Date(YYMMDD)_SmartChipResults_LIMSsampleID_chipID_template.xls";
 
     public DlpSampleSplitterPoolMaker() {
         setTaskEntry(true);
@@ -57,7 +65,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
 
     public PluginResult run() throws ServerException {
         try {
-            //String filesWithDlpData = clientCallback.showFileDialog("Please upload SmartChip output file", null);
+//            String filesWithDlpData = clientCallback.showFileDialog("Please upload SmartChip output file", null);
 //            if (StringUtils.isBlank(filesWithDlpData)) {
 //                return new PluginResult(false);
 //            }
@@ -74,7 +82,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             String endOfFileName = splitFileName.get(splitFileName.size() - 1);
             chipId = endOfFileName.split( "\\.")[0];
             String sampleId = samplesAttachedToTask.get(0).getStringVal("SampleId", user);
-
+            logInfo("SampleId = " + sampleId);
             boolean usualControlLocation = clientCallback.showYesNoDialog("Controls Locations", "Are the controls located at their usual spot?");
             String positiveControlLoc = "";
             String negativeControlLoc = "";
@@ -83,9 +91,14 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                 negativeControlLoc = clientCallback.showInputDialog("Please enter the column where negative controls are located:");
             }
             fillOutSmartChipSheet(sampleId, usualControlLocation, positiveControlLoc, negativeControlLoc);
-            byte[] excelFileData = clientCallback.readBytes(DLP_SMARTCHIP_SHEET);
+            logInfo("After exiting the fillOutSmartChipSheet function");
+            byte[] excelFileData = Files.readAllBytes(Paths.get(DLP_SMARTCHIP_SHEET));
+            //byte[] excelFileData = IOUtils.toByteArray(dlpFile);
+            //byte[] excelFileData = dlpFile.readBytes(DLP_SMARTCHIP_SHEET);
+            logInfo("excelFileData size is = " + excelFileData.length);
             List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
-
+            logInfo("#rows = " + rowData.size());
+            logInfo("row(1) = " + rowData.get(0).getCell(0).getStringCellValue());
             if (!fileHasData(rowData, DLP_SMARTCHIP_SHEET) || !hasValidHeader(rowData, DLP_UPLOAD_SHEET_EXPECTED_HEADERS, DLP_SMARTCHIP_SHEET)) {
                 return new PluginResult(false);
             }
@@ -93,6 +106,11 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             HashMap<String, Integer> headerValuesMap = utils.getHeaderValuesMapFromExcelRowData(rowData);
 
             Map<String, List<Row>> rowsSeparatedBySampleMap = getRowsBySample(samplesAttachedToTask, rowData, headerValuesMap);
+            logInfo("rowsSeparatedBySampleMap size = " + rowsSeparatedBySampleMap.size());
+            for (Map.Entry<String, List<Row>>  entry : rowsSeparatedBySampleMap.entrySet()) {
+                logInfo("rowsSeparatedBySampleMap rows = " + entry);
+            }
+
             if (rowsSeparatedBySampleMap.isEmpty()) {
                 clientCallback.displayError(String.format("Did not find matching SAMPLE ID's for samples attached to the task in the template file.\nPlease make sure that file has correct Sample Info."));
                 return new PluginResult(false);
@@ -110,8 +128,11 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             }
             Object recipe = samplesAttachedToTask.get(0).getValue(SampleModel.RECIPE, user);
             Object dlpRequestedReads = getDlpRequestedReads(recipe);
+            logInfo("dlpRequestedReads= " + dlpRequestedReads);
             Map<String, List<DataRecord>> newDlpSamples = createDlpSamplesAndProtocolRecords(rowsSeparatedBySampleMap, headerValuesMap, samplesAttachedToTask, cellTypeToProcess);
+            logInfo("After createDlpSamplesAndProtocolRecords function call");
             assert dlpRequestedReads != null;
+            logInfo("After assert");
             createPools(newDlpSamples, (Double) dlpRequestedReads);
 
         } catch (IoError e) {
@@ -320,6 +341,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         for (int i = 1; i < rows.size(); i++) {
             rows.get(i).getCell(headerValuesMap.get("Sample")).setCellType(CellType.STRING);
             String sampleId = rows.get(i).getCell(headerValuesMap.get("Sample")).getStringCellValue();
+            logInfo("Reading rows sampleId: " + sampleId);
             if (rowDataSeparatedBySampleMap.containsKey(sampleId)) {
                 rowDataSeparatedBySampleMap.get(sampleId).add(rows.get(i));
             }
@@ -481,7 +503,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             return controlTypeIdentifier;
         }
         List<String> sortedControlSampleIds = controlSampleIds.stream().sorted(new AlphaNumericComparator()).collect(Collectors.toList());
-        logInfo("Sorted controls:" + sortedControlSampleIds.toString());
+        //logInfo("Sorted controls:" + sortedControlSampleIds.toString());
         return sortedControlSampleIds.get(sortedControlSampleIds.size() - 1).split("_")[0];
     }
 
@@ -610,17 +632,20 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         int noCellControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPNoCellCONTROL"));
         recipe = samples.get(0).getStringVal("Recipe", user);
         for (DataRecord sample : samples) {
+            logInfo("sample in create dlp samples and protocols function: " + sample.getStringVal("SampleId", user));
             String sampleId = sample.getStringVal("SampleId", user);
             String otherSampleId = sample.getStringVal("OtherSampleId", user);
             String altId = sample.getStringVal("AltId", user);
             String sequencingRunType = getSequencingRunType(sample);
             List<Row> sampleDataRows = rowsSeparatedBySampleMap.get(sampleId);
-            String nextAliquotSampleId = getNextSampleId(sampleId); // This will provode the next sample ID that we can use to start creating aliquot ID's. If the sample is being reporcessed, the aliquot ID's may exist, and we need to find next aliquot sample ID.
+            String nextAliquotSampleId = getNextSampleId(sampleId); // This will provide the next sample ID that we can use to start creating aliquot ID's. If the sample is being reporcessed, the aliquot ID's may exist, and we need to find next aliquot sample ID.
             int aliquotIncrementValue = 1;
             for (Row row : sampleDataRows) {
+                logInfo("row " + row.getCell(0));
                 String chipRow = row.getCell(headerValuesMap.get("Row")).toString();
                 String chipColumn = row.getCell(headerValuesMap.get("Column")).toString();
                 String condition = row.getCell(headerValuesMap.get("Condition")).toString();
+                logInfo("Condition = " + condition);
                 if (isValidChipSpotToProcess(chipRow, chipColumn) && isValidCellTypeToProcess(row, headerValuesMap, cellTypeToProcess)) {
                     String newSampleId;
                     String newOtherSampleId;
@@ -634,6 +659,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                             newOtherSampleId = "DLPcellCONTROL" + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
                             altId = newSampleId;
                             isControl = true;
+                            logInfo("Positive control");
                             break;
                         case "ntc":
                             negativeControlIncrement += 1;
@@ -641,11 +667,13 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                             newOtherSampleId = "DLPNegativeCONTROL" + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
                             altId = newSampleId;
                             isControl = true;
+                            logInfo("Negative control");
                             break;
 
                         default:
                             newSampleId = nextAliquotSampleId + "_" + aliquotIncrementValue;
                             newOtherSampleId = otherSampleId + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
+                            logInfo("default");
                             break;
                     }
                     dlpRecordValues.put("SampleId", newSampleId);
@@ -674,6 +702,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                     }
                     if (isControl) {
                         createDLPLibProtocol2(dlpRecordValues);
+                        logInfo("dlp protocol 2 created: "  + dlpRecordValues.get("Aliq1ControlType"));
                         newDLPSample = createControlSampleRecord(sample, newSampleId, newOtherSampleId);
                     }
                     String indexId = getIndexId(chipRow, chipColumn);
@@ -797,33 +826,49 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
 
     private void fillOutSmartChipSheet(String sampleId, boolean usualControlLoc, String posCtrlLoc, String negCtrlLoc) {
         try {
-            FileInputStream inputStream = new FileInputStream(DLP_SMARTCHIP_SHEET);
-            Workbook smartChipWorkBook = new XSSFWorkbook(inputStream);
+            logInfo("Inside the fillOutSmartChipSheet function");
+            //FileReader input = new FileReader(DLP_SMARTCHIP_SHEET);
+            FileInputStream inputStream = new FileInputStream(new File(DLP_SMARTCHIP_SHEET));
+//            logInfo("inputstream has been read");
+
+            HSSFWorkbook smartChipWorkBook = new HSSFWorkbook(inputStream);
+            logInfo("workbook has been read");
             Sheet summary = smartChipWorkBook.getSheetAt(0);
+            logInfo("summary sheet has been read");
             // To change columns: sample: 1, Num_Live: 8, Num_Dead: 9, Num_other: 10, Condition: 15
             for (int i = 1; i <= 4900 ; i++) {
+                //logInfo("inside for loop ..");
                 Row row = summary.getRow(i);
+                logInfo("row cell 1 = " + row.getCell(1).getNumericCellValue());
                 row.getCell(0).setCellValue(sampleId);
+                //logInfo("row's assigned sample id: " + row.getCell(0).getStringCellValue());
                 row.getCell(8).setCellValue("1");
                 row.getCell(9).setCellValue("-1");
                 row.getCell(10).setCellValue("-1");
                 // Prefixed conditions
                 if (usualControlLoc) {
                     if (row.getCell(2).equals("3")) { // negative control
+                        logInfo("row cell 2 = " + row.getCell(2).getNumericCellValue());
                         row.getCell(15).setCellValue("ntc");
+                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                     } else if (row.getCell(2).equals("5")) { // positive control
                         row.getCell(15).setCellValue("184htert"); // "rpe1htert"
+                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                     } else {
                         row.getCell(15).setCellValue("~");
+                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                     }
                 }
                 else {
                     if (row.getCell(2).equals(negCtrlLoc)) { // negative control
                         row.getCell(15).setCellValue("ntc");
+                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                     } else if (row.getCell(2).equals(posCtrlLoc)) { // positive control
                         row.getCell(15).setCellValue("184htert"); // "rpe1htert"
+                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                     } else {
                         row.getCell(15).setCellValue("~");
+                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                     }
                 }
             }
