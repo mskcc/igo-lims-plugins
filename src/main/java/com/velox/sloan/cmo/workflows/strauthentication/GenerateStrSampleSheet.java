@@ -63,7 +63,7 @@ public class GenerateStrSampleSheet extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user);
             if (attachedProtocolRecords.isEmpty()) {
