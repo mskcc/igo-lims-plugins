@@ -50,7 +50,7 @@ public class BioAnalyzerResultsParserTest {
         String sampleIds = "('07566_12_1_1', '07566_13_1_1', '09687_AO_1_1')";
         try {
             attachedSamples = dataRecordManager.queryDataRecords(SampleModel.DATA_TYPE_NAME, SampleModel.SAMPLE_ID + " IN " + sampleIds, user);
-        } catch (NotFound | IoError | RemoteException notFound) {
+        } catch (Exception notFound) {
             notFound.printStackTrace();
         }
         String fileName = "BioAnalyzer_Test_File_QCResultAnnotation.csv";
@@ -64,7 +64,7 @@ public class BioAnalyzerResultsParserTest {
             String BIOA_HEADER_IDENTIFIER = "Size [bp]";
             Map<String, Integer> headerValueMap = utils.getBioanalyzerFileHeaderMap(dataFromFile, fileName, BIOA_HEADER_IDENTIFIER, logger);
             parser = new BioAnalyzerResultsParser(dataFromFile, fileName, headerValueMap, clientCallback, logger, user);
-        } catch (IOException e) {
+        } catch (Exception e) {
             String message = ExceptionUtils.getMessage(e);
             System.out.println(message);
             System.out.println(dataFromFile);

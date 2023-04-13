@@ -39,7 +39,7 @@ public class ThoracicBankedSampleDataReaderTests {
             sheetWithValidData = validFileWorkbook.getSheetAt(0);
             emptySheet = emptyFileWorkbook.getSheetAt(0);
             sheetWithInvalidHeader = invalidHeaderWorkbook.getSheetAt(0);
-        } catch (IOException | InvalidFormatException | RuntimeException e) {
+        } catch (IOException | RuntimeException e) {
             e.printStackTrace();
         }
     }

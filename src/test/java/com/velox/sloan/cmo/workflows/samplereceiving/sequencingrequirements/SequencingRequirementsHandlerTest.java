@@ -94,7 +94,7 @@ public class SequencingRequirementsHandlerTest {
                 whereClause = String.format("%s='%s' AND %s='%s'", "UserSampleID", userSampleId, "RequestId", requestId);
                 relatedBankedSampleInfo.add(this.dataRecordManager.queryDataRecords("BankedSample", whereClause, this.user).get(0));
             }
-        } catch (NotFound | IoError | RemoteException ex) {
+        } catch (Exception ex) {
             ex.printStackTrace();
         }
     }
@@ -123,7 +123,7 @@ public class SequencingRequirementsHandlerTest {
             if (!Objects.isNull(seqRequirements.get(0).getValue("CoverageTarget", user))) {
                 assertEquals(sample1Coverage, seqRequirements.get(0).getValue("CoverageTarget", user).toString());
             }
-        } catch (NotFound | RemoteException | ServerException | IoError | InvalidValue e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
