@@ -5,6 +5,7 @@ import com.velox.api.util.ServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 
+import java.rmi.RemoteException;
 import java.util.Arrays;
 
 public class WarningMessage extends DefaultGenericPlugin {
@@ -21,7 +22,7 @@ public class WarningMessage extends DefaultGenericPlugin {
                 !this.activeTask.getTask().getTaskOptions().containsKey("QC VALIDATED");
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         logInfo("Giving warning to the user!!");
         try {
             boolean userChoice = clientCallback.showOkCancelDialog("QC cDNA", "Have you finished the QC for cDNA from day1 " +

@@ -41,7 +41,7 @@ public class ActiveAdapterPlateMarker extends DefaultGenericPlugin {
     }
 
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             String plateBarcode = clientCallback.showInputDialog("Enter Barcode for Adapter Plate to activate.");
             if (StringUtils.isBlank(plateBarcode)) {
@@ -136,7 +136,7 @@ public class ActiveAdapterPlateMarker extends DefaultGenericPlugin {
      * @throws IoError
      * @throws InvalidValue
      */
-    private void setAdapterSetAsUsedAndDepleted(String indexType, Integer setId, String plateBarcode, List<DataRecord> indexAssignmentConfigs) throws NotFound, RemoteException, IoError, InvalidValue {
+    private void setAdapterSetAsUsedAndDepleted(String indexType, Integer setId, String plateBarcode, List<DataRecord> indexAssignmentConfigs) throws NotFound, ServerException, RemoteException, IoError, InvalidValue {
         for (DataRecord record : indexAssignmentConfigs) {
             if (indexType.equals(record.getStringVal("IndexType", user)) && record.getIntegerVal("SetId", user) == setId &&
                     !plateBarcode.equals(record.getStringVal("AdapterPlateId", user))) {

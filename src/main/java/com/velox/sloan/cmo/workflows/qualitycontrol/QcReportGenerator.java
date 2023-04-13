@@ -63,7 +63,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return false;
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException{
         try {
             List<DataRecord> samples = activeTask.getAttachedDataRecords("Sample", user);
             if (samples.size() == 0) {
@@ -591,7 +591,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws ServerException
      */
-    private List<DataRecord> generateDnaQcReportFieldValuesMap(List<DataRecord> samples, List<DataRecord> qcDataRecords, List<DataRecord> qcProtocolRecords) {
+    private List<DataRecord> generateDnaQcReportFieldValuesMap(List<DataRecord> samples, List<DataRecord> qcDataRecords, List<DataRecord> qcProtocolRecords) throws ServerException, IoError {
         List<DataRecord> dnaQcRecords = new ArrayList<>();
         for (DataRecord sample : samples) {
             Map<String, Object> qcRecord = new HashMap<>();
@@ -663,7 +663,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws ServerException
      */
-    private List<DataRecord> generateRnaQcReportFieldValuesMap(List<DataRecord> samples, List<DataRecord> qcRecords, List<DataRecord> qcProtocolRecords){
+    private List<DataRecord> generateRnaQcReportFieldValuesMap(List<DataRecord> samples, List<DataRecord> qcRecords, List<DataRecord> qcProtocolRecords) throws IoError {
         List<DataRecord> rnaQcRecords = new ArrayList<>();
         for (DataRecord sample : samples) {
             Map<String, Object> qcRecord = new HashMap<>();
@@ -789,6 +789,8 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 logError(String.format("RemoteException while generating Library QC Report values for sample with RecordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
             } catch (ServerException se) {
                 logError(String.format("ServerException while generating Library QC Report values for sample with RecordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(se)));
+            } catch (IoError se) {
+                logError(String.format("IoError while generating QC Report:\n%s", ExceptionUtils.getStackTrace(se)));
             }
         }
         return libraryQcRecords;
@@ -825,6 +827,8 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             logError(String.format("RemoteException while generating QC Report:\n%s", ExceptionUtils.getStackTrace(e)));
         } catch (ServerException se) {
             logError(String.format("ServerException while generating QC Report:\n%s", ExceptionUtils.getStackTrace(se)));
+        } catch (IoError se) {
+            logError(String.format("IoError while generating QC Report:\n%s", ExceptionUtils.getStackTrace(se)));
         }
     }
 }

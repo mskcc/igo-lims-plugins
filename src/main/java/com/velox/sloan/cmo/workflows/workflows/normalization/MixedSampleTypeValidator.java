@@ -8,6 +8,7 @@ import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sloan.cmo.recmodels.SampleModel;
 import org.apache.commons.lang3.StringUtils;
 
+import java.rmi.RemoteException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -30,7 +31,7 @@ public class MixedSampleTypeValidator extends DefaultGenericPlugin {
         return activeTask.getTask().getTaskName().equalsIgnoreCase("create experiment") && activeTask.getTask().getTaskOptions().containsKey("VALIDATE MIXED SAMPLE TYPES");
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> samples = activeTask.getAttachedDataRecords("Sample", user);
             Set<String> sampleTypeValues = new HashSet<>();

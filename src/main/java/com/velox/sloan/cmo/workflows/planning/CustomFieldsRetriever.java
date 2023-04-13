@@ -43,7 +43,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws com.velox.api.util.ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
             List<DataRecord> attachedPlanningProtocols = activeTask.getAttachedDataRecords("PlanningStepProtocol1", user);
@@ -102,7 +102,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
      * @throws IoError
      * @throws RemoteException
      */
-    private DataRecord getSampleParentWithDesiredChildRecord(DataRecord sample, String childDataType) throws IoError, RemoteException, NotFound {
+    private DataRecord getSampleParentWithDesiredChildRecord(DataRecord sample, String childDataType) throws IoError, ServerException, RemoteException, NotFound {
         DataRecord record = null;
         Stack<DataRecord> samplePile = new Stack<>();
         samplePile.push(sample);
@@ -193,7 +193,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private List<DataRecord> getSamplesInPool(DataRecord sample) throws IoError, RemoteException, NotFound {
+    private List<DataRecord> getSamplesInPool(DataRecord sample) throws IoError, RemoteException, ServerException, NotFound {
         DataRecord startingSample = sample;
         List<DataRecord> samplesInPool = new ArrayList<>();
         boolean found = false;

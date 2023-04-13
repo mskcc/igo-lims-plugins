@@ -36,7 +36,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
         return activeTask.getTask().getTaskOptions().containsKey("UPDATE INDEX VOLUMES POST MANUAL INDEX ASSIGNMENT") && !activeTask.getTask().getTaskOptions().containsKey("_UPDATE_INDEX_VOLUMES_POST_MANUAL_INDEX_ASSIGNMENT");
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         autohelper = new AutoIndexAssignmentHelper();
         try {
             List<DataRecord> attachedSamplesList = activeTask.getAttachedDataRecords("Sample", user);
@@ -185,7 +185,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
      */
     private boolean setUpdatedIndexAssignmentValues(List<DataRecord> indexAssignmentConfigs, List<DataRecord> indexBarcodeRecords,
                                                  Double minVolInAdapterPlate, Double maxPlateVolume, Integer plateSize,
-                                                 String sampleType, boolean isTCRseq, String species, String aliquotRecipe) throws NotFound, RemoteException,
+                                                 String sampleType, boolean isTCRseq, String species, String aliquotRecipe) throws NotFound, ServerException, RemoteException,
             InvalidValue, IoError, ServerException {
         for (DataRecord indexBarcodeRec : indexBarcodeRecords) {
             boolean found = false;

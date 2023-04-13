@@ -36,7 +36,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
    }
 
     @Override
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             String csvFilePath = clientCallback.showFileDialog("Upload file with Sample Information", null);
             if (csvFilePath == null) {
@@ -103,7 +103,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private boolean isValidFileData(List<String> fileData, Map<String, Integer> headerValuesMap) throws ServerException {
+    private boolean isValidFileData(List<String> fileData, Map<String, Integer> headerValuesMap) throws ServerException, RemoteException {
         Set<String> accessionNums = new HashSet<>();
         for (int i=1; i<fileData.size(); i++){
             List<String> rowVals = Arrays.asList(fileData.get(i).trim().split(","));
@@ -191,7 +191,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws ServerException
      */
-    private boolean hasDuplicateAccessionNumber(List<Map<String, Object>> parsedSampleData) {
+    private boolean hasDuplicateAccessionNumber(List<Map<String, Object>> parsedSampleData) throws RemoteException {
         List<DataRecord> samplesInRequest = new ArrayList<>();
         try{
             samplesInRequest = dataRecordManager.queryDataRecords("Sample", "RequestId = '" + COVID_REQUEST_ID + "' AND ExemplarSampleType = 'other'", user);

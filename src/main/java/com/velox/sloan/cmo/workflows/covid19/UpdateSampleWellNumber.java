@@ -39,7 +39,7 @@ public class UpdateSampleWellNumber extends DefaultGenericPlugin {
         return activeTask.getTask().getTaskOptions().containsKey(UPDATE_WELL_NUMBERS);
     }
 
-    public PluginResult run() throws ServerException{
+    public PluginResult run() throws ServerException, RemoteException {
         String inputDataTypeName="";
         try {
             inputDataTypeName = activeTask.getInputDataTypeName();
@@ -63,7 +63,7 @@ public class UpdateSampleWellNumber extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws RemoteException
      */
-    private String getDestinatinWellFieldName() throws ServerException {
+    private String getDestinatinWellFieldName() throws ServerException, RemoteException {
         String inputDataTypeName = null;
         String destinationWellFieldName = null;
         try {

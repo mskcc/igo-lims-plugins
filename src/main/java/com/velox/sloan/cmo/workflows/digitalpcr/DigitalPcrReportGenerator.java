@@ -70,7 +70,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
         return onTaskToolbar(activeWorkflow, activeTask);
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> ddPcrResults = activeTask.getAttachedDataRecords("DdPcrAssayResults", user);
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
@@ -115,7 +115,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private Object getMicronicTubeIdFromParentSample(DataRecord ddPcrReportRecord){
+    private Object getMicronicTubeIdFromParentSample(DataRecord ddPcrReportRecord) throws ServerException {
         try {
             List<DataRecord> parentSampleRecords = ddPcrReportRecord.getParentsOfType("Sample", user);
             if (!parentSampleRecords.isEmpty()) {
@@ -143,7 +143,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws IoError
      */
-    private List<Map<String, Object>> setFieldsForReport(List<DataRecord> ddPcrResults){
+    private List<Map<String, Object>> setFieldsForReport(List<DataRecord> ddPcrResults) throws ServerException {
         List<Map<String, Object>> reportFieldValueMaps = new ArrayList<>();
         for (DataRecord record : ddPcrResults) {
             Map<String, Object> reportFieldValues = new HashMap<>();
@@ -184,7 +184,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      *
      * @return Report Type
      */
-    private String getReportTypeFromUser() {
+    private String getReportTypeFromUser() throws ServerException, RemoteException {
         List plateDim = clientCallback.showListDialog("Please Select the Type of ddPCR Report to Generate:", ddPCRReportTypes, false, user);
         return plateDim.get(0).toString();
     }
@@ -334,7 +334,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private String generateFileNameFromRequestIds(List<DataRecord> attachedRecords) {
+    private String generateFileNameFromRequestIds(List<DataRecord> attachedRecords) throws ServerException {
         Set<String> requestIds = new HashSet<>();
         for (DataRecord sample : attachedRecords) {
             String requestId = getParentRequestId(sample);
@@ -353,7 +353,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      * @throws IoError
      * @throws RemoteException
      */
-    private String getParentRequestId(DataRecord sample){
+    private String getParentRequestId(DataRecord sample) throws ServerException {
         DataRecord record = null;
         Stack<DataRecord> samplePile = new Stack<>();
         samplePile.push(sample);
@@ -425,7 +425,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      * @throws InvalidValue
      * @throws ServerException
      */
-    private void mapHumanPercentageFromDdpcrResultsToDnaQcReport(List<DataRecord> savedRecords) throws IoError, RemoteException, NotFound, InvalidValue {
+    private void mapHumanPercentageFromDdpcrResultsToDnaQcReport(List<DataRecord> savedRecords) throws IoError, ServerException, RemoteException, NotFound, InvalidValue {
         for (DataRecord rec : savedRecords) {
             if (rec.getDataTypeName().equalsIgnoreCase("DdPcrAssayResults") && rec.getValue("HumanPercentage", user) != null) {
                 List<DataRecord> parentSamples = rec.getParentsOfType("Sample", user);
@@ -452,7 +452,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private List<DataRecord> getQcReportRecords(DataRecord sample, String requestId) throws IoError, RemoteException, NotFound {
+    private List<DataRecord> getQcReportRecords(DataRecord sample, String requestId) throws IoError, ServerException, RemoteException, NotFound {
         if (sample.getChildrenOfType("QcReportDna", user).length > 0) {
             return Arrays.asList(sample.getChildrenOfType("QcReportDna", user));
         }

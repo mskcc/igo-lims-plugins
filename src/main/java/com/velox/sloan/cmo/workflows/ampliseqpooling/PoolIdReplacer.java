@@ -37,7 +37,7 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
             logInfo("running PoolId Replacer Plugin.");
@@ -66,7 +66,7 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws IoError
      */
-    private List<DataRecord> getExistingSampleAliquots(DataRecord sample) {
+    private List<DataRecord> getExistingSampleAliquots(DataRecord sample) throws ServerException {
         String sampleId = "";
         List<DataRecord> existingSampleAliquots = new ArrayList<>();
         try {
@@ -120,7 +120,7 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private String getNextSampleId(DataRecord sample) {
+    private String getNextSampleId(DataRecord sample) throws ServerException {
         List<DataRecord> parentSamples = new ArrayList<>();
         try {
             parentSamples = sample.getParentsOfType("Sample", user);
@@ -143,7 +143,7 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
      * @param sample
      * @return
      */
-    private String getSampleTypeToAssign(DataRecord sample) {
+    private String getSampleTypeToAssign(DataRecord sample) throws ServerException {
         String sampleType = "";
         try {
             sample.getParentsOfType(SampleModel.DATA_TYPE_NAME, user).get(0).getStringVal(SampleModel.EXEMPLAR_SAMPLE_TYPE, user);

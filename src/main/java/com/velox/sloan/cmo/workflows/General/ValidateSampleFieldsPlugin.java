@@ -34,7 +34,7 @@ public class ValidateSampleFieldsPlugin extends DefaultGenericPlugin {
         return this.activeTask.getTask().getTaskOptions().containsKey("VALIDATE SAMPLE FIELDS")
                 && !this.activeTask.getTask().getTaskOptions().containsKey("SAMPLE FIELDS VALIDATED");
     }
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {this.logInfo("Running Validate Sample Fields plugin");
             List<DataRecord> attachedSamples = this.activeTask.getAttachedDataRecords("Sample", this.user);
 

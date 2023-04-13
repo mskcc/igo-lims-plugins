@@ -38,7 +38,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
         return LAB_MEDICINE_TRANSFER.equals(dataTypeName);
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             String excelFilePath = clientCallback.showFileDialog("Upload File with Thoracic bank sample information.", null);
             if (StringUtils.isBlank(excelFilePath)) {
@@ -115,7 +115,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
      * @throws InvalidFormatException
      * @throws ServerException
      */
-    private Sheet getSheetFromFile(String excelFilePath) throws IOException, InvalidFormatException, ServerException {
+    private Sheet getSheetFromFile(String excelFilePath) throws IOException, InvalidFormatException, ServerException, RemoteException {
         InputStream input = new ByteArrayInputStream(clientCallback.readBytes(excelFilePath));
         Workbook workbook = WorkbookFactory.create(input);
         return workbook.getSheetAt(0);
@@ -128,7 +128,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
      * @return true/false
      * @throws ServerException
      */
-    private boolean isValidExcelFile(String fileName) throws ServerException {
+    private boolean isValidExcelFile(String fileName) throws ServerException, RemoteException {
         if (!dataReader.isValidExcelFile(fileName)) {
             logError(String.format("File '%s' is invalid file type. Only excel file with '.xls' or '.xlsx' extensions are acceptable.", fileName));
             clientCallback.displayError(String.format("File '%s' is invalid file type. Only excel file with '.xls' or '.xlsx' extensions are acceptable.", fileName));
@@ -146,7 +146,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
      * @return true/false
      * @throws ServerException
      */
-    private boolean isValidFile(Sheet sheet, List<String> headerValues, String fileName) throws ServerException {
+    private boolean isValidFile(Sheet sheet, List<String> headerValues, String fileName) throws ServerException, RemoteException {
         if (!dataReader.excelFileHasData(sheet)) {
             logError(String.format("uploaded File '%s' is Empty. File must have more than 1 rows with data.", fileName));
             clientCallback.displayError(String.format("uploaded File '%s' is Empty. File must have more than 1 rows with data.", fileName));
@@ -181,7 +181,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private List<Map<String, Object>> getThoracicBankedSampleRecordsFromFile(Sheet sheet, Map<String, Integer> fileHeader) throws IoError, RemoteException, NotFound {
+    private List<Map<String, Object>> getThoracicBankedSampleRecordsFromFile(Sheet sheet, Map<String, Integer> fileHeader) throws IoError, ServerException, RemoteException, NotFound {
         List<String> existingUuids = getExistingUuids();
         return dataReader.readThoracicBankedSampleRecordsFromFile(sheet, fileHeader, existingUuids);
     }
@@ -218,7 +218,7 @@ public class ThoracicBankedSamplesImporter extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws IoError
      */
-    private List<String> getExistingUuids() throws RemoteException, NotFound, IoError {
+    private List<String> getExistingUuids() throws RemoteException, ServerException, NotFound, IoError {
         List<String> existingUuids = new ArrayList<>();
         List<DataRecord> thoracicBankedSamples = dataRecordManager.queryDataRecords("ThoracicBankTransfer", null, user);
         for (DataRecord record : thoracicBankedSamples) {

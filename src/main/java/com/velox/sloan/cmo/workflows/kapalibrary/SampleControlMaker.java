@@ -39,7 +39,7 @@ public class SampleControlMaker extends DefaultGenericPlugin {
     }
 
     @Override
-    public boolean shouldRun() throws RemoteException, com.velox.api.util.ServerException, NotFound {
+    public boolean shouldRun() throws RemoteException, ServerException, NotFound {
         if (activeTask.getStatus() != ActiveTask.COMPLETE && activeTask.getTask().getTaskOptions().containsKey("CREATE AND AUTO ASSIGN CONTROLS") && !activeTask.getTask().getTaskOptions().containsKey("CONTROLS_ADDED")) {
             List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
             if (isRecipeImpactOrHemepact(attachedSampleRecords)) {
@@ -55,7 +55,7 @@ public class SampleControlMaker extends DefaultGenericPlugin {
         return false;
     }
 
-    public PluginResult run() throws com.velox.api.util.ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
             addControls(attachedSampleRecords);
@@ -87,7 +87,7 @@ public class SampleControlMaker extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws RemoteException
      */
-    private List<String> getRecipeForAttachedSamples(List<DataRecord> attachedSamples) throws NotFound, RemoteException {
+    private List<String> getRecipeForAttachedSamples(List<DataRecord> attachedSamples) throws NotFound, ServerException, RemoteException {
         List<String> recipes = new ArrayList<>();
         for (DataRecord sample : attachedSamples) {
             String recipe = sample.getStringVal("Recipe", user);
@@ -106,7 +106,7 @@ public class SampleControlMaker extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws RemoteException
      */
-    private boolean isRecipeImpactOrHemepact(List<DataRecord> attachedSamples) throws NotFound, RemoteException {
+    private boolean isRecipeImpactOrHemepact(List<DataRecord> attachedSamples) throws NotFound, ServerException, RemoteException {
         List<String> recipes = getRecipeForAttachedSamples(attachedSamples);
         for (String recipe : recipes) {
             if (recipe.toLowerCase().contains("impact") || recipe.toLowerCase().contains("hemepact")) {
@@ -125,7 +125,7 @@ public class SampleControlMaker extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws RemoteException
      */
-    private List<String> getControlTypesToAdd(List<DataRecord> attachedSamples) throws NotFound, RemoteException {
+    private List<String> getControlTypesToAdd(List<DataRecord> attachedSamples) throws NotFound, ServerException, RemoteException {
         List<String> controlTypesToAdd = new ArrayList<>();
         for (DataRecord sample : attachedSamples) {
             String recipe = sample.getStringVal("Recipe", user);
@@ -161,7 +161,7 @@ public class SampleControlMaker extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private List<DataRecord> getAllControlRecordsByTypesToAdd(List<String> controlTypesToAdd) throws IoError, RemoteException, NotFound {
+    private List<DataRecord> getAllControlRecordsByTypesToAdd(List<String> controlTypesToAdd) throws IoError, ServerException, RemoteException, NotFound {
         List<DataRecord> allControlSampleRecords = dataRecordManager.queryDataRecords("Sample", "IsControl = 1", user);
         List<DataRecord> controlRecordsByTypesToAdd = new ArrayList<>();
         for (DataRecord pooledRecord : allControlSampleRecords) {

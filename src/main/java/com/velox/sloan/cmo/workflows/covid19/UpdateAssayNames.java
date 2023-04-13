@@ -48,7 +48,7 @@ public class UpdateAssayNames extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
             List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user);
