@@ -50,7 +50,8 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     String recipe = ""; // Recipe to assign to new pool and new child records
     String chipId = ""; // DLP chip ID
     Map<String, String> seqRunTypeByQuadrant = new HashMap<>();
-    private final String DLP_SMARTCHIP_SHEET = "/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet/Date(YYMMDD)_SmartChipResults_LIMSsampleID_chipID_template-test.xls";
+    private String DLP_SMARTCHIP_PATH = "/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet";
+    private String DLP_SMARTCHIP_SHEET = "/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet/Date(YYMMDD)_SmartChipResults_LIMSsampleID_chipID_template-test.xls";
 
     public DlpSampleSplitterPoolMaker() {
         setTaskEntry(true);
@@ -81,8 +82,6 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             List<String> splitFileName = Arrays.asList(DLP_SMARTCHIP_SHEET.replaceAll("\\s", "_").split("_|-|\\s"));
             String endOfFileName = splitFileName.get(splitFileName.size() - 1);
             chipId = endOfFileName.split( "\\.")[0];
-            String sampleId = samplesAttachedToTask.get(0).getStringVal("SampleId", user);
-            logInfo("SampleId = " + sampleId);
             boolean usualControlLocation = clientCallback.showYesNoDialog("Controls Locations", "Are the controls located at their usual spot?");
             String positiveControlLoc = "";
             String negativeControlLoc = "";
@@ -90,7 +89,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                 positiveControlLoc = clientCallback.showInputDialog("Please enter the column where positive controls are located:");
                 negativeControlLoc = clientCallback.showInputDialog("Please enter the column where negative controls are located:");
             }
-            fillOutSmartChipSheet(sampleId, usualControlLocation, positiveControlLoc, negativeControlLoc);
+            fillOutSmartChipSheet(samplesAttachedToTask, usualControlLocation, positiveControlLoc, negativeControlLoc);
             logInfo("After exiting the fillOutSmartChipSheet function");
             byte[] excelFileData = Files.readAllBytes(Paths.get(DLP_SMARTCHIP_SHEET));
             logInfo("excelFileData size is = " + excelFileData.length);
@@ -821,51 +820,61 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         activeTask.getTask().getTaskOptions().put("_DLP SPOTTING FILE PARSED", "");
     }
 
-    private void fillOutSmartChipSheet(String sampleId, boolean usualControlLoc, String posCtrlLoc, String negCtrlLoc) {
+    private void fillOutSmartChipSheet(List<DataRecord> sampleRecords, boolean usualControlLoc, String posCtrlLoc, String negCtrlLoc) {
         try {
             logInfo("Inside the fillOutSmartChipSheet function");
             //FileReader input = new FileReader(DLP_SMARTCHIP_SHEET);
-            FileInputStream inputStream = new FileInputStream(new File(DLP_SMARTCHIP_SHEET));
-//            logInfo("inputstream has been read");
-
-            XSSFWorkbook smartChipWorkBook = new XSSFWorkbook(inputStream);
-            logInfo("workbook has been read");
-            Sheet summary = smartChipWorkBook.getSheetAt(0);
-            logInfo("summary sheet has been read");
-            // To change columns: sample: 1, Num_Live: 8, Num_Dead: 9, Num_other: 10, Condition: 15
-            for (int i = 1; i <= 1720; i++) {
-                //logInfo("inside for loop ..");
-                Row row = summary.getRow(i);
-                logInfo("row cell 1 = " + row.getCell(1).getNumericCellValue());
-                row.getCell(0).setCellValue(sampleId);
-                //logInfo("row's assigned sample id: " + row.getCell(0).getStringCellValue());
-                row.getCell(8).setCellValue("1");
-                row.getCell(9).setCellValue("-1");
-                row.getCell(10).setCellValue("-1");
-                // Prefixed conditions
-                if (usualControlLoc) {
-                    if (row.getCell(2).equals("3")) { // negative control
-                        logInfo("row cell 2 = " + row.getCell(2).getNumericCellValue());
-                        row.getCell(15).setCellValue("ntc");
-                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                    } else if (row.getCell(2).equals("5")) { // positive control
-                        row.getCell(15).setCellValue("184hTERT"); // "rpe1htert"
-                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                    } else {
-                        row.getCell(15).setCellValue("~");
-                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+            for (DataRecord sample : sampleRecords) {
+                File samplesFile = new File(DLP_SMARTCHIP_PATH);
+                String sampleId = sample.getStringVal("SampleId", user);
+                File folder = new File(DLP_SMARTCHIP_PATH);
+                File[] listOfFiles = folder.listFiles();
+                for (File file: listOfFiles) {
+                    if (file.getName().contains(sampleId) && isValidExcelFile(file.getName())) {
+                        samplesFile = file;
                     }
                 }
-                else {
-                    if (row.getCell(2).equals(negCtrlLoc)) { // negative control
-                        row.getCell(15).setCellValue("ntc");
-                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                    } else if (row.getCell(2).equals(posCtrlLoc)) { // positive control
-                        row.getCell(15).setCellValue("184hTERT"); // "rpe1htert"
-                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                FileInputStream inputStream = new FileInputStream(samplesFile);
+//            logInfo("inputstream has been read");
+
+                XSSFWorkbook smartChipWorkBook = new XSSFWorkbook(inputStream);
+                logInfo("workbook has been read");
+                Sheet summary = smartChipWorkBook.getSheetAt(0);
+                logInfo("summary sheet has been read");
+                // To change columns: sample: 1, Num_Live: 8, Num_Dead: 9, Num_other: 10, Condition: 15
+                for (int i = 1; i <= 1720; i++) {
+                    //logInfo("inside for loop ..");
+                    Row row = summary.getRow(i);
+                    logInfo("row cell 1 = " + row.getCell(1).getNumericCellValue());
+                    row.getCell(0).setCellValue(sampleId);
+                    logInfo("row's assigned sample id: " + row.getCell(0).getStringCellValue());
+                    row.getCell(8).setCellValue("1");
+                    row.getCell(9).setCellValue("-1");
+                    row.getCell(10).setCellValue("-1");
+                    // Prefixed conditions
+                    if (usualControlLoc) {
+                        if (row.getCell(2).equals("3")) { // negative control
+                            //logInfo("row cell 2 = " + row.getCell(2).getNumericCellValue());
+                            row.getCell(15).setCellValue("ntc");
+                            //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                        } else if (row.getCell(2).equals("5")) { // positive control
+                            row.getCell(15).setCellValue("184hTERT"); // "rpe1htert"
+                            //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                        } else {
+                            row.getCell(15).setCellValue("~");
+                            //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                        }
                     } else {
-                        row.getCell(15).setCellValue("~");
-                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                        if (row.getCell(2).equals(negCtrlLoc)) { // negative control
+                            row.getCell(15).setCellValue("ntc");
+                            logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                        } else if (row.getCell(2).equals(posCtrlLoc)) { // positive control
+                            row.getCell(15).setCellValue("184hTERT"); // "rpe1htert"
+                            logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                        } else {
+                            row.getCell(15).setCellValue("~");
+                            logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                        }
                     }
                 }
             }
