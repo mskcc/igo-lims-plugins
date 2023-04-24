@@ -12,18 +12,16 @@ import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.poi.hssf.usermodel.HSSFSheet;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.util.IOUtils;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.mockito.internal.matchers.Null;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.rmi.RemoteException;
@@ -50,8 +48,8 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     String recipe = ""; // Recipe to assign to new pool and new child records
     String chipId = ""; // DLP chip ID
     Map<String, String> seqRunTypeByQuadrant = new HashMap<>();
-    private String DLP_SMARTCHIP_PATH = "/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet";
-    private String DLP_SMARTCHIP_SHEET = "/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet/Date(YYMMDD)_SmartChipResults_LIMSsampleID_chipID_template-test.xls";
+    private String DLP_SMARTCHIP_PATH = "/srv/www/sapio/lims/db_backup";//"/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet/";
+    //private String DLP_SMARTCHIP_SHEET = "/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet/Date(YYMMDD)_SmartChipResults_LIMSsampleID_chipID_template.xls";
 
     public DlpSampleSplitterPoolMaker() {
         setTaskEntry(true);
@@ -66,103 +64,108 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
 
     public PluginResult run() throws ServerException {
         try {
-//            String filesWithDlpData = clientCallback.showFileDialog("Please upload SmartChip output file", null);
-//            if (StringUtils.isBlank(filesWithDlpData)) {
-//                return new PluginResult(false);
-//            }
-//            if (!isValidExcelFile(filesWithDlpData)) {
-//                return new PluginResult(false);
-//            }
+            String DLPSmartChipFile = "";
             List<DataRecord> samplesAttachedToTask = activeTask.getAttachedDataRecords("Sample", user);
             if (samplesAttachedToTask.isEmpty()) {
                 clientCallback.displayError("No samples found attached to this task.");
                 return new PluginResult(false);
             }
+            for (DataRecord sample : samplesAttachedToTask) {
+                String sampleId = sample.getStringVal("SampleId", user);
+                File folder = new File(DLP_SMARTCHIP_PATH);
+                File[] listOfFiles = folder.listFiles();
+                for (File file : listOfFiles) {
+                    if (file.getName().contains(sampleId) && isValidExcelFile(file.getName())) {
+                        DLPSmartChipFile = file.getName();
+                        List<String> splitFileName = Arrays.asList(DLPSmartChipFile.replaceAll("\\s", "_").split("_|-|\\s"));
+                        String endOfFileName = splitFileName.get(splitFileName.size() - 1);
+                        chipId = endOfFileName.split("\\.")[0];
+                        boolean usualControlLocation = clientCallback.showYesNoDialog("Controls Locations", "Are the controls located at their usual spot?");
+                        String positiveControlLoc = "";
+                        String negativeControlLoc = "";
+                        if (!usualControlLocation) {
+                            positiveControlLoc = clientCallback.showInputDialog("Please enter the column where positive controls are located:");
+                            negativeControlLoc = clientCallback.showInputDialog("Please enter the column where negative controls are located:");
+                        }
+                        fillOutSmartChipSheet(sampleId, file, usualControlLocation, positiveControlLoc, negativeControlLoc);
+                        logInfo("After exiting the fillOutSmartChipSheet function");
+                        byte[] excelFileData = Files.readAllBytes(Paths.get(file.getAbsolutePath()));
+                        //byte[] excelFileData = DLPSmartChipFile.getBytes();
+                        logInfo("excelFileData size is = " + excelFileData.length);
+                        List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
+                        logInfo("#rows = " + rowData.size());
+                        logInfo("row(1600) = " + rowData.get(1).getCell(0).getStringCellValue());
+                        if (!fileHasData(rowData, DLPSmartChipFile) || !hasValidHeader(rowData, DLP_UPLOAD_SHEET_EXPECTED_HEADERS, DLPSmartChipFile)) {
+                            return new PluginResult(false);
+                        }
+                        clientCallback.displayInfo("This process Will take some time. Please be patient.");
+                        HashMap<String, Integer> headerValuesMap = utils.getHeaderValuesMapFromExcelRowData(rowData);
 
-            List<String> splitFileName = Arrays.asList(DLP_SMARTCHIP_SHEET.replaceAll("\\s", "_").split("_|-|\\s"));
-            String endOfFileName = splitFileName.get(splitFileName.size() - 1);
-            chipId = endOfFileName.split( "\\.")[0];
-            boolean usualControlLocation = clientCallback.showYesNoDialog("Controls Locations", "Are the controls located at their usual spot?");
-            String positiveControlLoc = "";
-            String negativeControlLoc = "";
-            if (!usualControlLocation) {
-                positiveControlLoc = clientCallback.showInputDialog("Please enter the column where positive controls are located:");
-                negativeControlLoc = clientCallback.showInputDialog("Please enter the column where negative controls are located:");
+                        Map<String, List<Row>> rowsSeparatedBySampleMap = getRowsBySample(samplesAttachedToTask, rowData, headerValuesMap);
+                        logInfo("rowsSeparatedBySampleMap size = " + rowsSeparatedBySampleMap.size());
+                        for (Map.Entry<String, List<Row>> entry : rowsSeparatedBySampleMap.entrySet()) {
+                            logInfo("rowsSeparatedBySampleMap rows = " + entry);
+                        }
+                        // TODO: to remove
+                        if (rowsSeparatedBySampleMap.isEmpty()) {
+                            clientCallback.displayError(String.format("Did not find matching SAMPLE ID's for samples attached to the task in the template file.\nPlease make sure that file has correct Sample Info."));
+                            return new PluginResult(false);
+                        }
+                        List<String> cellTypeChoices = clientCallback.showListDialog("Please choose the cell type to process", CELL_TYPES_TO_PROCESS, false, user);
+                        if (cellTypeChoices.isEmpty()) {
+                            clientCallback.displayError("Cell type to process not selected. You need to select correct cell type to process");
+                            return new PluginResult(false);
+                        }
+                        String cellTypeToProcess = cellTypeChoices.get(0);
+                        boolean isCorrectCellTypeToProcess = clientCallback.showYesNoDialog("Confirm CELL TYPE to process", String.format("Are you sure you want to process '%s' cells", cellTypeToProcess));
+                        if (!isCorrectCellTypeToProcess) {
+                            logInfo("User did not positively confirm CELL TYPE to process. Aborting plugin task.");
+                            return new PluginResult(false);
+                        }
+                        Object recipe = samplesAttachedToTask.get(0).getValue(SampleModel.RECIPE, user);
+                        Object dlpRequestedReads = getDlpRequestedReads(recipe);
+                        logInfo("dlpRequestedReads= " + dlpRequestedReads);
+                        Map<String, List<DataRecord>> newDlpSamples = createDlpSamplesAndProtocolRecords(rowsSeparatedBySampleMap, headerValuesMap, samplesAttachedToTask, cellTypeToProcess);
+                        logInfo("After createDlpSamplesAndProtocolRecords function call");
+                        assert dlpRequestedReads != null;
+                        logInfo("After assert");
+                        createPools(newDlpSamples, (Double) dlpRequestedReads);
+                    }
+                }
             }
-            fillOutSmartChipSheet(samplesAttachedToTask, usualControlLocation, positiveControlLoc, negativeControlLoc);
-            logInfo("After exiting the fillOutSmartChipSheet function");
-            byte[] excelFileData = Files.readAllBytes(Paths.get(DLP_SMARTCHIP_SHEET));
-            logInfo("excelFileData size is = " + excelFileData.length);
-            List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
-            logInfo("#rows = " + rowData.size());
-            logInfo("row(1600) = " + rowData.get(1).getCell(0).getStringCellValue());
-            if (!fileHasData(rowData, DLP_SMARTCHIP_SHEET) || !hasValidHeader(rowData, DLP_UPLOAD_SHEET_EXPECTED_HEADERS, DLP_SMARTCHIP_SHEET)) {
-                return new PluginResult(false);
-            }
-            clientCallback.displayInfo("This process Will take some time. Please be patient.");
-            HashMap<String, Integer> headerValuesMap = utils.getHeaderValuesMapFromExcelRowData(rowData);
+        }
 
-            Map<String, List<Row>> rowsSeparatedBySampleMap = getRowsBySample(samplesAttachedToTask, rowData, headerValuesMap);
-            logInfo("rowsSeparatedBySampleMap size = " + rowsSeparatedBySampleMap.size());
-            for (Map.Entry<String, List<Row>>  entry : rowsSeparatedBySampleMap.entrySet()) {
-                logInfo("rowsSeparatedBySampleMap rows = " + entry);
-            }
-
-            if (rowsSeparatedBySampleMap.isEmpty()) {
-                clientCallback.displayError(String.format("Did not find matching SAMPLE ID's for samples attached to the task in the template file.\nPlease make sure that file has correct Sample Info."));
-                return new PluginResult(false);
-            }
-            List<String> cellTypeChoices = clientCallback.showListDialog("Please choose the cell type to process", CELL_TYPES_TO_PROCESS, false, user);
-            if (cellTypeChoices.isEmpty()) {
-                clientCallback.displayError("Cell type to process not selected. You need to select correct cell type to process");
-                return new PluginResult(false);
-            }
-            String cellTypeToProcess = cellTypeChoices.get(0);
-            boolean isCorrectCellTypeToProcess = clientCallback.showYesNoDialog("Confirm CELL TYPE to process", String.format("Are you sure you want to process '%s' cells", cellTypeToProcess));
-            if (!isCorrectCellTypeToProcess) {
-                logInfo("User did not positively confirm CELL TYPE to process. Aborting plugin task.");
-                return new PluginResult(false);
-            }
-            Object recipe = samplesAttachedToTask.get(0).getValue(SampleModel.RECIPE, user);
-            Object dlpRequestedReads = getDlpRequestedReads(recipe);
-            logInfo("dlpRequestedReads= " + dlpRequestedReads);
-            Map<String, List<DataRecord>> newDlpSamples = createDlpSamplesAndProtocolRecords(rowsSeparatedBySampleMap, headerValuesMap, samplesAttachedToTask, cellTypeToProcess);
-            logInfo("After createDlpSamplesAndProtocolRecords function call");
-            assert dlpRequestedReads != null;
-            logInfo("After assert");
-            createPools(newDlpSamples, (Double) dlpRequestedReads);
-
-        } catch (IoError e) {
+        catch(IoError e){
             String errMsg = String.format("IoError Exception while parsing the DLP plus spotting file:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
-        } catch (InvalidValue e) {
+        } catch(InvalidValue e){
             String errMsg = String.format("IoError Exception while parsing the DLP plus spotting file:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
-        } catch (InvalidFormatException e) {
+        } catch(InvalidFormatException e){
             String errMsg = String.format("InvalidFormat Exception while parsing the DLP plus spotting file:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
-        } catch (NotFound e) {
+        } catch(NotFound e){
             String errMsg = String.format("NotFound Exception while parsing the DLP plus spotting file:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
-        } catch (AlreadyExists e) {
+        } catch(AlreadyExists e){
             String errMsg = String.format("AlreadyExists Exception while parsing the DLP plus spotting file:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
-        } catch (RemoteException e) {
+        } catch(RemoteException e){
             String errMsg = String.format("RemoteException while parsing the DLP plus spotting file:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
-        } catch (IOException e) {
+        } catch(IOException e){
             String errMsg = String.format("IOException while parsing the DLP plus spotting file:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
@@ -820,64 +823,76 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         activeTask.getTask().getTaskOptions().put("_DLP SPOTTING FILE PARSED", "");
     }
 
-    private void fillOutSmartChipSheet(List<DataRecord> sampleRecords, boolean usualControlLoc, String posCtrlLoc, String negCtrlLoc) {
+    private void fillOutSmartChipSheet(String sampleId, File file, boolean usualControlLoc, String posCtrlLoc, String negCtrlLoc) {
         try {
             logInfo("Inside the fillOutSmartChipSheet function");
-            //FileReader input = new FileReader(DLP_SMARTCHIP_SHEET);
-            for (DataRecord sample : sampleRecords) {
-                File samplesFile = new File(DLP_SMARTCHIP_PATH);
-                String sampleId = sample.getStringVal("SampleId", user);
-                File folder = new File(DLP_SMARTCHIP_PATH);
-                File[] listOfFiles = folder.listFiles();
-                for (File file: listOfFiles) {
-                    if (file.getName().contains(sampleId) && isValidExcelFile(file.getName())) {
-                        samplesFile = file;
-                    }
-                }
-                FileInputStream inputStream = new FileInputStream(samplesFile);
-//            logInfo("inputstream has been read");
 
-                XSSFWorkbook smartChipWorkBook = new XSSFWorkbook(inputStream);
-                logInfo("workbook has been read");
-                Sheet summary = smartChipWorkBook.getSheetAt(0);
-                logInfo("summary sheet has been read");
-                // To change columns: sample: 1, Num_Live: 8, Num_Dead: 9, Num_other: 10, Condition: 15
-                for (int i = 1; i <= 1720; i++) {
-                    //logInfo("inside for loop ..");
-                    Row row = summary.getRow(i);
-                    logInfo("row cell 1 = " + row.getCell(1).getNumericCellValue());
-                    row.getCell(0).setCellValue(sampleId);
-                    logInfo("row's assigned sample id: " + row.getCell(0).getStringCellValue());
-                    row.getCell(8).setCellValue("1");
-                    row.getCell(9).setCellValue("-1");
-                    row.getCell(10).setCellValue("-1");
-                    // Prefixed conditions
-                    if (usualControlLoc) {
-                        if (row.getCell(2).equals("3")) { // negative control
-                            //logInfo("row cell 2 = " + row.getCell(2).getNumericCellValue());
-                            row.getCell(15).setCellValue("ntc");
-                            //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                        } else if (row.getCell(2).equals("5")) { // positive control
-                            row.getCell(15).setCellValue("184hTERT"); // "rpe1htert"
-                            //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                        } else {
-                            row.getCell(15).setCellValue("~");
-                            //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                        }
+            FileInputStream inputStream = new FileInputStream(file);
+
+            //XSSFWorkbook smartChipWorkBook = new XSSFWorkbook(inputStream);
+            //Workbook smartChipWorkBook = WorkbookFactory.create(file);
+
+            POIFSFileSystem fs = new POIFSFileSystem(file);
+            HSSFWorkbook smartChipWorkBook = new HSSFWorkbook(fs.getRoot(), true); //
+
+            logInfo("workbook has been read");
+            Sheet summary = smartChipWorkBook.getSheetAt(0);
+            logInfo("summary sheet has been read");
+            // To change columns: sample: 1, Num_Live: 8, Num_Dead: 9, Num_other: 10, Condition: 15
+            for (int i = 1; i <= 5185; i++) {
+                //logInfo("inside for loop ..");
+                Row row = summary.getRow(i);
+                logInfo("row cell 1 = " + row.getCell(1).getNumericCellValue());
+                row.getCell(0).setCellValue(sampleId);
+                logInfo("row's assigned sample id: " + row.getCell(0).getStringCellValue());
+                row.getCell(8).setCellValue("1");
+                row.getCell(9).setCellValue("-1");
+                row.getCell(10).setCellValue("-1");
+                // Prefixed conditions
+                if (usualControlLoc) {
+                    if (row.getCell(2).equals("3")) { // negative control
+                        //logInfo("row cell 2 = " + row.getCell(2).getNumericCellValue());
+                        row.getCell(15).setCellValue("ntc");
+                        //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                    } else if (row.getCell(2).equals("5")) { // positive control
+                        row.getCell(15).setCellValue("184hTERT"); // "rpe1htert"
+                        //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                     } else {
-                        if (row.getCell(2).equals(negCtrlLoc)) { // negative control
-                            row.getCell(15).setCellValue("ntc");
-                            logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                        } else if (row.getCell(2).equals(posCtrlLoc)) { // positive control
-                            row.getCell(15).setCellValue("184hTERT"); // "rpe1htert"
-                            logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                        } else {
-                            row.getCell(15).setCellValue("~");
-                            logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                        }
+                        row.getCell(15).setCellValue("~");
+                        //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                    }
+                } else {
+                    if (row.getCell(2).equals(negCtrlLoc)) { // negative control
+                        row.getCell(15).setCellValue("ntc");
+                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                    } else if (row.getCell(2).equals(posCtrlLoc)) { // positive control
+                        row.getCell(15).setCellValue("184hTERT"); // "rpe1htert"
+                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                    } else {
+                        row.getCell(15).setCellValue("~");
+                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                     }
                 }
             }
+            logInfo("Writing SmartChip Report " + file.getName() + ".xls");
+            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+            try {
+                smartChipWorkBook.write(byteStream);
+                byteStream.close();
+                byte[] bytes = byteStream.toByteArray();
+                clientCallback.writeBytes(bytes, file.getName() + ".xls");
+            } catch (ServerException e) {
+                logError(String.format("RemoteException -> Error while exporting SmartChip report:\n%s",ExceptionUtils.getStackTrace(e)));
+            } catch (IOException e) {
+                logError(String.format("IOException -> Error while exporting SmartChip report:\n%s", ExceptionUtils.getStackTrace(e)));
+            } finally {
+                try {
+                    byteStream.close();
+                } catch (IOException e) {
+                    logError(String.format("IOException -> Error while closing the ByteArrayOutputStream:\n%s", ExceptionUtils.getStackTrace(e)));
+                }
+            }
+
         }
         catch (Exception e) {
             logInfo("An exception occurred when pre-populating SmartChip sheet", e);
