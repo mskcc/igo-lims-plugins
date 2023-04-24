@@ -87,9 +87,9 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                             positiveControlLoc = clientCallback.showInputDialog("Please enter the column where positive controls are located:");
                             negativeControlLoc = clientCallback.showInputDialog("Please enter the column where negative controls are located:");
                         }
-                        fillOutSmartChipSheet(sampleId, file, usualControlLocation, positiveControlLoc, negativeControlLoc);
+                        byte[] excelFileData = fillOutSmartChipSheet(sampleId, file, usualControlLocation, positiveControlLoc, negativeControlLoc);
                         logInfo("After exiting the fillOutSmartChipSheet function");
-                        byte[] excelFileData = Files.readAllBytes(Paths.get(file.getAbsolutePath()));
+                        //byte[] excelFileData = Files.readAllBytes(Paths.get(file.getAbsolutePath()));
                         //byte[] excelFileData = DLPSmartChipFile.getBytes();
                         logInfo("excelFileData size is = " + excelFileData.length);
                         List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
@@ -117,6 +117,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                             return new PluginResult(false);
                         }
                         String cellTypeToProcess = cellTypeChoices.get(0);
+                        logInfo("selected cell type:" + cellTypeToProcess);
                         boolean isCorrectCellTypeToProcess = clientCallback.showYesNoDialog("Confirm CELL TYPE to process", String.format("Are you sure you want to process '%s' cells", cellTypeToProcess));
                         if (!isCorrectCellTypeToProcess) {
                             logInfo("User did not positively confirm CELL TYPE to process. Aborting plugin task.");
@@ -823,23 +824,24 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         activeTask.getTask().getTaskOptions().put("_DLP SPOTTING FILE PARSED", "");
     }
 
-    private void fillOutSmartChipSheet(String sampleId, File file, boolean usualControlLoc, String posCtrlLoc, String negCtrlLoc) {
+    private byte[] fillOutSmartChipSheet(String sampleId, File file, boolean usualControlLoc, String posCtrlLoc, String negCtrlLoc) {
+        byte[] bytes = null;
         try {
             logInfo("Inside the fillOutSmartChipSheet function");
 
             FileInputStream inputStream = new FileInputStream(file);
 
             //XSSFWorkbook smartChipWorkBook = new XSSFWorkbook(inputStream);
-            //Workbook smartChipWorkBook = WorkbookFactory.create(file);
+            Workbook smartChipWorkBook = WorkbookFactory.create(file);
 
             POIFSFileSystem fs = new POIFSFileSystem(file);
-            HSSFWorkbook smartChipWorkBook = new HSSFWorkbook(fs.getRoot(), true); //
+            //HSSFWorkbook smartChipWorkBook = new HSSFWorkbook(inputStream); //
 
             logInfo("workbook has been read");
             Sheet summary = smartChipWorkBook.getSheetAt(0);
             logInfo("summary sheet has been read");
             // To change columns: sample: 1, Num_Live: 8, Num_Dead: 9, Num_other: 10, Condition: 15
-            for (int i = 1; i <= 5185; i++) {
+            for (int i = 1; i <= 5184; i++) {
                 //logInfo("inside for loop ..");
                 Row row = summary.getRow(i);
                 logInfo("row cell 1 = " + row.getCell(1).getNumericCellValue());
@@ -876,10 +878,11 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             }
             logInfo("Writing SmartChip Report " + file.getName() + ".xls");
             ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+
             try {
                 smartChipWorkBook.write(byteStream);
                 byteStream.close();
-                byte[] bytes = byteStream.toByteArray();
+                bytes = byteStream.toByteArray();
                 clientCallback.writeBytes(bytes, file.getName() + ".xls");
             } catch (ServerException e) {
                 logError(String.format("RemoteException -> Error while exporting SmartChip report:\n%s",ExceptionUtils.getStackTrace(e)));
@@ -892,10 +895,10 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                     logError(String.format("IOException -> Error while closing the ByteArrayOutputStream:\n%s", ExceptionUtils.getStackTrace(e)));
                 }
             }
-
         }
         catch (Exception e) {
             logInfo("An exception occurred when pre-populating SmartChip sheet", e);
         }
+        return bytes;
     }
 }
