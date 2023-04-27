@@ -841,9 +841,13 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             Sheet summary = smartChipWorkBook.getSheetAt(0);
             logInfo("summary sheet has been read");
             // To change columns: sample: 1, Num_Live: 8, Num_Dead: 9, Num_other: 10, Condition: 15
-            for (int i = 1; i <= 5184; i++) {
+            int rowCount = 0;
+            for (Row row : summary) {
+                if (rowCount == 0) {
+                    rowCount++;
+                    continue;
+                }
                 //logInfo("inside for loop ..");
-                Row row = summary.getRow(i);
                 logInfo("row cell 1 = " + row.getCell(1).getNumericCellValue());
                 row.getCell(0).setCellValue(sampleId);
                 logInfo("row's assigned sample id: " + row.getCell(0).getStringCellValue());
@@ -852,11 +856,11 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                 row.getCell(10).setCellValue("-1");
                 // Prefixed conditions
                 if (usualControlLoc) {
-                    if (row.getCell(2).equals("3")) { // negative control
+                    if (row.getCell(2).getNumericCellValue() == 3.0) { // negative control
                         //logInfo("row cell 2 = " + row.getCell(2).getNumericCellValue());
                         row.getCell(15).setCellValue("ntc");
                         //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                    } else if (row.getCell(2).equals("5")) { // positive control
+                    } else if (row.getCell(2).getNumericCellValue() == 5.0) { // positive control
                         row.getCell(15).setCellValue("184hTERT"); // "rpe1htert"
                         //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                     } else {
@@ -864,10 +868,10 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                         //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                     }
                 } else {
-                    if (row.getCell(2).equals(negCtrlLoc)) { // negative control
+                    if (row.getCell(2).getNumericCellValue() == Double.parseDouble(negCtrlLoc)) { // negative control
                         row.getCell(15).setCellValue("ntc");
                         logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                    } else if (row.getCell(2).equals(posCtrlLoc)) { // positive control
+                    } else if (row.getCell(2).getNumericCellValue() == Double.parseDouble(posCtrlLoc)) { // positive control
                         row.getCell(15).setCellValue("184hTERT"); // "rpe1htert"
                         logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                     } else {
