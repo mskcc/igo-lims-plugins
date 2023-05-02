@@ -48,7 +48,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     String recipe = ""; // Recipe to assign to new pool and new child records
     String chipId = ""; // DLP chip ID
     Map<String, String> seqRunTypeByQuadrant = new HashMap<>();
-    private String DLP_SMARTCHIP_PATH = "/srv/www/sapio/lims/db_backup";//"/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet/";
+    private String DLP_SMARTCHIP_PATH = "/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet/";// /srv/www/sapio/lims/db_backup;
     //private String DLP_SMARTCHIP_SHEET = "/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet/Date(YYMMDD)_SmartChipResults_LIMSsampleID_chipID_template.xls";
 
     public DlpSampleSplitterPoolMaker() {
@@ -80,12 +80,13 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                         List<String> splitFileName = Arrays.asList(DLPSmartChipFile.replaceAll("\\s", "_").split("_|-|\\s"));
                         String endOfFileName = splitFileName.get(splitFileName.size() - 1);
                         chipId = endOfFileName.split("\\.")[0];
-                        boolean usualControlLocation = clientCallback.showYesNoDialog("Controls Locations", "Are the controls located at their usual spot?");
+                        boolean usualControlLocation = clientCallback.showYesNoDialog("Controls Locations",
+                                String.format("Are the controls for sample %s located at their usual spot?", sampleId));
                         String positiveControlLoc = "";
                         String negativeControlLoc = "";
                         if (!usualControlLocation) {
-                            positiveControlLoc = clientCallback.showInputDialog("Please enter the column where positive controls are located:");
-                            negativeControlLoc = clientCallback.showInputDialog("Please enter the column where negative controls are located:");
+                            positiveControlLoc = clientCallback.showInputDialog("Please enter the column(s) where positive controls are located, separated by '-':");
+                            negativeControlLoc = clientCallback.showInputDialog("Please enter the column(s) where negative controls are located, separated by '-':");
                         }
                         byte[] excelFileData = fillOutSmartChipSheet(sample, file, usualControlLocation, positiveControlLoc, negativeControlLoc);
                         logInfo("After exiting the fillOutSmartChipSheet function");
