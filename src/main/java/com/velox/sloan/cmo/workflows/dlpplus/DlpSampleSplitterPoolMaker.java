@@ -87,7 +87,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                             positiveControlLoc = clientCallback.showInputDialog("Please enter the column where positive controls are located:");
                             negativeControlLoc = clientCallback.showInputDialog("Please enter the column where negative controls are located:");
                         }
-                        byte[] excelFileData = fillOutSmartChipSheet(sampleId, file, usualControlLocation, positiveControlLoc, negativeControlLoc);
+                        byte[] excelFileData = fillOutSmartChipSheet(sample, file, usualControlLocation, positiveControlLoc, negativeControlLoc);
                         logInfo("After exiting the fillOutSmartChipSheet function");
                         //byte[] excelFileData = Files.readAllBytes(Paths.get(file.getAbsolutePath()));
                         //byte[] excelFileData = DLPSmartChipFile.getBytes();
@@ -824,16 +824,14 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         activeTask.getTask().getTaskOptions().put("_DLP SPOTTING FILE PARSED", "");
     }
 
-    private byte[] fillOutSmartChipSheet(String sampleId, File file, boolean usualControlLoc, String posCtrlLoc, String negCtrlLoc) {
+    private byte[] fillOutSmartChipSheet(DataRecord sample, File file, boolean usualControlLoc, String posCtrlLoc, String negCtrlLoc) {
         byte[] bytes = null;
         try {
             logInfo("Inside the fillOutSmartChipSheet function");
 
             FileInputStream inputStream = new FileInputStream(file);
-
             //XSSFWorkbook smartChipWorkBook = new XSSFWorkbook(inputStream);
             Workbook smartChipWorkBook = WorkbookFactory.create(file);
-
             POIFSFileSystem fs = new POIFSFileSystem(file);
             //HSSFWorkbook smartChipWorkBook = new HSSFWorkbook(inputStream); //
 
@@ -842,6 +840,13 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             logInfo("summary sheet has been read");
             // To change columns: sample: 1, Num_Live: 8, Num_Dead: 9, Num_other: 10, Condition: 15
             int rowCount = 0;
+            String[] positiveContorlChoises = {"184hTERT", "rpe1htert"};
+            String[] positiveLocations = posCtrlLoc.split("-");
+            String[] negativeLocations = negCtrlLoc.split("-");
+            String sampleId = sample.getStringVal("SampleId", user);
+            String sampleName = sample.getStringVal("OtherSampleId", user);
+            int selectedPositiveControl = clientCallback.showOptionDialog("Positive Control Selection", "Which positive control " +
+                    "has been used for sample " + sampleId , positiveContorlChoises, 0);
             for (Row row : summary) {
                 if (rowCount == 0) {
                     rowCount++;
@@ -861,23 +866,35 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                         row.getCell(15).setCellValue("ntc");
                         //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                     } else if (row.getCell(2).getNumericCellValue() == 5.0) { // positive control
-                        row.getCell(15).setCellValue("184hTERT"); // "rpe1htert"
+                        row.getCell(15).setCellValue(positiveContorlChoises[selectedPositiveControl]);
                         //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                     } else {
-                        row.getCell(15).setCellValue("~");
+                        row.getCell(15).setCellValue(sampleName);
                         //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                     }
                 } else {
-                    if (row.getCell(2).getNumericCellValue() == Double.parseDouble(negCtrlLoc)) { // negative control
-                        row.getCell(15).setCellValue("ntc");
-                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                    } else if (row.getCell(2).getNumericCellValue() == Double.parseDouble(posCtrlLoc)) { // positive control
-                        row.getCell(15).setCellValue("184hTERT"); // "rpe1htert"
-                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                    } else {
-                        row.getCell(15).setCellValue("~");
-                        logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                    for (String neg : negativeLocations) {
+                        if (row.getCell(2).getNumericCellValue() == Double.parseDouble(neg)) { // negative control
+                            row.getCell(15).setCellValue("ntc");
+                            logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                        }
+                        else if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("184hTERT") ||
+                                !row.getCell(15).getStringCellValue().equalsIgnoreCase("rpe1htert")) {
+                            row.getCell(15).setCellValue(sampleName);
+                            logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                        }
                     }
+                    for (String pos : positiveLocations) {
+                        if (row.getCell(2).getNumericCellValue() == Double.parseDouble(pos)) { // positive control
+                            row.getCell(15).setCellValue(positiveContorlChoises[selectedPositiveControl]);
+                            logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                        }
+                        else if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("ntc")) {
+                            row.getCell(15).setCellValue(sampleName);
+                            logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                        }
+                    }
+
                 }
             }
             logInfo("Writing SmartChip Report " + file.getName() + ".xls");
