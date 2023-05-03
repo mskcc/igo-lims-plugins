@@ -21,6 +21,7 @@ import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.mockito.internal.matchers.Null;
 
+import javax.xml.crypto.Data;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -70,9 +71,74 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                 clientCallback.displayError("No samples found attached to this task.");
                 return new PluginResult(false);
             }
+            File folder = new File(DLP_SMARTCHIP_PATH);
+            boolean multipleSamplesOnOneChip = clientCallback.showYesNoDialog("Multiple Samples",
+                    "Are multiple samples on one chip?");
+            if (multipleSamplesOnOneChip) {
+                boolean noControlExperiment = clientCallback.showYesNoDialog("Control Usage", "Is it a NO control experiment?");
+                List<String> positiveControlLocations = new LinkedList<>();
+                List<String> negativeControlLocations = new LinkedList<>();
+                if (!noControlExperiment) {
+                    for (DataRecord sample : samplesAttachedToTask) {
+                        String sampleId = sample.getStringVal("SampleId", user);
+                        String positiveControlLoc = "";
+                        String negativeControlLoc = "";
+                        positiveControlLoc = clientCallback.showInputDialog(String.format("Please enter the column(s) where positive controls are located for %s, separated by '-':", sampleId));
+                        negativeControlLoc = clientCallback.showInputDialog(String.format("Please enter the column(s) where negative controls are located for %s, separated by '-':", sampleId));
+                        positiveControlLocations.add(positiveControlLoc);
+                        negativeControlLocations.add(negativeControlLoc);
+                    }
+                }
+
+                File[] listOfFiles = folder.listFiles();
+                for (File file : listOfFiles) {
+                    if (file.getName().contains(samplesAttachedToTask.get(0).getStringVal("SampleId", user))
+                            && isValidExcelFile(file.getName())) {
+                        byte[] excelFileData = fillOutSmartChipSheetForMultiSamples(samplesAttachedToTask, file, noControlExperiment, positiveControlLocations, negativeControlLocations);
+                        List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
+                        logInfo("#rows = " + rowData.size());
+                        logInfo("row(1600) = " + rowData.get(1).getCell(0).getStringCellValue());
+                        if (!fileHasData(rowData, DLPSmartChipFile) || !hasValidHeader(rowData, DLP_UPLOAD_SHEET_EXPECTED_HEADERS, DLPSmartChipFile)) {
+                            return new PluginResult(false);
+                        }
+                        clientCallback.displayInfo("This process Will take some time. Please be patient.");
+                        HashMap<String, Integer> headerValuesMap = utils.getHeaderValuesMapFromExcelRowData(rowData);
+
+                        Map<String, List<Row>> rowsSeparatedBySampleMap = getRowsBySample(samplesAttachedToTask, rowData, headerValuesMap);
+                        logInfo("rowsSeparatedBySampleMap size = " + rowsSeparatedBySampleMap.size());
+                        for (Map.Entry<String, List<Row>> entry : rowsSeparatedBySampleMap.entrySet()) {
+                            logInfo("rowsSeparatedBySampleMap rows = " + entry);
+                        }
+                        // TODO: to remove
+                        if (rowsSeparatedBySampleMap.isEmpty()) {
+                            clientCallback.displayError(String.format("Did not find matching SAMPLE ID's for samples attached to the task in the template file.\nPlease make sure that file has correct Sample Info."));
+                            return new PluginResult(false);
+                        }
+                        List<String> cellTypeChoices = clientCallback.showListDialog("Please choose the cell type to process", CELL_TYPES_TO_PROCESS, false, user);
+                        if (cellTypeChoices.isEmpty()) {
+                            clientCallback.displayError("Cell type to process not selected. You need to select correct cell type to process");
+                            return new PluginResult(false);
+                        }
+                        String cellTypeToProcess = cellTypeChoices.get(0);
+                        logInfo("selected cell type:" + cellTypeToProcess);
+                        boolean isCorrectCellTypeToProcess = clientCallback.showYesNoDialog("Confirm CELL TYPE to process", String.format("Are you sure you want to process '%s' cells", cellTypeToProcess));
+                        if (!isCorrectCellTypeToProcess) {
+                            logInfo("User did not positively confirm CELL TYPE to process. Aborting plugin task.");
+                            return new PluginResult(false);
+                        }
+                        Object recipe = samplesAttachedToTask.get(0).getValue(SampleModel.RECIPE, user);
+                        Object dlpRequestedReads = getDlpRequestedReads(recipe);
+                        logInfo("dlpRequestedReads= " + dlpRequestedReads);
+                        Map<String, List<DataRecord>> newDlpSamples = createDlpSamplesAndProtocolRecords(rowsSeparatedBySampleMap, headerValuesMap, samplesAttachedToTask, cellTypeToProcess);
+                        logInfo("After createDlpSamplesAndProtocolRecords function call");
+                        assert dlpRequestedReads != null;
+                        logInfo("After assert");
+                        createPools(newDlpSamples, (Double) dlpRequestedReads);
+                    }
+                }
+            }
             for (DataRecord sample : samplesAttachedToTask) {
                 String sampleId = sample.getStringVal("SampleId", user);
-                File folder = new File(DLP_SMARTCHIP_PATH);
                 File[] listOfFiles = folder.listFiles();
                 for (File file : listOfFiles) {
                     if (file.getName().contains(sampleId) && isValidExcelFile(file.getName())) {
@@ -80,8 +146,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                         List<String> splitFileName = Arrays.asList(DLPSmartChipFile.replaceAll("\\s", "_").split("_|-|\\s"));
                         String endOfFileName = splitFileName.get(splitFileName.size() - 1);
                         chipId = endOfFileName.split("\\.")[0];
-                        boolean noControlExperiment = clientCallback.showYesNoDialog("Control Usage",
-                                String.format("Is it a NO control experiment?", sampleId));
+                        boolean noControlExperiment = clientCallback.showYesNoDialog("Control Usage", "Is it a NO control experiment?");
                         boolean usualControlLocation = Boolean.TRUE;
                         if (!noControlExperiment) {
                             usualControlLocation = clientCallback.showYesNoDialog("Controls Locations",
@@ -934,6 +999,111 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                     byteStream.close();
                 } catch (IOException e) {
                     logError(String.format("IOException -> Error while closing the ByteArrayOutputStream:\n%s", ExceptionUtils.getStackTrace(e)));
+                }
+            }
+        }
+        catch (Exception e) {
+            logInfo("An exception occurred when pre-populating SmartChip sheet", e);
+        }
+        return bytes;
+    }
+
+    private byte[] fillOutSmartChipSheetForMultiSamples(List<DataRecord> samples, File file, boolean noControlExperiment, List<String> posCtrlLocs, List<String> negCtrlLocs) {
+        byte[] bytes = null;
+        try {
+            logInfo("Inside the fillOutSmartChipSheetForMultiSamples function");
+            FileInputStream inputStream = new FileInputStream(file);
+            //XSSFWorkbook smartChipWorkBook = new XSSFWorkbook(inputStream);
+            Workbook smartChipWorkBook = WorkbookFactory.create(file);
+            POIFSFileSystem fs = new POIFSFileSystem(file);
+            //HSSFWorkbook smartChipWorkBook = new HSSFWorkbook(inputStream); //
+
+            logInfo("workbook has been read");
+            Sheet summary = smartChipWorkBook.getSheetAt(0);
+            logInfo("summary sheet has been read");
+            int rowCount = 0;
+            int i = 0;
+            String sampleId = "";
+            String sampleName = "";
+            for (DataRecord sample : samples) {
+                String[] positiveContorlChoises = {"184hTERT", "rpe1htert"};
+                String[] positiveLocations = posCtrlLocs.get(i).split("-");
+                String[] negativeLocations = negCtrlLocs.get(i).split("-");
+                i++;
+                sampleId = sample.getStringVal("SampleId", user);
+                sampleName = sample.getStringVal("OtherSampleId", user);
+                int selectedPositiveControl = 0;
+                if (!noControlExperiment) {
+                    selectedPositiveControl = clientCallback.showOptionDialog("Positive Control Selection", "Which positive control " +
+                            "has been used for sample " + sampleId, positiveContorlChoises, 0);
+                }
+
+                for (Row row : summary) {
+                    if (row != null) {
+                        if (rowCount == 0) {
+                            rowCount++;
+                            continue;
+                        }
+//                logInfo("row cell 1 = " + row.getCell(1).getNumericCellValue());
+                        row.getCell(0).setCellValue(sampleId);
+                        //logInfo("row's assigned sample id: " + row.getCell(0).getStringCellValue());
+                        row.getCell(8).setCellValue("1");
+                        row.getCell(9).setCellValue("-1");
+                        row.getCell(10).setCellValue("-1");
+                        if (noControlExperiment) {
+                            row.getCell(15).setCellValue(sampleName);
+                        }
+                        else {
+                            for (String neg : negativeLocations) {
+                                logInfo("neg loc = " + neg);
+                                if (row.getCell(2).getNumericCellValue() == Double.parseDouble(neg)) { // negative control
+                                    row.getCell(15).setCellValue("ntc");
+                                    //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                                }
+//                            else if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("184hTERT") ||
+//                                    !row.getCell(15).getStringCellValue().equalsIgnoreCase("rpe1htert")) {
+//                                row.getCell(15).setCellValue(sampleName);
+//                                //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+//                            }
+                            }
+                            for (String pos : positiveLocations) {
+                                logInfo("pos loc = " + pos);
+                                if (row.getCell(2).getNumericCellValue() == Double.parseDouble(pos)) { // positive control
+                                    row.getCell(15).setCellValue(positiveContorlChoises[selectedPositiveControl]);
+                                    logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                                }
+//                            else if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("ntc")) {
+//                                row.getCell(15).setCellValue(sampleName);
+//                                logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+//                            }
+                            }
+                            if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("ntc") &&
+                                    !row.getCell(15).getStringCellValue().equalsIgnoreCase("184hTERT") &&
+                                    !row.getCell(15).getStringCellValue().equalsIgnoreCase("rpe1htert")) {
+                                row.getCell(15).setCellValue(sampleName);
+
+                            }
+                        }
+                    }
+                }
+                logInfo("Writing SmartChip Report " + file.getName() + ".xls");
+                ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+
+                try {
+                    smartChipWorkBook.write(byteStream);
+                    byteStream.close();
+                    bytes = byteStream.toByteArray();
+                    clientCallback.writeBytes(bytes, file.getName() + ".xls");
+                } catch (ServerException e) {
+                    logError(String.format("RemoteException -> Error while exporting SmartChip report:\n%s",ExceptionUtils.getStackTrace(e)));
+                } catch (IOException e) {
+                    logError(String.format("IOException -> Error while exporting SmartChip report:\n%s", ExceptionUtils.getStackTrace(e)));
+                } finally {
+                    try {
+                        byteStream.close();
+                    } catch (IOException e) {
+                        logError(String.format("IOException -> Error while closing the ByteArrayOutputStream:\n%s", ExceptionUtils.getStackTrace(e)));
+                    }
                 }
             }
         }
