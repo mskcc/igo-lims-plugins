@@ -80,15 +80,20 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                         List<String> splitFileName = Arrays.asList(DLPSmartChipFile.replaceAll("\\s", "_").split("_|-|\\s"));
                         String endOfFileName = splitFileName.get(splitFileName.size() - 1);
                         chipId = endOfFileName.split("\\.")[0];
-                        boolean usualControlLocation = clientCallback.showYesNoDialog("Controls Locations",
-                                String.format("Are the controls for sample %s located at their usual spot?", sampleId));
+                        boolean noControlExperiment = clientCallback.showYesNoDialog("Control Usage",
+                                String.format("Is it a NO control experiment?", sampleId));
+                        boolean usualControlLocation = Boolean.TRUE;
+                        if (!noControlExperiment) {
+                            usualControlLocation = clientCallback.showYesNoDialog("Controls Locations",
+                                    String.format("Are the controls for sample %s located at their usual spot?", sampleId));
+                        }
                         String positiveControlLoc = "";
                         String negativeControlLoc = "";
                         if (!usualControlLocation) {
                             positiveControlLoc = clientCallback.showInputDialog("Please enter the column(s) where positive controls are located, separated by '-':");
                             negativeControlLoc = clientCallback.showInputDialog("Please enter the column(s) where negative controls are located, separated by '-':");
                         }
-                        byte[] excelFileData = fillOutSmartChipSheet(sample, file, usualControlLocation, positiveControlLoc, negativeControlLoc);
+                        byte[] excelFileData = fillOutSmartChipSheet(sample, file, noControlExperiment, usualControlLocation, positiveControlLoc, negativeControlLoc);
                         logInfo("After exiting the fillOutSmartChipSheet function");
                         //byte[] excelFileData = Files.readAllBytes(Paths.get(file.getAbsolutePath()));
                         //byte[] excelFileData = DLPSmartChipFile.getBytes();
@@ -825,11 +830,10 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         activeTask.getTask().getTaskOptions().put("_DLP SPOTTING FILE PARSED", "");
     }
 
-    private byte[] fillOutSmartChipSheet(DataRecord sample, File file, boolean usualControlLoc, String posCtrlLoc, String negCtrlLoc) {
+    private byte[] fillOutSmartChipSheet(DataRecord sample, File file, boolean noControlExperiment, boolean usualControlLoc, String posCtrlLoc, String negCtrlLoc) {
         byte[] bytes = null;
         try {
             logInfo("Inside the fillOutSmartChipSheet function");
-
             FileInputStream inputStream = new FileInputStream(file);
             //XSSFWorkbook smartChipWorkBook = new XSSFWorkbook(inputStream);
             Workbook smartChipWorkBook = WorkbookFactory.create(file);
@@ -839,63 +843,78 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             logInfo("workbook has been read");
             Sheet summary = smartChipWorkBook.getSheetAt(0);
             logInfo("summary sheet has been read");
-            // To change columns: sample: 1, Num_Live: 8, Num_Dead: 9, Num_other: 10, Condition: 15
             int rowCount = 0;
             String[] positiveContorlChoises = {"184hTERT", "rpe1htert"};
             String[] positiveLocations = posCtrlLoc.split("-");
             String[] negativeLocations = negCtrlLoc.split("-");
             String sampleId = sample.getStringVal("SampleId", user);
             String sampleName = sample.getStringVal("OtherSampleId", user);
-            int selectedPositiveControl = clientCallback.showOptionDialog("Positive Control Selection", "Which positive control " +
-                    "has been used for sample " + sampleId , positiveContorlChoises, 0);
+            int selectedPositiveControl = 0;
+            if (!noControlExperiment) {
+                selectedPositiveControl = clientCallback.showOptionDialog("Positive Control Selection", "Which positive control " +
+                        "has been used for sample " + sampleId, positiveContorlChoises, 0);
+            }
             for (Row row : summary) {
-                if (rowCount == 0) {
-                    rowCount++;
-                    continue;
-                }
-                //logInfo("inside for loop ..");
-                logInfo("row cell 1 = " + row.getCell(1).getNumericCellValue());
-                row.getCell(0).setCellValue(sampleId);
-                logInfo("row's assigned sample id: " + row.getCell(0).getStringCellValue());
-                row.getCell(8).setCellValue("1");
-                row.getCell(9).setCellValue("-1");
-                row.getCell(10).setCellValue("-1");
-                // Prefixed conditions
-                if (usualControlLoc) {
-                    if (row.getCell(2).getNumericCellValue() == 3.0) { // negative control
-                        //logInfo("row cell 2 = " + row.getCell(2).getNumericCellValue());
-                        row.getCell(15).setCellValue("ntc");
-                        //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                    } else if (row.getCell(2).getNumericCellValue() == 5.0) { // positive control
-                        row.getCell(15).setCellValue(positiveContorlChoises[selectedPositiveControl]);
-                        //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                    } else {
+                if (row != null) {
+                    if (rowCount == 0) {
+                        rowCount++;
+                        continue;
+                    }
+//                logInfo("row cell 1 = " + row.getCell(1).getNumericCellValue());
+                    row.getCell(0).setCellValue(sampleId);
+                    //logInfo("row's assigned sample id: " + row.getCell(0).getStringCellValue());
+                    row.getCell(8).setCellValue("1");
+                    row.getCell(9).setCellValue("-1");
+                    row.getCell(10).setCellValue("-1");
+                    if (noControlExperiment) {
                         row.getCell(15).setCellValue(sampleName);
-                        //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                     }
-                } else {
-                    for (String neg : negativeLocations) {
-                        if (row.getCell(2).getNumericCellValue() == Double.parseDouble(neg)) { // negative control
-                            row.getCell(15).setCellValue("ntc");
-                            logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                        }
-                        else if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("184hTERT") ||
-                                !row.getCell(15).getStringCellValue().equalsIgnoreCase("rpe1htert")) {
-                            row.getCell(15).setCellValue(sampleName);
-                            logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                        }
-                    }
-                    for (String pos : positiveLocations) {
-                        if (row.getCell(2).getNumericCellValue() == Double.parseDouble(pos)) { // positive control
-                            row.getCell(15).setCellValue(positiveContorlChoises[selectedPositiveControl]);
-                            logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                        }
-                        else if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("ntc")) {
-                            row.getCell(15).setCellValue(sampleName);
-                            logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                        }
-                    }
+                    else {
+                        // Prefixed conditions
+                        if (usualControlLoc) {
+                            if (row.getCell(2).getNumericCellValue() == 3.0) { // negative control
+                                //logInfo("row cell 2 = " + row.getCell(2).getNumericCellValue());
+                                row.getCell(15).setCellValue("ntc");
+                                //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                            } else if (row.getCell(2).getNumericCellValue() == 5.0) { // positive control
+                                row.getCell(15).setCellValue(positiveContorlChoises[selectedPositiveControl]);
+                                //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                            } else {
+                                row.getCell(15).setCellValue(sampleName);
+                                //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                            }
+                        } else {
+                            for (String neg : negativeLocations) {
+                                logInfo("neg loc = " + neg);
+                                if (row.getCell(2).getNumericCellValue() == Double.parseDouble(neg)) { // negative control
+                                    row.getCell(15).setCellValue("ntc");
+                                    //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                                }
+//                            else if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("184hTERT") ||
+//                                    !row.getCell(15).getStringCellValue().equalsIgnoreCase("rpe1htert")) {
+//                                row.getCell(15).setCellValue(sampleName);
+//                                //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+//                            }
+                            }
+                            for (String pos : positiveLocations) {
+                                logInfo("pos loc = " + pos);
+                                if (row.getCell(2).getNumericCellValue() == Double.parseDouble(pos)) { // positive control
+                                    row.getCell(15).setCellValue(positiveContorlChoises[selectedPositiveControl]);
+                                    logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+                                }
+//                            else if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("ntc")) {
+//                                row.getCell(15).setCellValue(sampleName);
+//                                logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
+//                            }
+                            }
+                            if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("ntc") &&
+                                    !row.getCell(15).getStringCellValue().equalsIgnoreCase("184hTERT") &&
+                                    !row.getCell(15).getStringCellValue().equalsIgnoreCase("rpe1htert")) {
+                                row.getCell(15).setCellValue(sampleName);
 
+                            }
+                        }
+                    }
                 }
             }
             logInfo("Writing SmartChip Report " + file.getName() + ".xls");
