@@ -48,6 +48,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
     String recipe = ""; // Recipe to assign to new pool and new child records
     String chipId = ""; // DLP chip ID
+    String[] positiveContorlChoises = {"184hTERT", "rpe1htert"};
     Map<String, String> seqRunTypeByQuadrant = new HashMap<>();
     private String DLP_SMARTCHIP_PATH = "/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet/";// /srv/www/sapio/lims/db_backup;
     //private String DLP_SMARTCHIP_SHEET = "/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet/Date(YYMMDD)_SmartChipResults_LIMSsampleID_chipID_template.xls";
@@ -899,17 +900,10 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         byte[] bytes = null;
         try {
             logInfo("Inside the fillOutSmartChipSheet function");
-            FileInputStream inputStream = new FileInputStream(file);
-            //XSSFWorkbook smartChipWorkBook = new XSSFWorkbook(inputStream);
             Workbook smartChipWorkBook = WorkbookFactory.create(file);
-            POIFSFileSystem fs = new POIFSFileSystem(file);
-            //HSSFWorkbook smartChipWorkBook = new HSSFWorkbook(inputStream); //
-
-            logInfo("workbook has been read");
             Sheet summary = smartChipWorkBook.getSheetAt(0);
-            logInfo("summary sheet has been read");
             int rowCount = 0;
-            String[] positiveContorlChoises = {"184hTERT", "rpe1htert"};
+            //String[] positiveContorlChoises = {"184hTERT", "rpe1htert"};
             String[] positiveLocations = posCtrlLoc.split("-");
             String[] negativeLocations = negCtrlLoc.split("-");
             String sampleId = sample.getStringVal("SampleId", user);
@@ -925,9 +919,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                         rowCount++;
                         continue;
                     }
-//                logInfo("row cell 1 = " + row.getCell(1).getNumericCellValue());
                     row.getCell(0).setCellValue(sampleId);
-                    //logInfo("row's assigned sample id: " + row.getCell(0).getStringCellValue());
                     row.getCell(8).setCellValue("1");
                     row.getCell(9).setCellValue("-1");
                     row.getCell(10).setCellValue("-1");
@@ -938,39 +930,22 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                         // Prefixed conditions
                         if (usualControlLoc) {
                             if (row.getCell(2).getNumericCellValue() == 3.0) { // negative control
-                                //logInfo("row cell 2 = " + row.getCell(2).getNumericCellValue());
                                 row.getCell(15).setCellValue("ntc");
-                                //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                             } else if (row.getCell(2).getNumericCellValue() == 5.0) { // positive control
                                 row.getCell(15).setCellValue(positiveContorlChoises[selectedPositiveControl]);
-                                //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                             } else {
                                 row.getCell(15).setCellValue(sampleName);
-                                //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                             }
                         } else {
                             for (String neg : negativeLocations) {
-                                logInfo("neg loc = " + neg);
                                 if (row.getCell(2).getNumericCellValue() == Double.parseDouble(neg)) { // negative control
                                     row.getCell(15).setCellValue("ntc");
-                                    //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                                 }
-//                            else if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("184hTERT") ||
-//                                    !row.getCell(15).getStringCellValue().equalsIgnoreCase("rpe1htert")) {
-//                                row.getCell(15).setCellValue(sampleName);
-//                                //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-//                            }
                             }
                             for (String pos : positiveLocations) {
-                                logInfo("pos loc = " + pos);
                                 if (row.getCell(2).getNumericCellValue() == Double.parseDouble(pos)) { // positive control
                                     row.getCell(15).setCellValue(positiveContorlChoises[selectedPositiveControl]);
-                                    logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
                                 }
-//                            else if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("ntc")) {
-//                                row.getCell(15).setCellValue(sampleName);
-//                                logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-//                            }
                             }
                             if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("ntc") &&
                                     !row.getCell(15).getStringCellValue().equalsIgnoreCase("184hTERT") &&
@@ -1012,98 +987,85 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         byte[] bytes = null;
         try {
             logInfo("Inside the fillOutSmartChipSheetForMultiSamples function");
-            FileInputStream inputStream = new FileInputStream(file);
-            //XSSFWorkbook smartChipWorkBook = new XSSFWorkbook(inputStream);
             Workbook smartChipWorkBook = WorkbookFactory.create(file);
-            POIFSFileSystem fs = new POIFSFileSystem(file);
-            //HSSFWorkbook smartChipWorkBook = new HSSFWorkbook(inputStream); //
-
-            logInfo("workbook has been read");
             Sheet summary = smartChipWorkBook.getSheetAt(0);
-            logInfo("summary sheet has been read");
-            int rowCount = 0;
             int i = 0;
-            String sampleId = "";
-            String sampleName = "";
             for (DataRecord sample : samples) {
-                String[] positiveContorlChoises = {"184hTERT", "rpe1htert"};
-                String[] positiveLocations = posCtrlLocs.get(i).split("-");
-                String[] negativeLocations = negCtrlLocs.get(i).split("-");
+                int rowCount = 0;
                 i++;
-                sampleId = sample.getStringVal("SampleId", user);
-                sampleName = sample.getStringVal("OtherSampleId", user);
+                String sampleId = sample.getStringVal("SampleId", user);
+                String sampleName = sample.getStringVal("OtherSampleId", user);
                 int selectedPositiveControl = 0;
+                String[] positiveLocations = {};
+                String[] negativeLocations = {};
                 if (!noControlExperiment) {
+                    positiveLocations = posCtrlLocs.get(i).split("-");
+                    negativeLocations = negCtrlLocs.get(i).split("-");
                     selectedPositiveControl = clientCallback.showOptionDialog("Positive Control Selection", "Which positive control " +
                             "has been used for sample " + sampleId, positiveContorlChoises, 0);
                 }
-
+                // Prompt for the location of samples, rows and columns ranges
+                String minRowOfCurrentSample = clientCallback.showInputDialog(String.format("Enter the first row where sample %s is on the chip: ", sampleId));
+                String maxRowOfCurrentSample = clientCallback.showInputDialog(String.format("Enter the last row where sample %s is on the chip: ", sampleId));
+                String minColOfCurrentSample = clientCallback.showInputDialog(String.format("Enter the first column where sample %s is on the chip: ", sampleId));
+                String maxColOfCurrentSample = clientCallback.showInputDialog(String.format("Enter the last column where sample %s is on the chip: ", sampleId));
                 for (Row row : summary) {
                     if (row != null) {
                         if (rowCount == 0) {
                             rowCount++;
                             continue;
                         }
-//                logInfo("row cell 1 = " + row.getCell(1).getNumericCellValue());
-                        row.getCell(0).setCellValue(sampleId);
-                        //logInfo("row's assigned sample id: " + row.getCell(0).getStringCellValue());
                         row.getCell(8).setCellValue("1");
                         row.getCell(9).setCellValue("-1");
                         row.getCell(10).setCellValue("-1");
-                        if (noControlExperiment) {
-                            row.getCell(15).setCellValue(sampleName);
-                        }
-                        else {
-                            for (String neg : negativeLocations) {
-                                logInfo("neg loc = " + neg);
-                                if (row.getCell(2).getNumericCellValue() == Double.parseDouble(neg)) { // negative control
-                                    row.getCell(15).setCellValue("ntc");
-                                    //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                                }
-//                            else if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("184hTERT") ||
-//                                    !row.getCell(15).getStringCellValue().equalsIgnoreCase("rpe1htert")) {
-//                                row.getCell(15).setCellValue(sampleName);
-//                                //logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-//                            }
-                            }
-                            for (String pos : positiveLocations) {
-                                logInfo("pos loc = " + pos);
-                                if (row.getCell(2).getNumericCellValue() == Double.parseDouble(pos)) { // positive control
-                                    row.getCell(15).setCellValue(positiveContorlChoises[selectedPositiveControl]);
-                                    logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-                                }
-//                            else if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("ntc")) {
-//                                row.getCell(15).setCellValue(sampleName);
-//                                logInfo("row cell 15 = " + row.getCell(15).getStringCellValue());
-//                            }
-                            }
-                            if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("ntc") &&
-                                    !row.getCell(15).getStringCellValue().equalsIgnoreCase("184hTERT") &&
-                                    !row.getCell(15).getStringCellValue().equalsIgnoreCase("rpe1htert")) {
-                                row.getCell(15).setCellValue(sampleName);
+                        if ((row.getCell(1).getNumericCellValue() >= Double.parseDouble(minRowOfCurrentSample) &&
+                                row.getCell(1).getNumericCellValue() <= Double.parseDouble(maxRowOfCurrentSample))
+                        && (row.getCell(2).getNumericCellValue() >= Double.parseDouble(minColOfCurrentSample) &&
+                                row.getCell(2).getNumericCellValue() <= Double.parseDouble(maxColOfCurrentSample))) {
 
+                            row.getCell(0).setCellValue(sampleId);
+                            if (noControlExperiment) {
+                                row.getCell(15).setCellValue(sampleName);
+                            } else {
+                                for (String neg : negativeLocations) {
+                                    logInfo("neg loc = " + neg);
+                                    if (row.getCell(2).getNumericCellValue() == Double.parseDouble(neg)) { // negative control
+                                        row.getCell(15).setCellValue("ntc");
+                                    }
+                                }
+                                for (String pos : positiveLocations) {
+                                    logInfo("pos loc = " + pos);
+                                    if (row.getCell(2).getNumericCellValue() == Double.parseDouble(pos)) { // positive control
+                                        row.getCell(15).setCellValue(positiveContorlChoises[selectedPositiveControl]);
+                                    }
+                                }
+                                if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("ntc") &&
+                                        !row.getCell(15).getStringCellValue().equalsIgnoreCase("184hTERT") &&
+                                        !row.getCell(15).getStringCellValue().equalsIgnoreCase("rpe1htert")) {
+                                    row.getCell(15).setCellValue(sampleName);
+                                }
                             }
                         }
                     }
                 }
-                logInfo("Writing SmartChip Report " + file.getName() + ".xls");
-                ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+            }
+            logInfo("Writing SmartChip Report " + file.getName() + ".xls");
+            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
 
+            try {
+                smartChipWorkBook.write(byteStream);
+                byteStream.close();
+                bytes = byteStream.toByteArray();
+                clientCallback.writeBytes(bytes, file.getName() + ".xls");
+            } catch (ServerException e) {
+                logError(String.format("RemoteException -> Error while exporting SmartChip report:\n%s",ExceptionUtils.getStackTrace(e)));
+            } catch (IOException e) {
+                logError(String.format("IOException -> Error while exporting SmartChip report:\n%s", ExceptionUtils.getStackTrace(e)));
+            } finally {
                 try {
-                    smartChipWorkBook.write(byteStream);
                     byteStream.close();
-                    bytes = byteStream.toByteArray();
-                    clientCallback.writeBytes(bytes, file.getName() + ".xls");
-                } catch (ServerException e) {
-                    logError(String.format("RemoteException -> Error while exporting SmartChip report:\n%s",ExceptionUtils.getStackTrace(e)));
                 } catch (IOException e) {
-                    logError(String.format("IOException -> Error while exporting SmartChip report:\n%s", ExceptionUtils.getStackTrace(e)));
-                } finally {
-                    try {
-                        byteStream.close();
-                    } catch (IOException e) {
-                        logError(String.format("IOException -> Error while closing the ByteArrayOutputStream:\n%s", ExceptionUtils.getStackTrace(e)));
-                    }
+                    logError(String.format("IOException -> Error while closing the ByteArrayOutputStream:\n%s", ExceptionUtils.getStackTrace(e)));
                 }
             }
         }
