@@ -48,6 +48,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
     String recipe = ""; // Recipe to assign to new pool and new child records
     String chipId = ""; // DLP chip ID
+    Boolean usualControlLocation = Boolean.TRUE;
     String[] positiveContorlChoises = {"184hTERT", "rpe1htert"};
     Map<String, String> seqRunTypeByQuadrant = new HashMap<>();
     private String DLP_SMARTCHIP_PATH = "/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet/";// /srv/www/sapio/lims/db_backup;
@@ -76,26 +77,11 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             boolean multipleSamplesOnOneChip = clientCallback.showYesNoDialog("Multiple Samples",
                     "Are multiple samples on one chip?");
             if (multipleSamplesOnOneChip) {
-                boolean noControlExperiment = clientCallback.showYesNoDialog("Control Usage", "Is it a NO control experiment?");
-                List<String> positiveControlLocations = new LinkedList<>();
-                List<String> negativeControlLocations = new LinkedList<>();
-                if (!noControlExperiment) {
-                    for (DataRecord sample : samplesAttachedToTask) {
-                        String sampleId = sample.getStringVal("SampleId", user);
-                        String positiveControlLoc = "";
-                        String negativeControlLoc = "";
-                        positiveControlLoc = clientCallback.showInputDialog(String.format("Please enter the column(s) where positive controls are located for %s, separated by '-':", sampleId));
-                        negativeControlLoc = clientCallback.showInputDialog(String.format("Please enter the column(s) where negative controls are located for %s, separated by '-':", sampleId));
-                        positiveControlLocations.add(positiveControlLoc);
-                        negativeControlLocations.add(negativeControlLoc);
-                    }
-                }
-
                 File[] listOfFiles = folder.listFiles();
                 for (File file : listOfFiles) {
                     if (file.getName().contains(samplesAttachedToTask.get(0).getStringVal("SampleId", user))
                             && isValidExcelFile(file.getName())) {
-                        byte[] excelFileData = fillOutSmartChipSheetForMultiSamples(samplesAttachedToTask, file, noControlExperiment, positiveControlLocations, negativeControlLocations);
+                        byte[] excelFileData = fillOutSmartChipSheetForMultiSamples(samplesAttachedToTask, file);
                         List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
                         logInfo("#rows = " + rowData.size());
                         logInfo("row(1600) = " + rowData.get(1).getCell(0).getStringCellValue());
@@ -148,7 +134,6 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                         String endOfFileName = splitFileName.get(splitFileName.size() - 1);
                         chipId = endOfFileName.split("\\.")[0];
                         boolean noControlExperiment = clientCallback.showYesNoDialog("Control Usage", "Is it a NO control experiment?");
-                        boolean usualControlLocation = Boolean.TRUE;
                         if (!noControlExperiment) {
                             usualControlLocation = clientCallback.showYesNoDialog("Controls Locations",
                                     String.format("Are the controls for sample %s located at their usual spot?", sampleId));
@@ -156,8 +141,8 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                         String positiveControlLoc = "";
                         String negativeControlLoc = "";
                         if (!usualControlLocation) {
-                            positiveControlLoc = clientCallback.showInputDialog("Please enter the column(s) where positive controls are located, separated by '-':");
-                            negativeControlLoc = clientCallback.showInputDialog("Please enter the column(s) where negative controls are located, separated by '-':");
+                            positiveControlLoc = clientCallback.showInputDialog("Please enter the column(s) where POSITIVE CONTROLS are located, separated by '-':");
+                            negativeControlLoc = clientCallback.showInputDialog("Please enter the column(s) where NEGATIVE CONTROLS are located, separated by '-':");
                         }
                         byte[] excelFileData = fillOutSmartChipSheet(sample, file, noControlExperiment, usualControlLocation, positiveControlLoc, negativeControlLoc);
                         logInfo("After exiting the fillOutSmartChipSheet function");
@@ -704,7 +689,6 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         int noCellControlIncrement = getIncrementingNumberOnControl(getMostRecentDLPControl("DLPNoCellCONTROL"));
         recipe = samples.get(0).getStringVal("Recipe", user);
         for (DataRecord sample : samples) {
-            logInfo("sample in create dlp samples and protocols function: " + sample.getStringVal("SampleId", user));
             String sampleId = sample.getStringVal("SampleId", user);
             String otherSampleId = sample.getStringVal("OtherSampleId", user);
             String altId = sample.getStringVal("AltId", user);
@@ -713,11 +697,9 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             String nextAliquotSampleId = getNextSampleId(sampleId); // This will provide the next sample ID that we can use to start creating aliquot ID's. If the sample is being reporcessed, the aliquot ID's may exist, and we need to find next aliquot sample ID.
             int aliquotIncrementValue = 1;
             for (Row row : sampleDataRows) {
-                logInfo("row " + row.getCell(0));
                 String chipRow = row.getCell(headerValuesMap.get("Row")).toString();
                 String chipColumn = row.getCell(headerValuesMap.get("Column")).toString();
                 String condition = row.getCell(headerValuesMap.get("Condition")).toString();
-                logInfo("Condition = " + condition);
                 if (isValidChipSpotToProcess(chipRow, chipColumn) && isValidCellTypeToProcess(row, headerValuesMap, cellTypeToProcess)) {
                     String newSampleId;
                     String newOtherSampleId;
@@ -731,7 +713,6 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                             newOtherSampleId = "DLPcellCONTROL" + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
                             altId = newSampleId;
                             isControl = true;
-                            logInfo("Positive control");
                             break;
                         case "ntc":
                             negativeControlIncrement += 1;
@@ -739,13 +720,11 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                             newOtherSampleId = "DLPNegativeCONTROL" + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
                             altId = newSampleId;
                             isControl = true;
-                            logInfo("Negative control");
                             break;
 
                         default:
                             newSampleId = nextAliquotSampleId + "_" + aliquotIncrementValue;
                             newOtherSampleId = otherSampleId + "_" + chipId + "_" + (int) Double.parseDouble(chipRow) + "_" + (int) Double.parseDouble(chipColumn);
-                            logInfo("default");
                             break;
                     }
                     dlpRecordValues.put("SampleId", newSampleId);
@@ -983,32 +962,52 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         return bytes;
     }
 
-    private byte[] fillOutSmartChipSheetForMultiSamples(List<DataRecord> samples, File file, boolean noControlExperiment, List<String> posCtrlLocs, List<String> negCtrlLocs) {
+    private byte[] fillOutSmartChipSheetForMultiSamples(List<DataRecord> samples, File file) {
         byte[] bytes = null;
         try {
             logInfo("Inside the fillOutSmartChipSheetForMultiSamples function");
             Workbook smartChipWorkBook = WorkbookFactory.create(file);
             Sheet summary = smartChipWorkBook.getSheetAt(0);
+
+            List<String> positiveControlLocations = new LinkedList<>();
+            List<String> negativeControlLocations = new LinkedList<>();
             int i = 0;
             for (DataRecord sample : samples) {
                 int rowCount = 0;
-                i++;
                 String sampleId = sample.getStringVal("SampleId", user);
                 String sampleName = sample.getStringVal("OtherSampleId", user);
                 int selectedPositiveControl = 0;
                 String[] positiveLocations = {};
                 String[] negativeLocations = {};
+
+
+                boolean noControlExperiment = clientCallback.showYesNoDialog("Control Usage", String.format("Is %s a NO control experiment?", sampleId));
+
                 if (!noControlExperiment) {
-                    positiveLocations = posCtrlLocs.get(i).split("-");
-                    negativeLocations = negCtrlLocs.get(i).split("-");
+                        usualControlLocation = clientCallback.showYesNoDialog("Controls Locations",
+                                String.format("Are the controls for sample %s located at their usual spot?", sampleId));
+                        if (!usualControlLocation) {
+                            String positiveControlLoc = clientCallback.showInputDialog(String.format("Please enter the column(s) where POSITIVE CONTROLS are located for %s, separated by '-':", sampleId));
+                            String negativeControlLoc = clientCallback.showInputDialog(String.format("Please enter the column(s) where NEGATIVE CONTROLS are located for %s, separated by '-':", sampleId));
+                            positiveControlLocations.add(positiveControlLoc);
+                            negativeControlLocations.add(negativeControlLoc);
+                        }
+                }
+
+                if (!noControlExperiment) {
+                    if (!usualControlLocation) {
+                        positiveLocations = positiveControlLocations.get(i).split("-");
+                        negativeLocations = negativeControlLocations.get(i).split("-");
+                        i++;
+                    }
                     selectedPositiveControl = clientCallback.showOptionDialog("Positive Control Selection", "Which positive control " +
                             "has been used for sample " + sampleId, positiveContorlChoises, 0);
                 }
                 // Prompt for the location of samples, rows and columns ranges
-                String minRowOfCurrentSample = clientCallback.showInputDialog(String.format("Enter the first row where sample %s is on the chip: ", sampleId));
-                String maxRowOfCurrentSample = clientCallback.showInputDialog(String.format("Enter the last row where sample %s is on the chip: ", sampleId));
-                String minColOfCurrentSample = clientCallback.showInputDialog(String.format("Enter the first column where sample %s is on the chip: ", sampleId));
-                String maxColOfCurrentSample = clientCallback.showInputDialog(String.format("Enter the last column where sample %s is on the chip: ", sampleId));
+                String minRowOfCurrentSample = clientCallback.showInputDialog(String.format("Enter the FIRST ROW where sample %s is on the chip: ", sampleId));
+                String maxRowOfCurrentSample = clientCallback.showInputDialog(String.format("Enter the LAST ROW where sample %s is on the chip: ", sampleId));
+                String minColOfCurrentSample = clientCallback.showInputDialog(String.format("Enter the FIRST COLUMN where sample %s is on the chip: ", sampleId));
+                String maxColOfCurrentSample = clientCallback.showInputDialog(String.format("Enter the LAST COLUMN where sample %s is on the chip: ", sampleId));
                 for (Row row : summary) {
                     if (row != null) {
                         if (rowCount == 0) {
@@ -1027,16 +1026,24 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                             if (noControlExperiment) {
                                 row.getCell(15).setCellValue(sampleName);
                             } else {
-                                for (String neg : negativeLocations) {
-                                    logInfo("neg loc = " + neg);
-                                    if (row.getCell(2).getNumericCellValue() == Double.parseDouble(neg)) { // negative control
+                                if (usualControlLocation) {
+                                    if (row.getCell(2).getNumericCellValue() == 3.0) { // negative control
                                         row.getCell(15).setCellValue("ntc");
-                                    }
-                                }
-                                for (String pos : positiveLocations) {
-                                    logInfo("pos loc = " + pos);
-                                    if (row.getCell(2).getNumericCellValue() == Double.parseDouble(pos)) { // positive control
+                                    } else if (row.getCell(2).getNumericCellValue() == 5.0) { // positive control
                                         row.getCell(15).setCellValue(positiveContorlChoises[selectedPositiveControl]);
+                                    } else {
+                                        row.getCell(15).setCellValue(sampleName);
+                                    }
+                                } else {
+                                    for (String neg : negativeLocations) {
+                                        if (row.getCell(2).getNumericCellValue() == Double.parseDouble(neg)) { // negative control
+                                            row.getCell(15).setCellValue("ntc");
+                                        }
+                                    }
+                                    for (String pos : positiveLocations) {
+                                        if (row.getCell(2).getNumericCellValue() == Double.parseDouble(pos)) { // positive control
+                                            row.getCell(15).setCellValue(positiveContorlChoises[selectedPositiveControl]);
+                                        }
                                     }
                                 }
                                 if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("ntc") &&
@@ -1046,6 +1053,12 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                                 }
                             }
                         }
+//                        if (!row.getCell(15).getStringCellValue().equalsIgnoreCase("ntc") &&
+//                                !row.getCell(15).getStringCellValue().equalsIgnoreCase("184hTERT") &&
+//                                !row.getCell(15).getStringCellValue().equalsIgnoreCase("rpe1htert") &&
+//                                !row.getCell(15).getStringCellValue().equalsIgnoreCase(sampleName)) {
+//                            row.getCell(15).setCellValue("~");
+//                        }
                     }
                 }
             }
