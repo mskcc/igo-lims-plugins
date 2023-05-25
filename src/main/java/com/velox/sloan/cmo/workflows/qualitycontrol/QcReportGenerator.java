@@ -79,12 +79,13 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 dataRecordManager.deleteDataRecords(attachedReportData, null, false, user);
             }
             List<DataRecord> qcRecords = getQcRecordsForSamples(sampleIds);
+            List<DataRecord> seqReqRecords = getSequencingRequirementsForSamples(sampleIds);
             List<DataRecord> qcProtocolRecords = getQcProtocolRecordsForSamples(sampleIds);
             if (qcRecords.size() < sampleIds.size()) {
                 clientCallback.displayWarning(String.format("Number of QC Records found: %d are LESS than number of samples attached %d." +
                         "\nPlease make sure all the samples have at least one QC record.", qcRecords.size(), sampleIds.size()));
             }
-            generateQcReport(samples, qcRecords, qcProtocolRecords);
+            generateQcReport(samples, qcRecords, qcProtocolRecords, seqReqRecords);
         } catch (RemoteException e) {
             String errMsg = String.format("Remote Exception while QC report generation:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
@@ -200,6 +201,22 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             logError(String.format("RemoteException while getting QC records for attached Samples:\n%s", ExceptionUtils.getStackTrace(e)));
         }
         return qcRecords;
+    }
+
+    private List<DataRecord> getSequencingRequirementsForSamples(List<Object> sampleIdList) {
+        List<DataRecord> seqReqRecords = new ArrayList<>();
+        try {
+            seqReqRecords = dataRecordManager.queryDataRecords("SeqRequirement", "SampleId", sampleIdList, user);
+        } catch (NotFound notFound) {
+            logError(String.format("NotFound Exception while getting sequencing requirements records for attached Samples:\n%s", ExceptionUtils.getStackTrace(notFound)));
+        } catch (IoError ioError) {
+            logError(String.format("IoError Exception while getting sequencing requirements records for attached Samples:\n%s", ExceptionUtils.getStackTrace(ioError)));
+        } catch (ServerException e) {
+            logError(String.format("ServerException while getting sequencing requirements records for attached Samples:\n%s", ExceptionUtils.getStackTrace(e)));
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException while getting sequencing requirements records for attached Samples:\n%s", ExceptionUtils.getStackTrace(e)));
+        }
+        return seqReqRecords;
     }
 
     /**
@@ -445,6 +462,20 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return A260230;
     }
 
+    private String getNumOfReadsFromSeqReqRecord(String sampleId, List<DataRecord> seqReqRecords) {
+        String numOfReads = "";
+        for (DataRecord eachSeqRec : seqReqRecords) {
+            try {
+                if (sampleId.equals(eachSeqRec.getStringVal("SampleId", user))) {
+                    numOfReads = eachSeqRec.getStringVal("RequestedReads", user);
+                }
+
+            } catch (Exception e) {
+                logError("NotFound | RemoteException while getting requested reads from sequencing requirement record of the sample.");
+            }
+        }
+        return numOfReads;
+    }
     /**
      * get QcProtocol records for samples.
      *
@@ -735,7 +766,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws ServerException
      */
-    private List<DataRecord> generateLibraryQcReportFieldValuesMap(List<DataRecord> samples, List<DataRecord> qcRecords, List<DataRecord> qcProtocolRecords) throws NotFound, RemoteException, ServerException {
+    private List<DataRecord> generateLibraryQcReportFieldValuesMap(List<DataRecord> samples, List<DataRecord> qcRecords, List<DataRecord> qcProtocolRecords, List<DataRecord> seqReqRecords) throws NotFound, RemoteException, ServerException {
         List<DataRecord> libraryQcRecords = new ArrayList<>();
         String[] stringListOfQcFiles = {"BioAnalyzer", "TapeStation"};
         int selectedQcFile = 0;
@@ -771,10 +802,14 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 qcRecord.put("TumorOrNormal", sample.getStringVal("TumorOrNormal", user));
                 qcRecord.put("Recipe", sample.getStringVal("Recipe", user));
                 Double averageBpSize = getAverageLibrarySizeValue(sampleId, qcRecords, selectedQcFile);
+                String numOfReads = getNumOfReadsFromSeqReqRecord(sampleId, seqReqRecords);
                 String igoRecommendation = getIgoRecommendationValue(sampleId, qcProtocolRecords);
                 String comments = getQcCommentsValue(sampleId, qcProtocolRecords);
                 if (averageBpSize > 0) {
                     qcRecord.put("AvgSize", averageBpSize);
+                }
+                if(!StringUtils.isBlank(numOfReads)) {
+                    qcRecord.put("NumOfReads", numOfReads);
                 }
                 if (!StringUtils.isBlank(igoRecommendation)) {
                     qcRecord.put("IgoQcRecommendation", igoRecommendation);
@@ -804,7 +839,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private void generateQcReport(List<DataRecord> samples, List<DataRecord> qcRecords, List<DataRecord> qcProtocolRecords) {
+    private void generateQcReport(List<DataRecord> samples, List<DataRecord> qcRecords, List<DataRecord> qcProtocolRecords, List<DataRecord> seqReqRecords) {
         try {
             String attachedSampleTypes = samples.get(0).getStringVal("ExemplarSampleType", user);
             if (DNA_SAMPLE_TYPES.contains(attachedSampleTypes.toLowerCase())) {
@@ -816,7 +851,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 activeTask.addAttachedDataRecords(rnaQcRecords);
             }
             if (LIBRARY_SAMPLE_TYPES.contains(attachedSampleTypes.toLowerCase())) {
-                List<DataRecord> libraryQcRecords = generateLibraryQcReportFieldValuesMap(samples, qcRecords, qcProtocolRecords);
+                List<DataRecord> libraryQcRecords = generateLibraryQcReportFieldValuesMap(samples, qcRecords, qcProtocolRecords, seqReqRecords);
                 activeTask.addAttachedDataRecords(libraryQcRecords);
             }
         }catch (NotFound notFound) {
