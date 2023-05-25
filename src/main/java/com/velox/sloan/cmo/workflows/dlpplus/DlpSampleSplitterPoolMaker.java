@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
  * a child sample record is created for the sample in the excel row. The plugin also creates the AssignedIndex record for each child sample created based on the row and column location indicated in the
  * excel file. Finally all the aliquots created by this plugin are linked to a Sample Pool. Sample pools are created based on quadrants.
  * Created by sharmaa1 on 7/23/19.
+ * @author Fahimhe Mirhaj, updated: May 2023
  */
 public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
 
@@ -51,8 +52,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     Boolean usualControlLocation = Boolean.TRUE;
     String[] positiveContorlChoises = {"184hTERT", "rpe1htert"};
     Map<String, String> seqRunTypeByQuadrant = new HashMap<>();
-    private String DLP_SMARTCHIP_PATH = "/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet/";// /srv/www/sapio/lims/db_backup;
-    //private String DLP_SMARTCHIP_SHEET = "/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet/Date(YYMMDD)_SmartChipResults_LIMSsampleID_chipID_template.xls";
+    private String DLP_SMARTCHIP_PATH = "/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet/";
 
     public DlpSampleSplitterPoolMaker() {
         setTaskEntry(true);
