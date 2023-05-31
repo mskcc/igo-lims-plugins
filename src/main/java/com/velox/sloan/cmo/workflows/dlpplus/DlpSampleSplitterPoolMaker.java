@@ -133,7 +133,8 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                         List<String> splitFileName = Arrays.asList(DLPSmartChipFile.replaceAll("\\s", "_").split("_|-|\\s"));
                         String endOfFileName = splitFileName.get(splitFileName.size() - 1);
                         chipId = endOfFileName.split("\\.")[0];
-                        boolean noControlExperiment = clientCallback.showYesNoDialog("Control Usage", "Is it a NO control experiment?");
+                        boolean noControlExperiment = clientCallback.showYesNoDialog("Control Usage", String.format
+                                ("Does experiment for sample %s have controls? Yes or No", sampleId));
                         if (!noControlExperiment) {
                             usualControlLocation = clientCallback.showYesNoDialog("Controls Locations",
                                     String.format("Are the controls for sample %s located at their usual spot?", sampleId));
@@ -981,7 +982,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                 String[] negativeLocations = {};
 
 
-                boolean noControlExperiment = clientCallback.showYesNoDialog("Control Usage", String.format("Is %s a NO control experiment?", sampleId));
+                boolean noControlExperiment = clientCallback.showYesNoDialog("Control Usage", String.format("Does experiment for sample %s have controls? Yes or No?", sampleId));
 
                 if (!noControlExperiment) {
                         usualControlLocation = clientCallback.showYesNoDialog("Controls Locations",
