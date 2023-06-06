@@ -196,12 +196,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             }
         }
 
-        catch(IoError e){
-            String errMsg = String.format("IoError Exception while parsing the DLP plus spotting file:\n%s", ExceptionUtils.getStackTrace(e));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-            return new PluginResult(false);
-        } catch(InvalidValue e){
+        catch(IoError | InvalidValue e){
             String errMsg = String.format("IoError Exception while parsing the DLP plus spotting file:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
