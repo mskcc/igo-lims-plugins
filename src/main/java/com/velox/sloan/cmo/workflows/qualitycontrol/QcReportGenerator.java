@@ -31,6 +31,8 @@ public class QcReportGenerator extends DefaultGenericPlugin {
     private final String QC_TYPE_FOR_RIN = "bioanalyzer rna pico, bioanalyzer rna nano, tapestation rna screentape hisense sample table, tapestation rna screentape sample table";
     private final String QC_TYPE_FOR_A260280 = "nanodrop nano";
     private final String QC_TYPE_FOR_A260230 = "nanodrop nano";
+    private final String QC_TYPE_FOR_AVERAGE_BP_SIZE = "TapeStation Compact Peak Table, TapeStation Compact Pico Region Table, " +
+            "TapeStation D1000 Compact Region Table, TapeStation D1000 HiSense Compact Region Table, Bioanalyzer DNA High Sens Region Table";
     private final String TAPESTATION_QC_FOR_AVERAGE_BP_SIZE = "TapeStation Compact Peak Table, TapeStation Compact Pico Region Table, " +
             "TapeStation D1000 Compact Region Table, TapeStation D1000 HiSense Compact Region Table";
     private final String BIOA_QC_FOR_AVERAGE_BP_SIZE = "Bioanalyzer DNA High Sens Region Table";
@@ -580,14 +582,14 @@ public class QcReportGenerator extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws ServerException
      */
-    private Double getAverageLibrarySizeValue(String sampleId, List<DataRecord> qcRecords, int selectedQcFile) {
+    private Double getAverageLibrarySizeValue(String sampleId, List<DataRecord> qcRecords/*, int selectedQcFile*/) {
         List<DataRecord> qcRecordsWithAvgBpSizeForSample = new LinkedList<>();
-        if (selectedQcFile == 0) {
-            qcRecordsWithAvgBpSizeForSample = getQcRecordsByQcType(sampleId, qcRecords, BIOA_QC_FOR_AVERAGE_BP_SIZE);
-        }
-        else {
-            qcRecordsWithAvgBpSizeForSample = getQcRecordsByQcType(sampleId, qcRecords, TAPESTATION_QC_FOR_AVERAGE_BP_SIZE);
-        }
+        //if (selectedQcFile == 0) {
+            qcRecordsWithAvgBpSizeForSample = getQcRecordsByQcType(sampleId, qcRecords, QC_TYPE_FOR_AVERAGE_BP_SIZE);
+        //}
+//        else {
+//            qcRecordsWithAvgBpSizeForSample = getQcRecordsByQcType(sampleId, qcRecords, TAPESTATION_QC_FOR_AVERAGE_BP_SIZE);
+//        }
 
         Double averageBasePairSize = 0.0;
         try {
@@ -770,15 +772,15 @@ public class QcReportGenerator extends DefaultGenericPlugin {
      */
     private List<DataRecord> generateLibraryQcReportFieldValuesMap(List<DataRecord> samples, List<DataRecord> qcRecords, List<DataRecord> qcProtocolRecords, List<DataRecord> seqReqRecords) throws NotFound, RemoteException, ServerException {
         List<DataRecord> libraryQcRecords = new ArrayList<>();
-        String[] stringListOfQcFiles = {"BioAnalyzer", "TapeStation"};
-        int selectedQcFile = 0;
-        try {
-            selectedQcFile = clientCallback.showOptionDialog("Selecting QC Average Size Bp",
-                    "Which QC file average size bp would you like to use: ", stringListOfQcFiles, 0);
-        }
-        catch (ServerException se) {
-            this.logError(String.valueOf(se.getStackTrace()));
-        }
+        //String[] stringListOfQcFiles = {"BioAnalyzer", "TapeStation"};
+        //int selectedQcFile = 0;
+//        try {
+//            selectedQcFile = clientCallback.showOptionDialog("Selecting QC Average Size Bp",
+//                    "Which QC file average size bp would you like to use: ", stringListOfQcFiles, 0);
+//        }
+//        catch (ServerException se) {
+//            this.logError(String.valueOf(se.getStackTrace()));
+//        }
         for (DataRecord sample : samples) {
             Map<String, Object> qcRecord = new HashMap<>();
             try {
@@ -806,6 +808,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 Double averageBpSize = getAverageLibrarySizeValue(sampleId, qcRecords, selectedQcFile);
                 String numOfReads = getNumOfReadsFromSeqReqRecord(sampleId, seqReqRecords);
                 logInfo("num of reads = " + numOfReads);
+                Double averageBpSize = getAverageLibrarySizeValue(sampleId, qcRecords/*, selectedQcFile*/);
                 String igoRecommendation = getIgoRecommendationValue(sampleId, qcProtocolRecords);
                 String comments = getQcCommentsValue(sampleId, qcProtocolRecords);
                 if (averageBpSize > 0) {
