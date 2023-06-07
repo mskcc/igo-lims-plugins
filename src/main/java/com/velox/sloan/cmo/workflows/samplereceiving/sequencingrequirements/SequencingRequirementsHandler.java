@@ -428,7 +428,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                         continue;
                                     }
                                     else {
-                                        //this.logInfo("returned ref record: " + refRecord.toString());
                                         if (species.toString().equalsIgnoreCase("Human")) {
                                             seqReq.setDataField("RequestedReads", refRecord.getValue(
                                                     "MillionReadsHuman", user), user);
