@@ -226,15 +226,12 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
         Map<String, Object> recipeToSelectedCapturePanel = new HashMap<>();
         for(String recipe : batchRecipes) {
 
-            // added
-
             if(bankedSampleRecipeToCapturePanelMap.get(recipe) != null && bankedSampleRecipeToCapturePanelMap.get(recipe)
                     .size() == 1) {
                 //Don't ask!!
                 recipeToSelectedCapturePanel.put(recipe, bankedSampleRecipeToCapturePanelMap.get(recipe).first());
                 break;
             }
-            // end
 
 
             if (!Objects.isNull(recipeToCapturePanelMap.get(recipe))) {
@@ -273,7 +270,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                         Object tumorOrNormal = s.getValue("TumorOrNormal", user);
                         Object reads = null;
                         Object coverage = null;
-                        //Object sequencingReadLength = null;
                         Iterator banked = bankedSamples.iterator();
                         Iterator seqReqs1 = seqRequirements.iterator();
                         DataRecord d = null;
@@ -286,7 +282,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                 reads = d.getValue("RequestedReads", user);
                                 coverage = d.getValue("RequestedCoverage", user);
                                 runType = d.getValue("RunType", user);
-                                //sequencingReadLength = d.getValue("SequencingReadLength", user);
                                 if (!Objects.isNull(coverage)) {
                                     coverage = coverage.toString().replace("X", "").replace("x",
                                             "").trim();
@@ -347,7 +342,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                         } else { // no range
                                             seqReq.setDataField("RequestedReads", minMaxRead, user);
                                         }
-                                        //this.logInfo("Here at read parsing I am..");
                                     }
                                 }
 
@@ -356,8 +350,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                         refRecipeToCoverageMap.get(recipe.toString()).size() == 0) &&
                                         (Objects.isNull(reads) || reads.toString().trim().isEmpty())) {
                                     this.logInfo("I thought it's ShallowWGS or CRISPR");
-                                    //this.logInfo("ref recipe to translated reads for shallowES: " + refRecipeToTranslatedReadsHumanMap.
-                                            //get("ShallowWGS"));
                                     seqReq.setDataField("RequestedReads", refRecipeToTranslatedReadsHumanMap.
                                             get(recipe.toString()), user);
 
@@ -369,7 +361,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                     this.logInfo("Coverage is null..");
                                     if (Objects.isNull(this.panelName) || this.panelName.toString().trim().isEmpty()) {
                                         if (!Objects.isNull(recipeToCapturePanelMap.get(recipe.toString()))) {
-                                            //this.logInfo("recipe to capture panel was NOT null!");
                                             if (recipeToCapturePanelMap.get(recipe.toString()).size() > 1) {
                                                 this.panelName = recipeToSelectedCapturePanel.get(recipe.toString());
                                             }
@@ -378,7 +369,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                             }
                                         }
                                     }
-                                    //this.logInfo("finding ref corresponding record..");
                                     DataRecord refRecord = CoverageToReadsUtil.getRefRecordFromRecipeAndCapturePanel
                                             (recipe, this.panelName, tumorOrNormal, coverage, coverageReqRefs,
                                                     user, this.pluginLogger);
@@ -416,7 +406,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
 
                                 } else {
                                     // requested coverage has a value
-                                    //this.logInfo("Coverage is NOT null..");
                                     if (Objects.nonNull(recipeToCapturePanelMap.get(recipe.toString()))) {
                                         this.logInfo("recipe to capture panel was NOT null!");
                                         if (recipeToCapturePanelMap.get(recipe.toString()).size() > 1) {
