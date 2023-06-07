@@ -464,16 +464,18 @@ public class QcReportGenerator extends DefaultGenericPlugin {
 
     private String getNumOfReadsFromSeqReqRecord(String sampleId, List<DataRecord> seqReqRecords) {
         String numOfReads = "";
-        for (DataRecord eachSeqRec : seqReqRecords) {
+        //for (DataRecord eachSeqRec : seqReqRecords) {
             try {
-                if (sampleId.equals(eachSeqRec.getStringVal("SampleId", user))) {
-                    numOfReads = eachSeqRec.getStringVal("RequestedReads", user);
+                if (sampleId.equals(seqReqRecords.get(0).getStringVal("SampleId", user))) {
+                    numOfReads = seqReqRecords.get(0).getDataField("RequestedReads", user).toString();
                 }
 
-            } catch (Exception e) {
-                logError("NotFound | RemoteException while getting requested reads from sequencing requirement record of the sample.");
+            } catch (NotFound e) {
+                logError("NotFound while getting requested reads from sequencing requirement record of the sample.");
+            } catch (RemoteException e) {
+                logError("RemoteException while getting requested reads from sequencing requirement record of the sample.");
             }
-        }
+        //}
         return numOfReads;
     }
     /**
@@ -803,6 +805,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 qcRecord.put("Recipe", sample.getStringVal("Recipe", user));
                 Double averageBpSize = getAverageLibrarySizeValue(sampleId, qcRecords, selectedQcFile);
                 String numOfReads = getNumOfReadsFromSeqReqRecord(sampleId, seqReqRecords);
+                logInfo("num of reads = " + numOfReads);
                 String igoRecommendation = getIgoRecommendationValue(sampleId, qcProtocolRecords);
                 String comments = getQcCommentsValue(sampleId, qcProtocolRecords);
                 if (averageBpSize > 0) {
