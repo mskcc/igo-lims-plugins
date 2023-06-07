@@ -805,7 +805,6 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 }
                 qcRecord.put("TumorOrNormal", sample.getStringVal("TumorOrNormal", user));
                 qcRecord.put("Recipe", sample.getStringVal("Recipe", user));
-                Double averageBpSize = getAverageLibrarySizeValue(sampleId, qcRecords, selectedQcFile);
                 String numOfReads = getNumOfReadsFromSeqReqRecord(sampleId, seqReqRecords);
                 logInfo("num of reads = " + numOfReads);
                 Double averageBpSize = getAverageLibrarySizeValue(sampleId, qcRecords/*, selectedQcFile*/);
