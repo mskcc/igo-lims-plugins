@@ -81,6 +81,14 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                 for (File file : listOfFiles) {
                     if (file.getName().contains(samplesAttachedToTask.get(0).getStringVal("SampleId", user))
                             && isValidExcelFile(file.getName())) {
+                        DLPSmartChipFile = file.getName();
+                        List<String> splitFileName = Arrays.asList(DLPSmartChipFile.replaceAll("\\s", "_").split("_|-|\\s"));
+                        String endOfFileName = splitFileName.get(splitFileName.size() - 1);
+                        chipId = endOfFileName.split("\\.")[0];
+                        if (chipId.equals("")) {
+                            clientCallback.displayError("ChipID cannot be empty. Please make sure the Smartchip " +
+                                    "sheet exists on the shared drive LIMS -> DLP -> SmartchipSheet/");
+                        }
                         byte[] excelFileData = fillOutSmartChipSheetForMultiSamples(samplesAttachedToTask, file);
                         List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
                         logInfo("#rows = " + rowData.size());
@@ -134,6 +142,10 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                             List<String> splitFileName = Arrays.asList(DLPSmartChipFile.replaceAll("\\s", "_").split("_|-|\\s"));
                             String endOfFileName = splitFileName.get(splitFileName.size() - 1);
                             chipId = endOfFileName.split("\\.")[0];
+                            if (chipId.equals("")) {
+                                clientCallback.displayError("ChipID cannot be empty. Please make sure the Smartchip " +
+                                        "sheet exists on the shared drive LIMS -> DLP -> SmartchipSheet/");
+                            }
                             boolean controlExperiment = clientCallback.showYesNoDialog("Control Usage", String.format
                                     ("Does experiment for sample %s have controls? Yes or No", sampleId));
                             if (controlExperiment) {
