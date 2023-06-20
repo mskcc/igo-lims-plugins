@@ -236,14 +236,8 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             }
 
             logInfo("seqReqRecords size is: " + seqReqRecords.size());
-        } catch (NotFound notFound) {
-            logError(String.format("NotFound Exception while getting sequencing requirements records for attached Samples:\n%s", ExceptionUtils.getStackTrace(notFound)));
-        } catch (IoError ioError) {
-            logError(String.format("IoError Exception while getting sequencing requirements records for attached Samples:\n%s", ExceptionUtils.getStackTrace(ioError)));
-        } catch (ServerException e) {
-            logError(String.format("ServerException while getting sequencing requirements records for attached Samples:\n%s", ExceptionUtils.getStackTrace(e)));
-        } catch (RemoteException e) {
-            logError(String.format("RemoteException while getting sequencing requirements records for attached Samples:\n%s", ExceptionUtils.getStackTrace(e)));
+        } catch (NotFound | IoError | ServerException | RemoteException e) {
+            logError(String.format("An Exception occurred while getting sequencing requirements records for attached Samples:\n%s", ExceptionUtils.getStackTrace(e)));
         }
         return seqReqRecords;
     }
