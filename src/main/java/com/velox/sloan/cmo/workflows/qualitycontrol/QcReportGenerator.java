@@ -72,6 +72,20 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 clientCallback.displayError(String.format("Sample attachments not found on task: %s", activeTask.getTask().getTaskName()));
                 return new PluginResult(false);
             }
+            boolean hasPool = false;
+            List<Object> poolsSampleNames = new LinkedList<>();
+            // Pools
+            for (DataRecord sample : samples) {
+                if (sample.getStringVal("SampleId", user).toLowerCase().startsWith("pool-")) {
+                    hasPool = true;
+                    String [] sampleNames = sample.getStringVal("OtherSampleId", user).split(",");
+                    for (int i = 0; i < sampleNames.length; i++) {
+                        poolsSampleNames.add(sampleNames[i]);
+                        logInfo("poolsSampleNames size = " + poolsSampleNames.size());
+                    }
+
+                }
+            }
             List<Object> sampleIds = getSampleIds(samples);
             String reportName = getReportName(samples.get(0));
             List<DataRecord> attachedReportData = activeTask.getAttachedDataRecords(reportName, user);
@@ -81,13 +95,14 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 dataRecordManager.deleteDataRecords(attachedReportData, null, false, user);
             }
             List<DataRecord> qcRecords = getQcRecordsForSamples(sampleIds);
+            List<DataRecord> seqReqRecords = getSequencingRequirementsForSamples(sampleIds, hasPool, poolsSampleNames);
             List<DataRecord> qcProtocolRecords = getQcProtocolRecordsForSamples(sampleIds);
             if (qcRecords.size() < sampleIds.size()) {
                 clientCallback.displayWarning(String.format("Number of QC Records found: %d are LESS than number of samples attached %d." +
                         "\nPlease make sure all the samples have at least one QC record.", qcRecords.size(), sampleIds.size()));
             }
-            generateQcReport(samples, qcRecords, qcProtocolRecords);
-        } catch (RemoteException e) {
+            generateQcReport(samples, qcRecords, qcProtocolRecords, seqReqRecords, hasPool);
+        } catch (NotFound | RemoteException e) {
             String errMsg = String.format("Remote Exception while QC report generation:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
@@ -166,6 +181,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             String sampleId = null;
             try {
                 sampleId = sample.getStringVal("SampleId", user);
+                logInfo("getSampleIds returns: " + sampleId);
             } catch (RemoteException e) {
                 logError(String.format("Remote Exception while reading SampleId for sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
             } catch (NotFound e) {
@@ -202,6 +218,28 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             logError(String.format("RemoteException while getting QC records for attached Samples:\n%s", ExceptionUtils.getStackTrace(e)));
         }
         return qcRecords;
+    }
+
+    private List<DataRecord> getSequencingRequirementsForSamples(List<Object> sampleIdList, boolean hasPool, List<Object> poolsSampleNames) {
+        List<DataRecord> seqReqRecords = new ArrayList<>();
+        try {
+            if (hasPool) {
+                List<DataRecord> poolSeqReqs = dataRecordManager.queryDataRecords("SeqRequirement", "OtherSampleId", poolsSampleNames, user);
+                for (DataRecord d : poolSeqReqs) {
+                    seqReqRecords.add(d);
+                }
+            }
+
+            List<DataRecord> libSeqReqs = dataRecordManager.queryDataRecords("SeqRequirement", "SampleId", sampleIdList, user);
+            for (DataRecord d : libSeqReqs) {
+                seqReqRecords.add(d);
+            }
+
+            logInfo("seqReqRecords size is: " + seqReqRecords.size());
+        } catch (NotFound | IoError | ServerException | RemoteException e) {
+            logError(String.format("An Exception occurred while getting sequencing requirements records for attached Samples:\n%s", ExceptionUtils.getStackTrace(e)));
+        }
+        return seqReqRecords;
     }
 
     /**
@@ -447,6 +485,29 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return A260230;
     }
 
+    private String getNumOfReadsFromSeqReqRecord(String sampleId, List<DataRecord> seqReqRecords, boolean hasPool ,String SampleRequest) {
+        String numOfReads = "";
+        double poolNumOfReads = 0.0;
+        for (DataRecord eachSeqRec : seqReqRecords) {
+            try {
+                logInfo("sampleId = " + sampleId + " |request = " + SampleRequest + " hasPool = " + hasPool);
+                if (hasPool && sampleId.toLowerCase().startsWith("pool-") && sampleId.contains(SampleRequest)) {
+                    logInfo("in here!");
+                    poolNumOfReads += Double.parseDouble(eachSeqRec.getDataField("RequestedReads", user).toString());
+                    numOfReads = String.valueOf(poolNumOfReads);
+                }
+                else if (sampleId.equals(eachSeqRec.getStringVal("SampleId", user))) {
+                    numOfReads = eachSeqRec.getDataField("RequestedReads", user).toString();
+                }
+
+            } catch (NotFound e) {
+                logError("NotFound while getting requested reads from sequencing requirement record of the sample.");
+            } catch (RemoteException e) {
+                logError("RemoteException while getting requested reads from sequencing requirement record of the sample.");
+            }
+        }
+        return numOfReads;
+    }
     /**
      * get QcProtocol records for samples.
      *
@@ -737,7 +798,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws ServerException
      */
-    private List<DataRecord> generateLibraryQcReportFieldValuesMap(List<DataRecord> samples, List<DataRecord> qcRecords, List<DataRecord> qcProtocolRecords) throws NotFound, RemoteException, ServerException {
+    private List<DataRecord> generateLibraryQcReportFieldValuesMap(List<DataRecord> samples, List<DataRecord> qcRecords, List<DataRecord> qcProtocolRecords, List<DataRecord> seqReqRecords, boolean hasPool) throws NotFound, RemoteException, ServerException {
         List<DataRecord> libraryQcRecords = new ArrayList<>();
         //String[] stringListOfQcFiles = {"BioAnalyzer", "TapeStation"};
         //int selectedQcFile = 0;
@@ -752,6 +813,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
             Map<String, Object> qcRecord = new HashMap<>();
             try {
                 String sampleId = sample.getStringVal("SampleId", user);
+                String SampleRequest = sample.getStringVal("RequestId", user);
                 qcRecord.put("SampleId", sampleId);
                 qcRecord.put("OtherSampleId", sample.getStringVal("OtherSampleId", user));
                 qcRecord.put("UserSampleID", sample.getStringVal("UserSampleID", user));
@@ -772,11 +834,16 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 }
                 qcRecord.put("TumorOrNormal", sample.getStringVal("TumorOrNormal", user));
                 qcRecord.put("Recipe", sample.getStringVal("Recipe", user));
+                String numOfReads = getNumOfReadsFromSeqReqRecord(sampleId, seqReqRecords, hasPool, SampleRequest);
+                logInfo("num of reads = " + numOfReads);
                 Double averageBpSize = getAverageLibrarySizeValue(sampleId, qcRecords/*, selectedQcFile*/);
                 String igoRecommendation = getIgoRecommendationValue(sampleId, qcProtocolRecords);
                 String comments = getQcCommentsValue(sampleId, qcProtocolRecords);
                 if (averageBpSize > 0) {
                     qcRecord.put("AvgSize", averageBpSize);
+                }
+                if(!StringUtils.isBlank(numOfReads)) {
+                    qcRecord.put("NumOfReads", numOfReads);
                 }
                 if (!StringUtils.isBlank(igoRecommendation)) {
                     qcRecord.put("IgoQcRecommendation", igoRecommendation);
@@ -806,7 +873,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private void generateQcReport(List<DataRecord> samples, List<DataRecord> qcRecords, List<DataRecord> qcProtocolRecords) {
+    private void generateQcReport(List<DataRecord> samples, List<DataRecord> qcRecords, List<DataRecord> qcProtocolRecords, List<DataRecord> seqReqRecords, boolean hasPool) {
         try {
             String attachedSampleTypes = samples.get(0).getStringVal("ExemplarSampleType", user);
             if (DNA_SAMPLE_TYPES.contains(attachedSampleTypes.toLowerCase())) {
@@ -818,7 +885,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 activeTask.addAttachedDataRecords(rnaQcRecords);
             }
             if (LIBRARY_SAMPLE_TYPES.contains(attachedSampleTypes.toLowerCase())) {
-                List<DataRecord> libraryQcRecords = generateLibraryQcReportFieldValuesMap(samples, qcRecords, qcProtocolRecords);
+                List<DataRecord> libraryQcRecords = generateLibraryQcReportFieldValuesMap(samples, qcRecords, qcProtocolRecords, seqReqRecords, hasPool);
                 activeTask.addAttachedDataRecords(libraryQcRecords);
             }
         }catch (NotFound notFound) {
