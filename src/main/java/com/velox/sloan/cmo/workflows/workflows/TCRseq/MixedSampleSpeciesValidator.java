@@ -31,7 +31,6 @@ public class MixedSampleSpeciesValidator extends DefaultGenericPlugin {
 
     public PluginResult run() throws ServerException {
         try {
-            logInfo("I should run species validator plugin!!!");
             List<DataRecord> samples = activeTask.getAttachedDataRecords("Sample", user);
             Set<String> sampleSpeciesValues = new HashSet<>();
             for (DataRecord sample : samples) {
