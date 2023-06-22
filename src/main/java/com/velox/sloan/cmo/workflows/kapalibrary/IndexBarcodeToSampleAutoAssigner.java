@@ -212,12 +212,12 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                 }
             }
         } else if (isCrisprOrAmpliconSeq) {
-            logInfo("Recipe on Library samples is Crispr or AmpliconSeq, reserved indexes in set5 will be used.");
-            return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType='DUAL_IDT_LIB' AND AdapterPlateId='Set1Plate5' and IsActive=1", user);
+            logInfo("Recipe on Library samples is Crispr or AmpliconSeq, reserved indexes in plate5 will be used.");
+            return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType='DUAL_IDT_LIB' AND AdapterPlateId LIKE 'Set%Plate5' and IsActive=1", user);
 
         } else {
-            logInfo("Library samples do not have recipe values Crispr or AmpliconSeq, reserved indexes in set5 will not be used.");
-            return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + "AND IsActive=1 AND AdapterPlateId!='Set1Plate5'", user);
+            logInfo("Library samples do not have recipe values Crispr or AmpliconSeq, reserved indexes in plate5 will not be used.");
+            return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + "AND IsActive=1 AND AdapterPlateId NOT LIKE 'Set%Plate5'", user);
 
         }
         return new LinkedList<DataRecord>();
