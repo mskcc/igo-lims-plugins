@@ -89,21 +89,18 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                             clientCallback.displayError("ChipID cannot be empty. Please make sure the Smartchip " +
                                     "sheet exists on the shared drive LIMS -> DLP -> SmartchipSheet/");
                         }
+                        if (chipId.length() < 7) {
+                            clientCallback.displayError("ChipID length is not correct. Please make sure the correct chipID is in the Smartchip sheet file name.");
+                        }
                         byte[] excelFileData = fillOutSmartChipSheetForMultiSamples(samplesAttachedToTask, file);
                         List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
-                        logInfo("#rows = " + rowData.size());
-                        logInfo("row(1600) = " + rowData.get(1).getCell(0).getStringCellValue());
                         if (!fileHasData(rowData, DLPSmartChipFile) || !hasValidHeader(rowData, DLP_UPLOAD_SHEET_EXPECTED_HEADERS, DLPSmartChipFile)) {
                             return new PluginResult(false);
                         }
                         clientCallback.displayInfo("This process Will take some time. Please be patient.");
                         HashMap<String, Integer> headerValuesMap = utils.getHeaderValuesMapFromExcelRowData(rowData);
-
                         Map<String, List<Row>> rowsSeparatedBySampleMap = getRowsBySample(samplesAttachedToTask, rowData, headerValuesMap);
-                        //logInfo("rowsSeparatedBySampleMap size = " + rowsSeparatedBySampleMap.size());
-//                        for (Map.Entry<String, List<Row>> entry : rowsSeparatedBySampleMap.entrySet()) {
-//                            logInfo("rowsSeparatedBySampleMap rows = " + entry);
-//                        }
+
                         // TODO: to remove
                         if (rowsSeparatedBySampleMap.isEmpty()) {
                             clientCallback.displayError(String.format("Did not find matching SAMPLE ID's for samples attached to the task in the template file.\nPlease make sure that file has correct Sample Info."));
@@ -115,7 +112,6 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                             return new PluginResult(false);
                         }
                         String cellTypeToProcess = cellTypeChoices.get(0);
-                        logInfo("selected cell type:" + cellTypeToProcess);
                         boolean isCorrectCellTypeToProcess = clientCallback.showYesNoDialog("Confirm CELL TYPE to process", String.format("Are you sure you want to process '%s' cells", cellTypeToProcess));
                         if (!isCorrectCellTypeToProcess) {
                             logInfo("User did not positively confirm CELL TYPE to process. Aborting plugin task.");
@@ -123,11 +119,8 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                         }
                         Object recipe = samplesAttachedToTask.get(0).getValue(SampleModel.RECIPE, user);
                         Object dlpRequestedReads = getDlpRequestedReads(recipe);
-                        logInfo("dlpRequestedReads= " + dlpRequestedReads);
                         Map<String, List<DataRecord>> newDlpSamples = createDlpSamplesAndProtocolRecords(rowsSeparatedBySampleMap, headerValuesMap, samplesAttachedToTask, cellTypeToProcess);
-                        logInfo("After createDlpSamplesAndProtocolRecords function call");
                         assert dlpRequestedReads != null;
-                        logInfo("After assert");
                         createPools(newDlpSamples, (Double) dlpRequestedReads);
                     }
                 }
@@ -146,6 +139,9 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                                 clientCallback.displayError("ChipID cannot be empty. Please make sure the Smartchip " +
                                         "sheet exists on the shared drive LIMS -> DLP -> SmartchipSheet/");
                             }
+                            if (chipId.length() < 7) {
+                                clientCallback.displayError("ChipID length is not correct. Please make sure the correct chipID is in the Smartchip sheet file name.");
+                            }
                             boolean controlExperiment = clientCallback.showYesNoDialog("Control Usage", String.format
                                     ("Does experiment for sample %s have controls? Yes or No", sampleId));
                             if (controlExperiment) {
@@ -160,12 +156,8 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                             }
                             byte[] excelFileData = fillOutSmartChipSheet(sample, file, controlExperiment, usualControlLocation, positiveControlLoc, negativeControlLoc);
                             logInfo("After exiting the fillOutSmartChipSheet function");
-                            //byte[] excelFileData = Files.readAllBytes(Paths.get(file.getAbsolutePath()));
-                            //byte[] excelFileData = DLPSmartChipFile.getBytes();
-                            logInfo("excelFileData size is = " + excelFileData.length);
                             List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
-                            logInfo("#rows = " + rowData.size());
-                            logInfo("row(1600) = " + rowData.get(1).getCell(0).getStringCellValue());
+
                             if (!fileHasData(rowData, DLPSmartChipFile) || !hasValidHeader(rowData, DLP_UPLOAD_SHEET_EXPECTED_HEADERS, DLPSmartChipFile)) {
                                 return new PluginResult(false);
                             }
@@ -173,10 +165,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                             HashMap<String, Integer> headerValuesMap = utils.getHeaderValuesMapFromExcelRowData(rowData);
 
                             Map<String, List<Row>> rowsSeparatedBySampleMap = getRowsBySample(samplesAttachedToTask, rowData, headerValuesMap);
-                            logInfo("rowsSeparatedBySampleMap size = " + rowsSeparatedBySampleMap.size());
-                            for (Map.Entry<String, List<Row>> entry : rowsSeparatedBySampleMap.entrySet()) {
-                                logInfo("rowsSeparatedBySampleMap rows = " + entry);
-                            }
+
                             // TODO: to remove
                             if (rowsSeparatedBySampleMap.isEmpty()) {
                                 clientCallback.displayError(String.format("Did not find matching SAMPLE ID's for samples attached to the task in the template file.\nPlease make sure that file has correct Sample Info."));
