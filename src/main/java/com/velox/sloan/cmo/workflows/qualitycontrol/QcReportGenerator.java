@@ -526,21 +526,21 @@ public class QcReportGenerator extends DefaultGenericPlugin {
 
         for (DataRecord eachSeqRec : seqReqRecords) {
             try {
-                if (isPool && eachSeqRec != null) {
-                    String SampleRequest = sampleId.split("-")[1]; // input: Pool-05500_IY-Tube1, output: 05500_IY
-                    if (eachSeqRec.getStringVal("SampleId", user).contains(SampleRequest) &&
-                            sampleName.contains(eachSeqRec.getStringVal("OtherSampleId", user))) {
+                if (eachSeqRec.getDataField("RequestedReads", user) != null) {
+                    if (isPool && eachSeqRec != null) {
+                        String SampleRequest = sampleId.split("-")[1]; // input: Pool-05500_IY-Tube1, output: 05500_IY
+                        if (eachSeqRec.getStringVal("SampleId", user).contains(SampleRequest) &&
+                                sampleName.contains(eachSeqRec.getStringVal("OtherSampleId", user))) {
 
-                        poolNumOfReads += Double.parseDouble(eachSeqRec.getDataField("RequestedReads", user).toString());
-                        logInfo("eachSeqRec igo id = " + eachSeqRec.getStringVal("SampleId", user) +
-                                " eachSeqRec sample name = " + eachSeqRec.getStringVal("OtherSampleId", user));
-                        logInfo("poolNumOfReads = " + poolNumOfReads);
-                        numOfReads = String.valueOf(poolNumOfReads);
+                            poolNumOfReads += Double.parseDouble(eachSeqRec.getDataField("RequestedReads", user).toString());
+                            logInfo("eachSeqRec igo id = " + eachSeqRec.getStringVal("SampleId", user) +
+                                    " eachSeqRec sample name = " + eachSeqRec.getStringVal("OtherSampleId", user));
+                            logInfo("poolNumOfReads = " + poolNumOfReads);
+                            numOfReads = String.valueOf(poolNumOfReads);
+                        }
+
                     }
-
-                }
-                else if (eachSeqRec.getDataField("RequestedReads", user) != null) {
-                    if (sampleId.equals(eachSeqRec.getStringVal("SampleId", user))) {
+                    else if (sampleId.equals(eachSeqRec.getStringVal("SampleId", user))) {
                         numOfReads = eachSeqRec.getDataField("RequestedReads", user).toString();
                     }
                 }
