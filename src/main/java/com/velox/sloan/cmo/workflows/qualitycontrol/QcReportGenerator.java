@@ -539,8 +539,10 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                     }
 
                 }
-                else if (sampleId.equals(eachSeqRec.getStringVal("SampleId", user))) {
-                    numOfReads = eachSeqRec.getDataField("RequestedReads", user).toString();
+                else if (eachSeqRec.getDataField("RequestedReads", user) != null) {
+                    if (sampleId.equals(eachSeqRec.getStringVal("SampleId", user))) {
+                        numOfReads = eachSeqRec.getDataField("RequestedReads", user).toString();
+                    }
                 }
 
             } catch (NotFound e) {
