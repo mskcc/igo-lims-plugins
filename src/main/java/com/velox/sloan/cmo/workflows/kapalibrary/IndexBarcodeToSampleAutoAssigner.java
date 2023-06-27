@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
  */
 public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
 
-    private final List<String> RECIPES_TO_USE_SPECIAL_ADAPTERS = Arrays.asList("CRISPRSeq", "AmpliconSeq");
+    private final List<String> RECIPES_TO_USE_SPECIAL_ADAPTERS = Arrays.asList("CRISPRSeq", "AmpliconSeq", "SingleCellCNV");
     private boolean isTCRseq = false;
     private IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
     private AutoIndexAssignmentHelper autoHelper;
@@ -212,12 +212,12 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                 }
             }
         } else if (isCrisprOrAmpliconSeq) {
-            logInfo("Recipe on Library samples is Crispr or AmpliconSeq, reserved indexes in set5 will be used.");
-            return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType='DUAL_IDT_LIB' AND SetId=5 and IsActive=1", user);
+            logInfo("Recipe on Library samples is Crispr or AmpliconSeq, reserved indexes in plate5 will be used.");
+            return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType='DUAL_IDT_LIB' AND AdapterPlateId LIKE 'Set%Plate5' and IsActive=1", user);
 
         } else {
-            logInfo("Library samples do not have recipe values Crispr or AmpliconSeq, reserved indexes in set5 will not be used.");
-            return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + "AND IsActive=1 AND SetId!=5", user);
+            logInfo("Library samples do not have recipe values Crispr or AmpliconSeq, reserved indexes in plate5 will not be used.");
+            return dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, "IndexType IN " + indexTypes + "AND IsActive=1 AND AdapterPlateId NOT LIKE 'Set%Plate5'", user);
 
         }
         return new LinkedList<DataRecord>();
