@@ -9,9 +9,16 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 
 
-import javax.xml.crypto.Data;
 import java.rmi.RemoteException;
 import java.util.List;
+
+/**
+ * This is a plugin called at step 6 of DNA Extraction workflow to change the attached samples "sample type" and DNA
+ * Extraction Experiment "Resulting Sample Type" to hmwDNA (High Molecular Weight DNA) when the samples are going for ONT
+ * library preparation.
+ *
+ * @author Fahimeh Mirhaj
+*/
 
 public class ChangeSampleTypeTohmwDNA extends DefaultGenericPlugin {
 
