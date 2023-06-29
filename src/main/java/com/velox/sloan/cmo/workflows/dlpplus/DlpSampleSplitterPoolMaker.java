@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
  * a child sample record is created for the sample in the excel row. The plugin also creates the AssignedIndex record for each child sample created based on the row and column location indicated in the
  * excel file. Finally all the aliquots created by this plugin are linked to a Sample Pool. Sample pools are created based on quadrants.
  * Created by sharmaa1 on 7/23/19.
- * @author Fahimhe Mirhaj, updated: May 2023
+ * @author Fahimeh Mirhaj, updated: May 2023
  */
 public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
 
