@@ -36,11 +36,11 @@ public class ChangeSampleTypeTohmwDNA extends DefaultGenericPlugin {
             if (isONT) {
                 logInfo("isONT = true, changing extraction sample type");
                 dnaExtractionExpriments.get(0).setDataField("ExtractionSampleType", "hmwDNA", user);
-            }
 
-            for (DataRecord sample : samples) {
-                logInfo("isONT = true, changing sample type");
-                sample.setDataField("ExemplarSampleType", "hmwDNA", user);
+                for (DataRecord sample : samples) {
+                    logInfo("isONT = true, changing sample type");
+                    sample.setDataField("ExemplarSampleType", "hmwDNA", user);
+                }
             }
         } catch (InvalidValue | IoError |NotFound | com.velox.api.util.ServerException | RemoteException e) {
             logError("An exception occurred while setting sample type to hmwDNA", e);
