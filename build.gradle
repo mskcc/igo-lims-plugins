@@ -71,7 +71,7 @@ repositories {
 dependencies {
     compileOnly fileTree(dir: "lib", includes: ['*.jar'])
 
-    implementation 'com.velox.internalproducts:veloxapi:2022.12.22.2113-1052-22_12_1'
+    //implementation 'com.velox.internalproducts:veloxapi:2022.12.22.2113-1052-22_12_1'
     //implementation 'com.velox.internalproducts:sapiogeneric:28.1.0.22.12'
     //implementation 'com.velox.internalproducts:sapioutils:28.1.0.22.12'
     //implementation 'com.velox.internalproducts:sapio-commons:28.1.0.22.12'
