@@ -874,6 +874,13 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         activeTask.getTask().getTaskOptions().put("_DLP SPOTTING FILE PARSED", "");
     }
 
+    /**
+     * This method uses a template SmartChip sheet in the DLP folder on the shared drive and fill out a row for every single
+     * well on the chip. Based on whether a well contains a sample or a control the "condition" column gets populated with
+     * sample name or positive/negative controls.
+     * NOTE: this function gets called when there is only one sample on the entire chip
+     *
+     * */
     private byte[] fillOutSmartChipSheet(DataRecord sample, File file, boolean controlExperiment, boolean usualControlLoc, String posCtrlLoc, String negCtrlLoc) {
         byte[] bytes = null;
         try {
@@ -961,6 +968,13 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         return bytes;
     }
 
+    /**
+     * This method uses a template SmartChip sheet in the DLP folder on the shared drive and fill out a row for every single
+     * well on the chip. Based on whether a well contains samples or a control the "condition" column gets populated with
+     * sample names or positive/negative controls.
+     * NOTE: this function gets called when there are multiple samples placed on a single chip (generating one sheet)
+     *
+     * */
     private byte[] fillOutSmartChipSheetForMultiSamples(List<DataRecord> samples, File file) {
         byte[] bytes = null;
         try {
