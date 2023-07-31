@@ -34,7 +34,6 @@ import java.util.Map;
  * @author sharmaa1
  */
 public class QPCRResultsImporter extends DefaultGenericPlugin {
-
     private final String IMPORT_QPCR_RESULTS = "IMPORT QPCR RESULTS";
     private IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
     private Covid19Helper helper = new Covid19Helper();
@@ -107,18 +106,8 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
             saveQpcrData(analyzedData);
             exportReport(analyzedData);
             logInfo(String.format("Saved %d %s DataRecords created from uploaded file %s", analyzedData.size(), activeTask.getInputDataTypeName(), csvFilePath));
-
-        } catch (RemoteException e) {
-            String errMsg = String.format("Error reading qPCR Sample Information. Remote Exception:\n%s", ExceptionUtils.getStackTrace(e));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-        } catch (IOException e) {
-            String errMsg = String.format("IO Exception Error while reading qPCR Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
-            clientCallback.displayError(errMsg);
-            logError(errMsg);
-        } catch (NotFound e) {
-            String errMsg = String.format("Not Found Exception Error while reading qPCR Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
-            clientCallback.displayError(errMsg);
+        } catch (Exception e) {
+            String errMsg = String.format("Exception Error while reading qPCR Sample Information:\n%s", ExceptionUtils.getStackTrace(e));
             logError(errMsg);
         }
         return new PluginResult(true);
@@ -130,7 +119,7 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
      * @param fileData
      * @return
      */
-    private List<String> getQpcrResults(List<String> fileData, String fileName) throws ServerException {
+    private List<String> getQpcrResults(List<String> fileData, String fileName) throws ServerException, RemoteException {
         List<String> data = helper.getQpcrResults(fileData);
         if (data.size() < 2) {
             clientCallback.displayError(String.format("uploaded file '%s' does not contain data", fileName));
@@ -147,7 +136,7 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
      * @return true/false
      * @throws ServerException
      */
-    private boolean isValidCsvFile(String fileName) throws ServerException {
+    private boolean isValidCsvFile(String fileName) throws ServerException, RemoteException {
         if (!fileName.toLowerCase().endsWith(".csv")) {
             String errMsg = String.format("File '%s' is invalid file type. Only csv files with the extension .csv are accepted.", fileName);
             logError(errMsg);
@@ -449,7 +438,7 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws IOException
      */
-    private void exportReport(List<Map<String, Object>> analyzedData) throws ServerException {
+    private void exportReport(List<Map<String, Object>> analyzedData) throws ServerException, RemoteException {
         try {
             XSSFWorkbook workbook = new XSSFWorkbook();
             List<List<String>> completeReport = getQPCRCompleteReport(analyzedData);

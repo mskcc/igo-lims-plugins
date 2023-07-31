@@ -4,12 +4,15 @@ import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
 import com.velox.api.datatype.TemporaryDataType;
+import com.velox.api.util.ServerException;
 import com.velox.api.datatype.datatypelayout.DataFormComponent;
 import com.velox.api.datatype.datatypelayout.DataTypeLayout;
 import com.velox.api.datatype.datatypelayout.DataTypeTabDefinition;
+import com.velox.api.exception.recoverability.serverexception.UnrecoverableServerException;
 import com.velox.api.datatype.fielddefinition.FieldDefinitionPosition;
 import com.velox.api.datatype.fielddefinition.VeloxFieldDefinition;
 import com.velox.api.plugin.PluginLogger;
+import com.velox.api.util.ServerException;
 import com.velox.api.user.User;
 import com.velox.api.util.ClientCallbackOperations;
 import com.velox.api.util.ServerException;
@@ -103,7 +106,7 @@ public class IgoLimsPluginUtils {
      * @throws ServerException
      * @throws IOException
      */
-    public List<String> readDataFromFiles(List<String> fileNames, ClientCallbackOperations clientCallback) throws ServerException {
+    public List<String> readDataFromFiles(List<String> fileNames, ClientCallbackOperations clientCallback) throws ServerException, RemoteException {
         List<String> combinedFileData = new ArrayList<>();
         for (String file : fileNames) {
             try {
@@ -386,7 +389,7 @@ public class IgoLimsPluginUtils {
      * @return
      * @throws ServerException
      */
-    public DataRecord getParentSampleUnderRequest(DataRecord sample, User user, ClientCallbackOperations clientCallback) throws ServerException {
+    public DataRecord getParentSampleUnderRequest(DataRecord sample, User user, ClientCallbackOperations clientCallback) throws ServerException, RemoteException {
         try {
             Object requestId = sample.getValue(SampleModel.REQUEST_ID, user);
             Stack<DataRecord> sampleStack = new Stack<>();
@@ -418,7 +421,7 @@ public class IgoLimsPluginUtils {
      * @return
      * @throws ServerException
      */
-    public boolean isUserLibrary(DataRecord sample, User user, ClientCallbackOperations clientCallback) throws ServerException {
+    public boolean isUserLibrary(DataRecord sample, User user, ClientCallbackOperations clientCallback) throws ServerException, RemoteException {
         long recordId = sample.getRecordId();
         try {
             DataRecord parentSample = getParentSampleUnderRequest(sample, user, clientCallback);
@@ -439,7 +442,7 @@ public class IgoLimsPluginUtils {
     /**
      * Method to get Sample matching with passed SampleId from attached Samples.
      */
-    public DataRecord getSampleWithMatchingId(String sampleId, List<DataRecord> attachedSamples, String fileName, ClientCallbackOperations clientCallback, PluginLogger logger, User user) throws ServerException {
+    public DataRecord getSampleWithMatchingId(String sampleId, List<DataRecord> attachedSamples, String fileName, ClientCallbackOperations clientCallback, PluginLogger logger, User user) throws ServerException, RemoteException {
         DataRecord matchingSample = null;
         try {
             for (DataRecord sa : attachedSamples) {
@@ -469,7 +472,7 @@ public class IgoLimsPluginUtils {
      * @return
      * @throws ServerException
      */
-    public double getSampleQuantity(DataRecord sample, ClientCallbackOperations clientCallback, PluginLogger logger, User user) throws ServerException {
+    public double getSampleQuantity(DataRecord sample, ClientCallbackOperations clientCallback, PluginLogger logger, User user) throws ServerException, RemoteException{
         double sampleQuantity = 0.0;
         try {
             Object concentration = sample.getValue(SampleModel.CONCENTRATION, user);
@@ -503,7 +506,7 @@ public class IgoLimsPluginUtils {
      * @param data
      * @return
      */
-    public boolean isBioanalyzerFile(List<String> data, List<String> bioanalyzerIdentifiers, ClientCallbackOperations clientCallback, PluginLogger logger) throws ServerException {
+    public boolean isBioanalyzerFile(List<String> data, List<String> bioanalyzerIdentifiers, ClientCallbackOperations clientCallback, PluginLogger logger) throws ServerException, RemoteException {
         int countFound = 0;
         try {
             int numberOfLinesToScan = data.size() > 20 ? 20 : data.size();
@@ -719,7 +722,7 @@ public class IgoLimsPluginUtils {
                 recordsStack.addAll(poppedRecord.getParentsOfType(parentDataType, user));
             }
 
-        } catch (IoError | RemoteException e) {
+        } catch (IoError | ServerException | RemoteException e) {
             logger.logError(String.format("%s -> Error while getting %s records for %s record with Record Id %d,\n%s",
                     ExceptionUtils.getRootCause(e), targetDataType, record.getDataTypeName(), record.getRecordId(), ExceptionUtils.getStackTrace(e)));
         }
@@ -783,7 +786,7 @@ public class IgoLimsPluginUtils {
                     return true;
                 }
             }
-        } catch (RemoteException | IoError | NotFound e) {
+        } catch (ServerException | RemoteException | IoError | NotFound e) {
             logger.logError(String.format("%s->Error while validating %s record with record id %d is a control:\n%s", ExceptionUtils.getMessage(e), rec.getDataTypeName(), rec.getRecordId(), ExceptionUtils.getStackTrace(e)));
         }
         return false;

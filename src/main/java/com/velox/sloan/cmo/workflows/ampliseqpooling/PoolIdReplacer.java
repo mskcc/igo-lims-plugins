@@ -37,7 +37,7 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
             logInfo("running PoolId Replacer Plugin.");
@@ -77,7 +77,7 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
                 return dataRecordManager.queryDataRecords("Sample", "SampleId = '" + baseSampleId + "%'", user);
             }
             existingSampleAliquots = dataRecordManager.queryDataRecords("Sample", "SampleId = '" + sampleId + "%'", user);
-        } catch (RemoteException e) {
+        } catch (RemoteException | ServerException e) {
             logError(String.format("RemoteException -> Error while getting Existing Aliquots for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
         } catch (IoError ioError) {
             logError(String.format("IoError Exception -> Error while getting Existing Aliquots for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(ioError)));
@@ -120,7 +120,7 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private String getNextSampleId(DataRecord sample) {
+    private String getNextSampleId(DataRecord sample) throws ServerException {
         List<DataRecord> parentSamples = new ArrayList<>();
         try {
             parentSamples = sample.getParentsOfType("Sample", user);
@@ -149,8 +149,8 @@ public class PoolIdReplacer extends DefaultGenericPlugin {
             sample.getParentsOfType(SampleModel.DATA_TYPE_NAME, user).get(0).getStringVal(SampleModel.EXEMPLAR_SAMPLE_TYPE, user);
         } catch (NotFound notFound) {
             logError(String.format("NotFound Exception -> Error while getting ExemplarSampleType value for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
-        } catch (RemoteException e) {
-            logError(String.format("RemoteException Exception -> Error while getting ExemplarSampleType value for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+        } catch (RemoteException | ServerException e) {
+            logError(String.format("Exception -> Error while getting ExemplarSampleType value for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
         } catch (IoError ioError) {
             logError(String.format("IoError Exception -> Error while getting ExemplarSampleType value for Sample with recordid %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(ioError)));
         }

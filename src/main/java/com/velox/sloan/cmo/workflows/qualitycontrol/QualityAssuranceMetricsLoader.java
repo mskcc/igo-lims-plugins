@@ -54,7 +54,7 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             boolean loadQaMetrics = clientCallback.showYesNoDialog("Do you want to uplaod QA Measurements data?", "If you would like to load QA Measurements data please click YES, to cancel click NO");
             if (!loadQaMetrics){
@@ -95,11 +95,11 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
      * @return boolean
      * @throws ServerException
      */
-    private boolean isValidInteger(String input) throws ServerException {
+    private boolean isValidInteger(String input) throws ServerException, RemoteException {
         try {
             Integer.parseInt(input);
             return true;
-        }catch (Exception e){
+        } catch (Exception e){
             clientCallback.displayError(String.format("Please enter a valid number. %s is not a valid entry.", input));
             return false;
         }
@@ -149,8 +149,8 @@ public class QualityAssuranceMetricsLoader extends DefaultGenericPlugin {
             }
             userInputData = clientCallback.showTableEntryDialog("Enter QA information",
                     "Enter QA Information in the table below.", tempPlate, defaultValuesList);
-        }catch (ServerException se){
-            logError(String.format("ServerException while creating popup table prompt to get 'QualityAssuranceMeasure' values from user:\n%s", ExceptionUtils.getStackTrace(se)));
+        }catch (ServerException | RemoteException se){
+            logError(String.format("Exception while creating popup table prompt to get 'QualityAssuranceMeasure' values from user:\n%s", ExceptionUtils.getStackTrace(se)));
         }
         return userInputData;
 

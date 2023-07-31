@@ -15,6 +15,7 @@ import com.velox.sloan.cmo.recmodels.SampleModel;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.*;
 
@@ -63,7 +64,7 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> samples = activeTask.getAttachedDataRecords(SampleModel.DATA_TYPE_NAME, user);
             if (samples.isEmpty()) {
@@ -127,7 +128,7 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
      * @param fileName
      * @return
      */
-    private List<SampleQcResult> getBioAnalyzerData(List<String> fileData, String fileName, List<DataRecord> attachedSamples) throws ServerException {
+    private List<SampleQcResult> getBioAnalyzerData(List<String> fileData, String fileName, List<DataRecord> attachedSamples) throws ServerException, RemoteException {
         List<SampleQcResult> qcResults = new ArrayList<>();
         try {
             Map<String, Integer> headerValueMap = utils.getBioanalyzerFileHeaderMap(fileData, fileName, BIOA_HEADER_IDENTIFIER, pluginLogger);
@@ -149,7 +150,7 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
      * @param fileName
      * @return
      */
-    private List<SampleQcResult> getTapeStationData(List<String> fileData, String fileName, List<DataRecord> attachedSamples) throws ServerException {
+    private List<SampleQcResult> getTapeStationData(List<String> fileData, String fileName, List<DataRecord> attachedSamples) throws ServerException, RemoteException {
         List<SampleQcResult> qcResults = new ArrayList<>();
         try {
             Map<String, Integer> headerValueMap = utils.getCsvHeaderValueMap(fileData);
@@ -170,7 +171,7 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private boolean isValidFileType(String file) throws ServerException {
+    private boolean isValidFileType(String file) throws ServerException, RemoteException {
         if (!utils.isCsvFile(file)) {
             String errmsg = String.format("'%s' is not a valid CSV file.", file);
             clientCallback.displayError(errmsg);
@@ -328,7 +329,7 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
             String formName = "QC Recommendations info";
             TemporaryDataType tempDataType = new TemporaryDataType("QCRecommendations", "QC Recommendations");
             List<VeloxFieldDefinition<?>> fieldDefList = new ArrayList<VeloxFieldDefinition<?>>();
-            VeloxStringFieldDefinition sampleId = VeloxFieldDefinition.stringFieldBuilder().displayName("IGO ID").dataFieldName("SampleId").visible(true).editable(false).maxLength(100000000).numLines(1).sortDirection(VeloxFieldDefinition.SortDirection.Ascending).build();
+            VeloxStringFieldDefinition sampleId = VeloxFieldDefinition.stringFieldBuilder().displayName("IGO ID").dataFieldName("SampleId").visible(true).editable(false).maxLength(100000000).numLines(1).sortDirection(SortDirection.Ascending).build();
             VeloxDoubleFieldDefinition quantity = VeloxFieldDefinition.doubleFieldBuilder().displayName("Total Mass").dataFieldName("Quantity").visible(true).editable(false).maxValue(100000000).minValue(0.0).precision((short) 3).build();
             VeloxDoubleFieldDefinition adapterPercentage = VeloxFieldDefinition.doubleFieldBuilder().displayName("Adapters (%)").dataFieldName("AdapterPercentage").visible(true).editable(false).maxValue(100000000).minValue(0.0).precision((short) 3).build();
             VeloxDoubleFieldDefinition fragmentsUpto1kb = VeloxFieldDefinition.doubleFieldBuilder().displayName("Fragments Upto 1 kb (%)").dataFieldName("PercentUpto1kb").visible(true).editable(false).maxValue(100000000).minValue(0.0).precision((short) 3).build();

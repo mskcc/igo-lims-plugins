@@ -43,7 +43,7 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             String uploadedFile = clientCallback.showFileDialog("Upload Excel Sheet with ddPCR plate assignment values", null);
             if (StringUtils.isBlank(uploadedFile)) {
@@ -101,7 +101,7 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
      * @return true/false
      * @throws ServerException
      */
-    private boolean isValidExcelFile(String fileName) throws ServerException {
+    private boolean isValidExcelFile(String fileName) throws ServerException, RemoteException {
         boolean isValid = utils.isValidExcelFile(fileName);
         if (!isValid) {
             clientCallback.displayError(String.format("Uploaded file '%s' is not a valid excel file", fileName));
@@ -118,7 +118,7 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
      * @return true/false
      * @throws ServerException
      */
-    private boolean fileHasData(List<Row> fileData, String fileName) throws ServerException {
+    private boolean fileHasData(List<Row> fileData, String fileName) throws ServerException, RemoteException {
         boolean hasData = utils.excelFileHasData(fileData);
         if (!hasData) {
             clientCallback.displayError(String.format("Uploaded file '%s' is Empty", fileName));
@@ -138,7 +138,7 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private boolean hasValidHeader(List<Row> dataRows, List<String> expectedHeaderValues, String fileName) throws ServerException {
+    private boolean hasValidHeader(List<Row> dataRows, List<String> expectedHeaderValues, String fileName) throws ServerException, RemoteException {
         boolean isValidHeader = utils.excelFileHasValidHeader(dataRows, expectedHeaderValues);
         if (!isValidHeader) {
             clientCallback.displayError(String.format("Uploaded file '%s' does not have a valid header. Valid file Headers are\n'%s'", fileName, utils.convertListToString(expectedHeaderValues)));

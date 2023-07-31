@@ -29,7 +29,7 @@ public class MixedSampleSpeciesValidator extends DefaultGenericPlugin {
                 this.activeTask.getTask().getTaskOptions().containsKey("VALIDATE MIXED SAMPLE SPECIES");
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> samples = activeTask.getAttachedDataRecords("Sample", user);
             Set<String> sampleSpeciesValues = new HashSet<>();

@@ -14,6 +14,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import javax.xml.crypto.Data;
+import java.io.IOError;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -45,7 +46,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         return activeTask.getTask().getTaskOptions().containsKey("AUTOASSIGN INDEX BARCODES") && !activeTask.getTask().getTaskOptions().containsKey("_INDEXES_AUTO_ASIGNED");
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException{
         autoHelper = new AutoIndexAssignmentHelper();
         try {
             List<DataRecord> attachedSamplesList = activeTask.getAttachedDataRecords("Sample", user);
@@ -538,11 +539,10 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         for (DataRecord s : attachedSamples) {
             try {
                 plates.add(s.getAncestorsOfType("Plate", user));
-            } catch (RemoteException re) {
-                logError("Remote exception happened while finding all unique plates for the attached samples", re);
+            } catch (RemoteException | IoError | ServerException re) {
+                logError("Exception happened while finding all unique plates for the attached samples", re);
             }
         }
-
 
         Set<Object> uniquePlates = new HashSet<>(plates);
         return new ArrayList<Object>(uniquePlates);

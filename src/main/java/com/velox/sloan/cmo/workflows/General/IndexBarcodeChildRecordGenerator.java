@@ -33,7 +33,7 @@ public class IndexBarcodeChildRecordGenerator extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException{
+    public PluginResult run() throws ServerException, RemoteException {
         String dataFile = clientCallback.showFileDialog("Upload csv file with Index Barcode Information", null);
         try {
             byte[] byteData = clientCallback.readBytes(dataFile);
@@ -78,7 +78,7 @@ public class IndexBarcodeChildRecordGenerator extends DefaultGenericPlugin {
             }
             dataRecordManager.storeAndCommit("Added child records to samples: " + getSampleIds(dataInFile).toString(), null, user);
 
-        }catch (RemoteException e) {
+        } catch (RemoteException e) {
             String errMsg = String.format("Remote Exception while creating Index Barcode records.\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);

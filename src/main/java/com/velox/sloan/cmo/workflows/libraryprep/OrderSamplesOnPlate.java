@@ -6,6 +6,7 @@ import com.velox.api.util.ServerException;
 import com.velox.api.workflow.ActiveWorkflow;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 
+import java.rmi.RemoteException;
 import java.util.List;
 
 public class OrderSamplesOnPlate extends DefaultGenericPlugin {
@@ -21,7 +22,7 @@ public class OrderSamplesOnPlate extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         ActiveWorkflow activeWebFormReceivingWorkflow;
         try {
             List<DataRecord> bankedSamples = dataRecordManager.queryDataRecords("BankedSample", "ServiceId = ", user);
