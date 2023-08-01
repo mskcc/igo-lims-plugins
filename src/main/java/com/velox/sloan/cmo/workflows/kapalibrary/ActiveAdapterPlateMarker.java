@@ -52,7 +52,7 @@ public class ActiveAdapterPlateMarker extends DefaultGenericPlugin {
             List<DataRecord> indexAssignmentConfigs = dataRecordManager.queryDataRecords(INDEX_ASSIGNMENT_CONFIG_DATATYPE, null, user);
             Integer setIdToActivate = getSetIdToActivate(plateBarcode, indexAssignmentConfigs);
             String indexTypeToActivate = getIndexTypeToActivate(plateBarcode, indexAssignmentConfigs);
-            //setAdapterSetAsUsedAndDepleted(indexTypeToActivate, setIdToActivate, plateBarcode, indexAssignmentConfigs);
+            setAdapterSetAsUsedAndDepleted(indexTypeToActivate, setIdToActivate, plateBarcode, indexAssignmentConfigs);
             setAdapterPlateAsActive(plateBarcode, indexAssignmentConfigs);
 
             if (isActiveAdapterCountCorrect(indexAssignmentConfigs)) {
