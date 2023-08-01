@@ -50,7 +50,7 @@ public class BioAnalyzerResultsParserTest {
         String sampleIds = "('07566_12_1_1', '07566_13_1_1', '09687_AO_1_1')";
         try {
             attachedSamples = dataRecordManager.queryDataRecords(SampleModel.DATA_TYPE_NAME, SampleModel.SAMPLE_ID + " IN " + sampleIds, user);
-        } catch (NotFound | IoError | RemoteException notFound) {
+        } catch (NotFound | IoError | RemoteException | ServerException notFound) {
             notFound.printStackTrace();
         }
         String fileName = "BioAnalyzer_Test_File_QCResultAnnotation.csv";
@@ -75,9 +75,4 @@ public class BioAnalyzerResultsParserTest {
     public void tearDown() throws Exception {
         connection.close();
     }
-
-//    @Test
-//    public void parseData() throws ServerException {
-//        assertEquals(parser.parseData(attachedSamples).size(),3 );
-//    }
 }

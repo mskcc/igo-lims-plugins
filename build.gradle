@@ -23,7 +23,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly fileTree(dir: "libs", includes: ['*.jar'])
+    implementation fileTree(dir: "libs", includes: ['*.jar'])
 
     implementation ('org.apache.poi:poi-ooxml:3.17')
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.7'
@@ -33,7 +33,7 @@ dependencies {
     implementation group: 'com.google.code.gson', name: 'gson', version: '2.7'
     implementation group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1'
     implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.13.3'
-    testImplementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.13.3'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.13.3'
     implementation ('junit:junit:4.12') {
         exclude group: 'org.hamcrest'
     }
