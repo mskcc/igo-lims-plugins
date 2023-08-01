@@ -188,7 +188,7 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    public boolean isValidTapestationData(List<String> fileData, String file) throws ServerException {
+    public boolean isValidTapestationData(List<String> fileData, String file) throws ServerException, RemoteException {
         try {
             logInfo(String.format("Header line from file %s %s", fileData.get(0), file));
             if (fileData.isEmpty() || !utils.csvFileContainsRequiredHeaders(fileData, EXPECTED_TAPESTATION_HEADER_VALS)) {
@@ -220,7 +220,7 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    public boolean isValidBioanalyzerData(List<String> fileData, String file) throws ServerException {
+    public boolean isValidBioanalyzerData(List<String> fileData, String file) throws ServerException, RemoteException {
         try {
             if (fileData.isEmpty() || !utils.hasValidBioanalyzerHeader(fileData, file, EXPECTED_BIOA_HEADER_VALS, pluginLogger)) {
                 String errMsg = String.format("Uploaded file %s is missing valid header values. Expected header values are %s.", file, EXPECTED_BIOA_HEADER_VALS);
@@ -364,7 +364,7 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
                 logError(errMsg);
                 clientCallback.displayError(errMsg);
             }
-        } catch (ServerException se) {
+        } catch (ServerException | RemoteException se) {
             logError(String.format("ServerException while creating popup table prompt to show 'IGO QC Recommendation' and get input from user:\n%s", ExceptionUtils.getStackTrace(se)));
         }
         return userInputData;
@@ -377,7 +377,7 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private List<Map<String, Object>> getHashMapValues(List<SampleQcResult> qcResults) throws ServerException {
+    private List<Map<String, Object>> getHashMapValues(List<SampleQcResult> qcResults) throws ServerException, RemoteException {
         List<Map<String, Object>> hashmapVals = new ArrayList<>();
         try {
             for (SampleQcResult result : qcResults) {
@@ -400,7 +400,7 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
      * @param attachedProtocolRecords
      * @throws ServerException
      */
-    private void setQcReportValues(List<Map<String, Object>> userReviewedValues, List<DataRecord> attachedProtocolRecords) throws ServerException {
+    private void setQcReportValues(List<Map<String, Object>> userReviewedValues, List<DataRecord> attachedProtocolRecords) throws ServerException, RemoteException {
         try {
             if(userReviewedValues!=null) {
                 for (DataRecord rec : attachedProtocolRecords) {

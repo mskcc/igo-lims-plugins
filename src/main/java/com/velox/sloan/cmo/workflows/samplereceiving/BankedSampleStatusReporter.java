@@ -123,7 +123,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private boolean shouldLaunchWorkflow(List<DataRecord> promotedBankedSamples, List<String> limsRequestIdForPromotedSamples) throws ServerException {
+    private boolean shouldLaunchWorkflow(List<DataRecord> promotedBankedSamples, List<String> limsRequestIdForPromotedSamples) throws ServerException, RemoteException {
         clientCallback.displayInfo(String.format("LIMS Request ID for %d Promoted Samples:\n%s",
                 promotedBankedSamples.size(), convertListToString(limsRequestIdForPromotedSamples)));
         String dialogBoxTitle = "Launch Sample Receiving Workflow";
