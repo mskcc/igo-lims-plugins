@@ -101,7 +101,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws IoError
      */
-    public List<DataRecord> getBankedSamples(List<DataRecord> attachedSamples) throws NotFound, RemoteException, IoError {
+    public List<DataRecord> getBankedSamples(List<DataRecord> attachedSamples) throws NotFound, ServerException, RemoteException, IoError {
         List<DataRecord> bankedSamples = new LinkedList<>();
         this.logInfo("attached samples size: " + attachedSamples.size());
         for (int i = 0; i < attachedSamples.size(); i++) {

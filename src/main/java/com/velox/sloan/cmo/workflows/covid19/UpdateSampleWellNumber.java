@@ -39,7 +39,7 @@ public class UpdateSampleWellNumber extends DefaultGenericPlugin {
         return activeTask.getTask().getTaskOptions().containsKey(UPDATE_WELL_NUMBERS);
     }
 
-    public PluginResult run() throws ServerException{
+    public PluginResult run() throws ServerException, RemoteException {
         String inputDataTypeName="";
         try {
             inputDataTypeName = activeTask.getInputDataTypeName();
@@ -48,7 +48,7 @@ public class UpdateSampleWellNumber extends DefaultGenericPlugin {
                 clientCallback.displayError(String.format("Could not find any attached protocol records for %s", inputDataTypeName));
             }
             setSampleSerialOrderWellNumber(attachedProtocolRecords);
-        }catch (RemoteException e) {
+        } catch (RemoteException e) {
             String errMsg = String.format("Remote Exception -> Could not update 'SampleSerialOrder' field on %s:\n%s",inputDataTypeName, ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
@@ -63,7 +63,7 @@ public class UpdateSampleWellNumber extends DefaultGenericPlugin {
      * @throws ServerException
      * @throws RemoteException
      */
-    private String getDestinatinWellFieldName() throws ServerException {
+    private String getDestinatinWellFieldName() throws ServerException, RemoteException {
         String inputDataTypeName = null;
         String destinationWellFieldName = null;
         try {

@@ -65,7 +65,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return false;
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> samples = activeTask.getAttachedDataRecords("Sample", user);
             if (samples.size() == 0) {
@@ -744,8 +744,8 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 if (!StringUtils.isBlank(comments)) {
                     qcRecord.put("Comments", comments);
                 }
-            } catch (RemoteException e) {
-                logError(String.format("RemoteException while setting QC Report values for sample with RecordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+            } catch (RemoteException | IoError | ServerException e) {
+                logError(String.format("Exception while setting QC Report values for sample with RecordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
             } catch (NotFound notFound) {
                 logError(String.format("NotFound Exception while setting QC Report values for sample with RecordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
             }
@@ -821,8 +821,8 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                     qcRecord.put("Comments", comments);
                 }
                 rnaQcRecords.add(sample.addChild("QcReportRna", qcRecord, user));
-            }catch (NotFound notFound) {
-                logError(String.format("NotFound Exception while generating RNA QC Report values for sample with RecordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
+            }catch (NotFound | IoError notFound) {
+                logError(String.format("Exception while generating RNA QC Report values for sample with RecordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
             }catch (RemoteException e) {
                 logError(String.format("RemoteException while generating RNA QC Report values for sample with RecordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
             } catch (ServerException se) {
@@ -898,8 +898,8 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                     qcRecord.put("Comments", comments);
                 }
                 libraryQcRecords.add(sample.addChild("QcReportLibrary", qcRecord, user));
-            }catch (NotFound notFound) {
-                logError(String.format("NotFound Exception while generating Library QC Report values for sample with RecordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
+            }catch (NotFound | IoError notFound) {
+                logError(String.format("Exception while generating Library QC Report values for sample with RecordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
             }catch (RemoteException e) {
                 logError(String.format("RemoteException while generating Library QC Report values for sample with RecordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
             } catch (ServerException se) {

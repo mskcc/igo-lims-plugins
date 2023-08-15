@@ -27,7 +27,6 @@ import java.util.List;
  * @author sharmaa1
  */
 public class GenerateStrSampleSheet extends DefaultGenericPlugin {
-
     private String strWellIdFieldName = "";
     private String strApplicationTypeFieldName = "";
     private String strSampleTypeFieldName = "";
@@ -63,7 +62,7 @@ public class GenerateStrSampleSheet extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user);
             if (attachedProtocolRecords.isEmpty()) {

@@ -34,7 +34,7 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             String excelFilePath = clientCallback.showFileDialog("Upload File with micronic tube information.", null);
             byte[] fileToBytes = clientCallback.readBytes(excelFilePath);
@@ -121,7 +121,7 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
      * @return true/false
      * @throws ServerException
      */
-    private boolean isValidFileWithValidData(String filePath, byte[] fileDataToBytes) throws ServerException {
+    private boolean isValidFileWithValidData(String filePath, byte[] fileDataToBytes) throws ServerException, RemoteException {
         String[] rowData = new String(fileDataToBytes).split("\r\n|\r|\n");
         if (!isValidCsvFile(filePath)) {
             logError(String.format("Invalid file format %s. The file must be a '.csv' file", filePath));
@@ -194,7 +194,7 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
      * @return true/false
      * @throws ServerException
      */
-    private boolean hasDuplicateBarcodesInData(List<String> micronicTubeBarcodesAlreadyInLims, List<String> newMicronicTubeBarcodes) throws ServerException {
+    private boolean hasDuplicateBarcodesInData(List<String> micronicTubeBarcodesAlreadyInLims, List<String> newMicronicTubeBarcodes) throws ServerException, RemoteException {
         List<String> duplicatesWithExistingBarcodes = fileDataReader.getDuplicateBarcodesInExistingBarcodes(micronicTubeBarcodesAlreadyInLims, newMicronicTubeBarcodes);
         List<String> duplicatesInNewBarcodes = fileDataReader.getDuplicateValuesInNewBarcodesList(newMicronicTubeBarcodes);
         if (duplicatesWithExistingBarcodes.size() > 0) {
@@ -204,7 +204,7 @@ public class NewMicronicTubeRecordGenerator extends DefaultGenericPlugin {
         }
         if (duplicatesInNewBarcodes.size() > 0) {
             clientCallback.displayError(String.format("Following duplicate barcodes found in the uploaded file %s", convertListToString(duplicatesInNewBarcodes)));
-            logError(String.format("Folloeing duplicate barcodes found in the uploaded file %s", convertListToString(duplicatesInNewBarcodes)));
+            logError(String.format("Following duplicate barcodes found in the uploaded file %s", convertListToString(duplicatesInNewBarcodes)));
             return true;
         }
         return false;

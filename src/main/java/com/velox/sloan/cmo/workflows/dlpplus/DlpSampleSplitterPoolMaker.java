@@ -7,6 +7,7 @@ import com.velox.api.util.ServerException;
 import com.velox.api.workflow.ActiveTask;
 import com.velox.sapio.commons.exemplar.plugin.PluginOrder;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
+import com.velox.api.util.ServerException;
 import com.velox.sloan.cmo.recmodels.SampleModel;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.AlphaNumericComparator;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
@@ -23,8 +24,6 @@ import org.mockito.internal.matchers.Null;
 
 import javax.xml.crypto.Data;
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -65,7 +64,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                 && !activeTask.getTask().getTaskOptions().containsKey("_DLP SPOTTING FILE PARSED");
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             String DLPSmartChipFile = "";
             List<DataRecord> samplesAttachedToTask = activeTask.getAttachedDataRecords("Sample", user);
@@ -239,7 +238,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
      * @return boolean true/false
      * @throws ServerException
      */
-    private boolean isValidExcelFile(String fileName) throws ServerException {
+    private boolean isValidExcelFile(String fileName) throws ServerException, RemoteException {
         boolean isValid = utils.isValidExcelFile(fileName);
         if (!isValid) {
             clientCallback.displayError(String.format("Uploaded file '%s' is not a valid excel file", fileName));
@@ -257,7 +256,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
      * @return boolean true/false
      * @throws ServerException
      */
-    private boolean fileHasData(List<Row> fileData, String fileName) throws ServerException {
+    private boolean fileHasData(List<Row> fileData, String fileName) throws ServerException, RemoteException {
         boolean hasData = utils.excelFileHasData(fileData);
         if (!hasData) {
             clientCallback.displayError(String.format("Uploaded file '%s' is Empty", fileName));
@@ -277,7 +276,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
      * @return boolean true/false
      * @throws ServerException
      */
-    private boolean hasValidHeader(List<Row> dataRows, List<String> expectedHeaderValues, String fileName) throws ServerException {
+    private boolean hasValidHeader(List<Row> dataRows, List<String> expectedHeaderValues, String fileName) throws ServerException, RemoteException {
         boolean isValidHeader = utils.excelFileHasValidHeader(dataRows, expectedHeaderValues);
         if (!isValidHeader) {
             clientCallback.displayError(String.format("Uploaded file '%s' does not have a valid header. Valid file Headers are\n'%s'", fileName, utils.convertListToString(expectedHeaderValues)));
@@ -543,7 +542,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private String getMostRecentDLPControl(String controlTypeIdentifier) throws IoError, RemoteException, NotFound {
+    private String getMostRecentDLPControl(String controlTypeIdentifier) throws IoError, RemoteException, NotFound, ServerException {
         List<DataRecord> controlSampleRecords = dataRecordManager.queryDataRecords("Sample", "IsControl = 1 AND SampleId LIKE '" + controlTypeIdentifier + "%'", user);
         logInfo("ControlSamples Size: " + controlSampleRecords.size());
         List<String> controlSampleIds = new ArrayList<>();
@@ -610,7 +609,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
      * @throws IoError
      * @throws NotFound
      */
-    private String getSequencingRunType(DataRecord sample) throws RemoteException, IoError, NotFound {
+    private String getSequencingRunType(DataRecord sample) throws RemoteException, IoError, NotFound, ServerException{
         List<DataRecord> ancestorSamples = sample.getAncestorsOfType("Sample", user);
         if (!ancestorSamples.isEmpty()) {
             for (DataRecord samp : ancestorSamples) {
@@ -647,7 +646,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private String getNextSampleId(String sampleId) throws IoError, RemoteException, NotFound {
+    private String getNextSampleId(String sampleId) throws IoError, RemoteException, NotFound, ServerException {
         int counter = 1;
         String nextSampleId = sampleId + "_" + counter; //this SampleId can already exist if sample is being reprocessed for DLP. We check that in next if block
         // if poolid exists, extend it with a number and increment the number until we have a pool id that doesn't exist in the LIMS.
@@ -767,7 +766,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     }
 
 
-    private Object getDlpRequestedReads(Object recipe) throws IoError, RemoteException, NotFound {
+    private Object getDlpRequestedReads(Object recipe) throws IoError, RemoteException, NotFound , ServerException {
         String queryClause = String.format("PlatformApplication = '%s' AND ReferenceOnly != 1", recipe);
         List<DataRecord> coverageReqRefs = dataRecordManager.queryDataRecords("ApplicationReadCoverageRef",
                 queryClause, user);
@@ -812,7 +811,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private String getPoolId(String requestId, String quadrant) throws IoError, RemoteException, NotFound {
+    private String getPoolId(String requestId, String quadrant) throws IoError, RemoteException, NotFound, ServerException {
         String poolId = "Pool-" + requestId + "-Tube" + quadrant; //this pool  ID can already exist if samples from same request were processed before. We check that in next if block
         if (dataRecordManager.queryDataRecords("Sample", "SampleId = '" + poolId + "'", user).isEmpty()) {
             logInfo("Pool ID : " + poolId);

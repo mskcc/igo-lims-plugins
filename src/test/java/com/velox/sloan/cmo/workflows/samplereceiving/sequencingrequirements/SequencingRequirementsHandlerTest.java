@@ -17,9 +17,7 @@ import org.junit.Test;
 
 
 import java.rmi.RemoteException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
@@ -69,8 +67,7 @@ public class SequencingRequirementsHandlerTest {
 
     private void readData(User user, DataRecordManager dataRecordManager, String igoId) {
         try {
-            coverageReqRefs = dataRecordManager.queryDataRecords("ApplicationReadCoverageRef",
-                    "ReferenceOnly != 1", user);
+            coverageReqRefs = dataRecordManager.queryDataRecords("ApplicationReadCoverageRef", "ReferenceOnly != 1", user);
             attachedSamples = dataRecordManager.queryDataRecords(SampleModel.DATA_TYPE_NAME,
                     SampleModel.SAMPLE_ID + " IN " + igoId, user);
 
@@ -94,7 +91,7 @@ public class SequencingRequirementsHandlerTest {
                 whereClause = String.format("%s='%s' AND %s='%s'", "UserSampleID", userSampleId, "RequestId", requestId);
                 relatedBankedSampleInfo.add(this.dataRecordManager.queryDataRecords("BankedSample", whereClause, this.user).get(0));
             }
-        } catch (NotFound | IoError | RemoteException ex) {
+        } catch (NotFound | IoError | ServerException | RemoteException ex) {
             ex.printStackTrace();
         }
     }

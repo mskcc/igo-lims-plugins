@@ -6,6 +6,7 @@ import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
+import com.velox.api.exception.recoverability.serverexception.UnrecoverableServerException;
 import com.velox.sapio.commons.exemplar.plugin.PluginOrder;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.recmodels.QCDatumModel;
@@ -21,8 +22,6 @@ import java.util.*;
  *
  * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
-
-
 public class CustomFieldsRetriever extends DefaultGenericPlugin {
 
     private static Set<String> unpooledLibTypes = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
@@ -43,7 +42,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws com.velox.api.util.ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
             List<DataRecord> attachedPlanningProtocols = activeTask.getAttachedDataRecords("PlanningStepProtocol1", user);
@@ -102,7 +101,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
      * @throws IoError
      * @throws RemoteException
      */
-    private DataRecord getSampleParentWithDesiredChildRecord(DataRecord sample, String childDataType) throws IoError, RemoteException, NotFound {
+    private DataRecord getSampleParentWithDesiredChildRecord(DataRecord sample, String childDataType) throws IoError, RemoteException, NotFound, UnrecoverableServerException, ServerException {
         DataRecord record = null;
         Stack<DataRecord> samplePile = new Stack<>();
         samplePile.push(sample);
@@ -193,7 +192,7 @@ public class CustomFieldsRetriever extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private List<DataRecord> getSamplesInPool(DataRecord sample) throws IoError, RemoteException, NotFound {
+    private List<DataRecord> getSamplesInPool(DataRecord sample) throws IoError, RemoteException, NotFound, ServerException {
         DataRecord startingSample = sample;
         List<DataRecord> samplesInPool = new ArrayList<>();
         boolean found = false;

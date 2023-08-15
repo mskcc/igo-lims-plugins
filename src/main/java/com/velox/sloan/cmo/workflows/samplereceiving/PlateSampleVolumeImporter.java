@@ -60,7 +60,7 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
         return false;
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             String plateVolumeFile = clientCallback.showFileDialog("Upload file with plate volume data", null);
             if (StringUtils.isEmpty(plateVolumeFile)) {
@@ -113,7 +113,7 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private boolean isValidCsvFile(String fileName) throws ServerException {
+    private boolean isValidCsvFile(String fileName) throws ServerException, RemoteException {
         if (!commonMethods.isCsvFile(fileName)) {
             clientCallback.displayError(String.format("Uploaded file '%s' is not a .csv file.", fileName));
             return false;
@@ -128,7 +128,7 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private boolean csvFileHasValidData(List<String> fileData, String fileName) throws ServerException {
+    private boolean csvFileHasValidData(List<String> fileData, String fileName) throws ServerException, RemoteException {
         if (!commonMethods.csvFileHasData(fileData)) {
             clientCallback.displayError(String.format("Uploaded file '%s' is empty.", fileName));
             return false;
@@ -152,7 +152,7 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private double getVolumeFromRowData(String[] rowData, Map<String, Integer> header) throws ServerException {
+    private double getVolumeFromRowData(String[] rowData, Map<String, Integer> header) throws ServerException, RemoteException {
         double volume = Double.parseDouble(rowData[header.get("VOLMED")]);
         String plateId = rowData[header.get("RACKID")].trim();
         String wellPosition = rowData[header.get("TUBE")].trim();
@@ -170,7 +170,7 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private List<Map<String, Object>> getRecordsFromFile(List<String> fileData, Map<String, Integer> header) throws ServerException {
+    private List<Map<String, Object>> getRecordsFromFile(List<String> fileData, Map<String, Integer> header) throws ServerException, RemoteException {
         List<Map<String, Object>> volumeDataRecords = new ArrayList<>();
         int minimumValuesInRow = 5;
         int rowNumAfterHeader = 1;
@@ -196,7 +196,7 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private boolean fileDataHasDuplicateRecords(List<String> fileData, Map<String, Integer> header, String filename) throws ServerException {
+    private boolean fileDataHasDuplicateRecords(List<String> fileData, Map<String, Integer> header, String filename) throws ServerException, RemoteException {
         Set<String> uniqueRecords = new HashSet<>();
         List<String> duplicateRecords = new ArrayList<>();
         int firstRowNumAfterHeader = 1;

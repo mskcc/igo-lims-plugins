@@ -37,7 +37,7 @@ public class DmpToBankedSampleImporter extends DefaultGenericPlugin {
         setLine1Text("DMP to Banked Sample Import");
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
 
             String dmpExcelPath = clientCallback.showFileDialog("Please upload the DMP Excel file.", null);
@@ -77,7 +77,7 @@ public class DmpToBankedSampleImporter extends DefaultGenericPlugin {
         return workbook.getSheetAt(0);
     }
 
-    private boolean isValidExcelFile(Sheet sheet, ArrayList<String> expectedHeaderValues, String filePath) throws ServerException {
+    private boolean isValidExcelFile(Sheet sheet, ArrayList<String> expectedHeaderValues, String filePath) throws ServerException, RemoteException {
 
         if (!dataReader.excelFileHasData(sheet)) {
             logError(String.format("File '%s' is invalid file type. Only excel file with '.xls' or '.xlsx' extensions are acceptable.", filePath));

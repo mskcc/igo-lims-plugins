@@ -55,7 +55,7 @@ public class SampleControlMaker extends DefaultGenericPlugin {
         return false;
     }
 
-    public PluginResult run() throws com.velox.api.util.ServerException {
+    public PluginResult run() throws com.velox.api.util.ServerException, RemoteException {
         try {
             List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
             addControls(attachedSampleRecords);
@@ -161,7 +161,7 @@ public class SampleControlMaker extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private List<DataRecord> getAllControlRecordsByTypesToAdd(List<String> controlTypesToAdd) throws IoError, RemoteException, NotFound {
+    private List<DataRecord> getAllControlRecordsByTypesToAdd(List<String> controlTypesToAdd) throws IoError, RemoteException, NotFound, ServerException {
         List<DataRecord> allControlSampleRecords = dataRecordManager.queryDataRecords("Sample", "IsControl = 1", user);
         List<DataRecord> controlRecordsByTypesToAdd = new ArrayList<>();
         for (DataRecord pooledRecord : allControlSampleRecords) {

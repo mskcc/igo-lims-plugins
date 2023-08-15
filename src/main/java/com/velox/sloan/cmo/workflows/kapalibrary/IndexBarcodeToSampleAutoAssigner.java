@@ -14,6 +14,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import javax.xml.crypto.Data;
+import java.io.IOError;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -45,7 +46,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         return activeTask.getTask().getTaskOptions().containsKey("AUTOASSIGN INDEX BARCODES") && !activeTask.getTask().getTaskOptions().containsKey("_INDEXES_AUTO_ASIGNED");
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException{
         autoHelper = new AutoIndexAssignmentHelper();
         try {
             List<DataRecord> attachedSamplesList = activeTask.getAttachedDataRecords("Sample", user);
@@ -59,8 +60,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
             if (activeTask.getTask().getTaskOptions().get("AUTOASSIGN INDEX BARCODES").toLowerCase().contains("tcrseq")) {
                 isTCRseq = true;
                 attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IgoTcrSeqIndexBarcode", user);
-            }
-            else {
+            } else {
                 attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IndexBarcode", user);
             }
 
@@ -70,7 +70,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
 
-            if (attachedIndexBarcodeRecords.isEmpty()) {
+            if (attachedIndexBarcodeRecords.isEmpty() || attachedIndexBarcodeRecords.size() == 0) {
                 clientCallback.displayError(String.format("Could not find any IndexBarcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
                 logError(String.format("Could not find any IndexBarcode records attached to the TASK '%s'", activeTask.getTask().getTaskName()));
                 return new PluginResult(false);
@@ -127,7 +127,6 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                     }
                 }
             }
-
         } catch (Exception e) {
             clientCallback.displayError(String.format("Error while Auto Index assignment to samples:\n%s", ExceptionUtils.getStackTrace(e)));
             clientCallback.displayError(e.toString());
@@ -341,12 +340,15 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                                                                         Integer plateSize, String sampleType, boolean isTCRseq) throws NotFound,
             RemoteException, InvalidValue, IoError, ServerException {
         Double sampleInputAmount = 0.0;
-        if (indexBarcode.getValue("InitialInput", user) != null) {
+        if (indexBarcode.getValue("InitialInput", user) != null && indexBarcode.getStringVal("InitialInput", user).length() > 0) {
+            logInfo("Parsing InitialInput value: " + indexBarcode.getStringVal("InitialInput", user));
             sampleInputAmount = Double.parseDouble(indexBarcode.getStringVal("InitialInput", user));
         } else {
             clientCallback.displayError(String.format("Sample Input for Sample '%s' cannot be null. Please correct the values", indexBarcode.getStringVal("SampleId", user)));
             logError(String.format("Sample Input for Sample '%s' cannot be null. Please correct the values", indexBarcode.getStringVal("SampleId", user)));
         }
+        Double targetAdapterConc = autoHelper.getCalculatedTargetAdapterConcentration(sampleInputAmount, plateSize, sampleType);
+
         String indexId = indexAssignmentConfig.getStringVal("IndexId", user);
         String indexTag = indexAssignmentConfig.getStringVal("IndexTag", user);
         String adapterPlate = indexAssignmentConfig.getStringVal("AdapterPlateId", user);
@@ -354,19 +356,15 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         String adapterSourceRow = autoHelper.getAdapterRowPosition(wellPosition);
         String adapterSourceCol = autoHelper.getAdapterColPosition(wellPosition);
         Double adapterStartConc = indexAssignmentConfig.getDoubleVal("AdapterConcentration", user);
-        Double targetAdapterConc = autoHelper.getCalculatedTargetAdapterConcentration(sampleInputAmount, plateSize, sampleType);
+
         Double adapterVolume = autoHelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType, isTCRseq);
         Double waterVolume = autoHelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume, sampleType);
         Double actualTargetAdapterConc = adapterStartConc / ((waterVolume + adapterVolume) / adapterVolume);
         setUpdatedIndexAssignmentConfigVol(indexAssignmentConfig, adapterVolume);
         Map<String, Object> indexAssignmentValues = new HashMap<>();
 
-
         indexAssignmentValues.put("IndexTag", indexTag);
-
-
         indexAssignmentValues.put("IndexId", indexId);
-
         indexAssignmentValues.put("BarcodePlateID", adapterPlate);
         indexAssignmentValues.put("IndexRow", adapterSourceRow);
         indexAssignmentValues.put("IndexCol", adapterSourceCol);
@@ -538,11 +536,10 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         for (DataRecord s : attachedSamples) {
             try {
                 plates.add(s.getAncestorsOfType("Plate", user));
-            } catch (RemoteException re) {
-                logError("Remote exception happened while finding all unique plates for the attached samples", re);
+            } catch (RemoteException | IoError | ServerException re) {
+                logError("Exception happened while finding all unique plates for the attached samples", re);
             }
         }
-
 
         Set<Object> uniquePlates = new HashSet<>(plates);
         return new ArrayList<Object>(uniquePlates);

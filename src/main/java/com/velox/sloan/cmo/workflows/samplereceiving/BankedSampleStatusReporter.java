@@ -3,7 +3,7 @@ package com.velox.sloan.cmo.workflows.samplereceiving;
 import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
-import com.velox.api.plugin.PluginDirective;
+import com.velox.api.plugin.directive.ActiveWorkflowDirective;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.api.workflow.ActiveTask;
@@ -37,7 +37,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
     }
 
     @Override
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException{
         String iLabsRequestId = clientCallback.showInputDialog("Please enter iLabs Request ID.");
         ActiveWorkflow activeWebFormReceivingWorkflow;
         try {
@@ -87,7 +87,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
             logError(errMsg);
             return new PluginResult(false);
         }
-        return new PluginResult(true, new PluginDirective(PluginDirective.Action.RUN_ACTIVE_WORKFLOW, activeWebFormReceivingWorkflow));
+        return new PluginResult(true, new ActiveWorkflowDirective(activeWebFormReceivingWorkflow));
     }
 
     /**
@@ -109,7 +109,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
                 clientCallback.displayError(String.format("LIMS RequestID NOT FOUND for this iLabs Request: %s", iLabsRequestId));
                 return false;
             }
-        }catch (ServerException se) {
+        } catch (Exception se) {
             String errMsg = String.format("InvalidValue Exception while validating Ilab Request ID %s:\n%s", iLabsRequestId, ExceptionUtils.getStackTrace(se));
             logError(errMsg);
         }
@@ -123,7 +123,7 @@ public class BankedSampleStatusReporter extends DefaultGenericPlugin {
      * @return
      * @throws ServerException
      */
-    private boolean shouldLaunchWorkflow(List<DataRecord> promotedBankedSamples, List<String> limsRequestIdForPromotedSamples) throws ServerException {
+    private boolean shouldLaunchWorkflow(List<DataRecord> promotedBankedSamples, List<String> limsRequestIdForPromotedSamples) throws ServerException, RemoteException {
         clientCallback.displayInfo(String.format("LIMS Request ID for %d Promoted Samples:\n%s",
                 promotedBankedSamples.size(), convertListToString(limsRequestIdForPromotedSamples)));
         String dialogBoxTitle = "Launch Sample Receiving Workflow";

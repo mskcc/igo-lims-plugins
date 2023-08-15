@@ -9,6 +9,7 @@ import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
+import java.rmi.RemoteException;
 import java.util.*;
 
 public class BioAnalyzerResultsParser {
@@ -44,7 +45,7 @@ public class BioAnalyzerResultsParser {
      * @return
      * @throws ServerException
      */
-    private Map<String, List<QualityControlData>> groupQualityControlDataBySampleId() throws ServerException {
+    private Map<String, List<QualityControlData>> groupQualityControlDataBySampleId() throws ServerException, RemoteException {
         Map<String, List<QualityControlData>> groupedData = new HashMap<>();
         String SAMPLE_BEGIN_IDENTIFIER = "Sample Name";
         String SAMPLE_DATA_BEGIN_IDENTIFIER = "Size [bp]";
@@ -110,7 +111,7 @@ public class BioAnalyzerResultsParser {
      * @return
      * @throws ServerException
      */
-    private double calculateAdapterPercentage(List<QualityControlData> QualityControlDataVals) throws ServerException {
+    private double calculateAdapterPercentage(List<QualityControlData> QualityControlDataVals) throws ServerException, RemoteException {
         double adapterPercentage = 0.0;
         try {
             for (QualityControlData data : QualityControlDataVals) {
@@ -137,7 +138,7 @@ public class BioAnalyzerResultsParser {
      * @return
      * @throws ServerException
      */
-    private double calculatePercentageFragmentsUpto1kb(List<QualityControlData> QualityControlDataVals) throws ServerException {
+    private double calculatePercentageFragmentsUpto1kb(List<QualityControlData> QualityControlDataVals) throws ServerException, RemoteException {
         double percentageFragmentsUpto1kb = 0.0;
         try {
             for (QualityControlData data : QualityControlDataVals) {
@@ -163,7 +164,7 @@ public class BioAnalyzerResultsParser {
     /**
      * Method to create QualityControlData objects
      */
-    private List<SampleQcResult> getQualityControlData(Map<String, List<QualityControlData>> groupedData, List<DataRecord> attachedSamples) throws ServerException {
+    private List<SampleQcResult> getQualityControlData(Map<String, List<QualityControlData>> groupedData, List<DataRecord> attachedSamples) throws ServerException, RemoteException {
         List<SampleQcResult> qcResults = new ArrayList<>();
         try{
             for (String key : groupedData.keySet()) {
@@ -201,7 +202,7 @@ public class BioAnalyzerResultsParser {
      * @return
      * @throws ServerException
      */
-    List<SampleQcResult> parseData(List<DataRecord> attachedSamples) throws ServerException {
+    List<SampleQcResult> parseData(List<DataRecord> attachedSamples) throws ServerException, RemoteException {
         List<SampleQcResult> qcResults = new ArrayList<>();
         try {
             Map<String, List<QualityControlData>> groupedData = groupQualityControlDataBySampleId();

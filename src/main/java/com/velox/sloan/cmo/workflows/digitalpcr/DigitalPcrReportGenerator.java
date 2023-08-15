@@ -9,6 +9,8 @@ import com.velox.api.util.ClientCallbackRMI;
 import com.velox.api.util.ServerException;
 import com.velox.api.workflow.ActiveTask;
 import com.velox.api.workflow.ActiveWorkflow;
+import com.velox.api.util.ServerException;
+import com.velox.api.exception.recoverability.serverexception.UnrecoverableServerException;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -30,9 +32,7 @@ import java.util.*;
  *
  * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
-
 public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
-
     private List<String> ddPCRReportTypes = Arrays.asList("GEX", "RED", "CNV", "LAB MEDICINE", "METHYLATED");
     private List<String> gexReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet # gene", "Droplet # Ref", "Ratio ([GOI]/[Ref])", "Accepted Droplets", "Micronic Tube Barcode");
     private List<String> cnvReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count Mu", "Droplet Count WT", "Ratio ([Mu]/[WT])", "Accepted Droplets", "Micronic Tube Barcode");
@@ -70,7 +70,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
         return onTaskToolbar(activeWorkflow, activeTask);
     }
 
-    public PluginResult run() throws ServerException {
+    public PluginResult run() throws ServerException, RemoteException {
         try {
             List<DataRecord> ddPcrResults = activeTask.getAttachedDataRecords("DdPcrAssayResults", user);
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
@@ -124,7 +124,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
                     return micronicTubeBarcode;
                 }
             }
-        } catch (RemoteException e) {
+        } catch (RemoteException | ServerException e) {
             logError(String.format("RemoteException -> Error getting MicronitTubeBarcode from parent sample on active task:\n%s", ExceptionUtils.getStackTrace(e)));
         } catch (IoError ioError) {
             logError(String.format("IoError Exception -> Error getting MicronitTubeBarcode from parent sample on active task:\n%s", ExceptionUtils.getStackTrace(ioError)));
@@ -184,7 +184,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      *
      * @return Report Type
      */
-    private String getReportTypeFromUser() {
+    private String getReportTypeFromUser() throws RemoteException, ServerException {
         List plateDim = clientCallback.showListDialog("Please Select the Type of ddPCR Report to Generate:", ddPCRReportTypes, false, user);
         return plateDim.get(0).toString();
     }
@@ -372,8 +372,8 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
             if ((record != null) && (record.getValue("RequestId", user) != null)) {
                 return (String) record.getValue("RequestId", user);
             }
-        } catch (RemoteException e) {
-            logError(String.format("RemoteException -> Error getting Parent RequestId for Sample with recordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
+        } catch (RemoteException | ServerException e) {
+            logError(String.format("Exception -> Error getting Parent RequestId for Sample with recordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
         } catch (IoError ioError) {
             logError(String.format("IoError Exception -> Error getting Parent RequestId for Sample with recordId %d:\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(ioError)));
         } catch (NotFound notFound) {
@@ -425,7 +425,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      * @throws InvalidValue
      * @throws ServerException
      */
-    private void mapHumanPercentageFromDdpcrResultsToDnaQcReport(List<DataRecord> savedRecords) throws IoError, RemoteException, NotFound, InvalidValue {
+    private void mapHumanPercentageFromDdpcrResultsToDnaQcReport(List<DataRecord> savedRecords) throws IoError, RemoteException, NotFound, InvalidValue, ServerException {
         for (DataRecord rec : savedRecords) {
             if (rec.getDataTypeName().equalsIgnoreCase("DdPcrAssayResults") && rec.getValue("HumanPercentage", user) != null) {
                 List<DataRecord> parentSamples = rec.getParentsOfType("Sample", user);
@@ -452,7 +452,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws NotFound
      */
-    private List<DataRecord> getQcReportRecords(DataRecord sample, String requestId) throws IoError, RemoteException, NotFound {
+    private List<DataRecord> getQcReportRecords(DataRecord sample, String requestId) throws IoError, RemoteException, NotFound, ServerException, UnrecoverableServerException{
         if (sample.getChildrenOfType("QcReportDna", user).length > 0) {
             return Arrays.asList(sample.getChildrenOfType("QcReportDna", user));
         }
