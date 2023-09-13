@@ -20,15 +20,23 @@ sourceSets {
 repositories {
     mavenCentral()
     mavenLocal()
+    maven { url "${nexusUrlReleases}"
+        allowInsecureProtocol = true}
 }
 
 dependencies {
-    implementation fileTree(dir: "libs", includes: ['*.jar'])
+    //implementation fileTree(dir: "libs", includes: ['*.jar'])
 
-    implementation ('org.apache.poi:poi-ooxml:3.17')
+    implementation group: 'com.velox.sapio', name:'sloancmo', version:'23.3'
+    implementation group: 'com.velox.sapio', name:'veloxapi', version:'23.3'
+    implementation group: 'com.velox.sapio', name:'sapioutils', version:'23.3'
+    implementation group: 'com.velox.sapio', name:'sapio-commons', version:'23.3'
+
+
+    implementation group: 'org.apache.poi', name:'poi-ooxml', version:'3.17'
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.7'
     implementation group: 'org.apache.httpcomponents', name: 'httpcore', version: '4.3.2'
-    implementation 'org.apache.httpcomponents:httpclient:4.5.11'
+    implementation group: 'org.apache.httpcomponents', name:'httpclient', version:'4.5.11'
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.0.1'
     implementation group: 'com.google.code.gson', name: 'gson', version: '2.7'
     implementation group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1'
