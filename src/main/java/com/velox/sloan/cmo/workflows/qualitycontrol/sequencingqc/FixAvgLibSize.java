@@ -62,7 +62,11 @@ public class FixAvgLibSize extends DefaultGenericPlugin {
             updateAvgSize(qcRecords, qcRecordsMCA);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         } catch (RemoteException e) {
+=======
+        } catch (NotFound | RemoteException e) {
+>>>>>>> 6267a67 (FixAvgLibSize added to update QCDatum AvgSize from MolarConcentrationAssignment so that Lib QC Reports reflect the proper library size)
 =======
         } catch (NotFound | RemoteException e) {
 >>>>>>> 6267a67 (FixAvgLibSize added to update QCDatum AvgSize from MolarConcentrationAssignment so that Lib QC Reports reflect the proper library size)
@@ -109,7 +113,11 @@ public class FixAvgLibSize extends DefaultGenericPlugin {
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     private void updateAvgSize(List<DataRecord> QCDatum, List<DataRecord> MCA){ //throws IoError, RemoteException, NotFound, ServerException, InvalidValue {
+=======
+    private void updateAvgSize(List<DataRecord> QCDatum, List<DataRecord> MCA) throws IoError, RemoteException, NotFound, ServerException, InvalidValue {
+>>>>>>> 6267a67 (FixAvgLibSize added to update QCDatum AvgSize from MolarConcentrationAssignment so that Lib QC Reports reflect the proper library size)
 =======
     private void updateAvgSize(List<DataRecord> QCDatum, List<DataRecord> MCA) throws IoError, RemoteException, NotFound, ServerException, InvalidValue {
 >>>>>>> 6267a67 (FixAvgLibSize added to update QCDatum AvgSize from MolarConcentrationAssignment so that Lib QC Reports reflect the proper library size)
