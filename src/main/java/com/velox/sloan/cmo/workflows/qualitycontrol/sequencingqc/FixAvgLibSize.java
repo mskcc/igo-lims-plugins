@@ -61,7 +61,11 @@ public class FixAvgLibSize extends DefaultGenericPlugin {
             //for sample in qcrecords, for sample1 in qcrecordsMCA, if getAverageLibrarySizeValue(sample, qcrecords) =! getAverageLibrarySizeValue(sample1, qcrecordsMCA), sample.avgsize = sample1.avgsize
             updateAvgSize(qcRecords, qcRecordsMCA);
 
+<<<<<<< HEAD
         } catch (RemoteException e) {
+=======
+        } catch (NotFound | RemoteException e) {
+>>>>>>> 6267a67 (FixAvgLibSize added to update QCDatum AvgSize from MolarConcentrationAssignment so that Lib QC Reports reflect the proper library size)
             String errMsg = String.format("Remote Exception while assigning Lib Avg Size:\n%s", ExceptionUtils.getStackTrace(e));
             logError(errMsg);
             return new PluginResult(false);
@@ -104,7 +108,11 @@ public class FixAvgLibSize extends DefaultGenericPlugin {
         return sampleIds;
     }
 
+<<<<<<< HEAD
     private void updateAvgSize(List<DataRecord> QCDatum, List<DataRecord> MCA){ //throws IoError, RemoteException, NotFound, ServerException, InvalidValue {
+=======
+    private void updateAvgSize(List<DataRecord> QCDatum, List<DataRecord> MCA) throws IoError, RemoteException, NotFound, ServerException, InvalidValue {
+>>>>>>> 6267a67 (FixAvgLibSize added to update QCDatum AvgSize from MolarConcentrationAssignment so that Lib QC Reports reflect the proper library size)
         for (DataRecord rectoupdate : QCDatum) {
             for (DataRecord rec : MCA) {
                 try {
