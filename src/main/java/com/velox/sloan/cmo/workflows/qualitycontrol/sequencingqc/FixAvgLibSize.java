@@ -61,7 +61,7 @@ public class FixAvgLibSize extends DefaultGenericPlugin {
             //for sample in qcrecords, for sample1 in qcrecordsMCA, if getAverageLibrarySizeValue(sample, qcrecords) =! getAverageLibrarySizeValue(sample1, qcrecordsMCA), sample.avgsize = sample1.avgsize
             updateAvgSize(qcRecords, qcRecordsMCA);
 
-        } catch (NotFound | RemoteException e) {
+        } catch (RemoteException e) {
             String errMsg = String.format("Remote Exception while assigning Lib Avg Size:\n%s", ExceptionUtils.getStackTrace(e));
             logError(errMsg);
             return new PluginResult(false);
@@ -104,7 +104,7 @@ public class FixAvgLibSize extends DefaultGenericPlugin {
         return sampleIds;
     }
 
-    private void updateAvgSize(List<DataRecord> QCDatum, List<DataRecord> MCA) throws IoError, RemoteException, NotFound, ServerException, InvalidValue {
+    private void updateAvgSize(List<DataRecord> QCDatum, List<DataRecord> MCA){ //throws IoError, RemoteException, NotFound, ServerException, InvalidValue {
         for (DataRecord rectoupdate : QCDatum) {
             for (DataRecord rec : MCA) {
                 try {
