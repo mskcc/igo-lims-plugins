@@ -44,8 +44,8 @@ public class AutoIndexAssignmentHelper extends ManagerBase {
      * @return Double volume
      */
     public Double getAdapterInputVolume(Double startingAdapterConcentration, Double minAdapterVolume,
-                                        Double targetAdapterConcentration, String sampleType, boolean isTCRseq) {
-        if(isTCRseq) {
+                                        Double targetAdapterConcentration, String sampleType, boolean isTCRseq, boolean specialRecipes) {
+        if(isTCRseq || specialRecipes) {
             return 7.5;
         }
         else {
@@ -92,8 +92,8 @@ public class AutoIndexAssignmentHelper extends ManagerBase {
      * @param maxPlateVolume
      * @return Double volume
      */
-    public Double getVolumeOfWater(Double startingAdapterConcentration, Double minAdapterVolume, Double targetAdapterConcentration, Double maxPlateVolume, String sampleType) {
-        if (RNA_SAMPLE_TYPES.contains(sampleType.toLowerCase())){
+    public Double getVolumeOfWater(Double startingAdapterConcentration, Double minAdapterVolume, Double targetAdapterConcentration, Double maxPlateVolume, String sampleType, boolean specialRecipes) {
+        if (RNA_SAMPLE_TYPES.contains(sampleType.toLowerCase()) || specialRecipes){
             return 0.0;
         }
         Double c1 = startingAdapterConcentration;
