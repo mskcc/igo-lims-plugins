@@ -51,7 +51,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     Boolean usualControlLocation = Boolean.TRUE;
     String[] positiveContorlChoises = {"184hTERT", "rpe1htert"};
     Map<String, String> seqRunTypeByQuadrant = new HashMap<>();
-    private String DLP_SMARTCHIP_PATH = "/skimcs/mohibullahlab/LIMS/DLP/SmartchipSheet/";
+    private String DLP_SMARTCHIP_PATH = "/rtssdc/mohibullahlab/LIMS/DLP/SmartchipSheet/";
 
     public DlpSampleSplitterPoolMaker() {
         setTaskEntry(true);
