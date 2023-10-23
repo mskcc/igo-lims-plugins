@@ -42,7 +42,7 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
             List<DataRecord> newSamples = new LinkedList<>();
 
             for (DataRecord sample : samplesAttachedToTask) {
-                int idIndex = 0;
+                int idIndex = 1;
                 Long attachedSampleRecordId = sample.getRecordId();
                 attachedSamples.add(attachedSampleRecordId);
                 String sampleId = sample.getStringVal("SampleId", user);
@@ -56,12 +56,13 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                 String preservation = sample.getStringVal("Preservation", user);
                 String plateId = sample.getParentsOfType("Plate", user).get(0).getStringVal("PlateId", user);
 
+                values.put("SampleId", sampleId + "_" + idIndex++);
+                logInfo("Sample ID: " + sampleId + "_" + idIndex + "\n");
+
                 for (int i = 1; i <= 23; i+=2) {
                     for (char c : TO_APPEND_1) {
-                        values.put("OtherSampleId", otherSampleId + "_" + TO_APPEND_1 + i);
-                        logInfo("Sample name: " + otherSampleId + "_" + TO_APPEND_1 + i);
-                        values.put("SampleId", sampleId + "_" + idIndex++);
-                        logInfo("Sample ID: " + sampleId + "_" + idIndex++);
+                        values.put("OtherSampleId", otherSampleId + "_" + c + i);
+                        logInfo("Sample name: " + otherSampleId + "_" + c + i + "\n");
                         values.put("RequestId", requestId);
                         values.put("ExemplarSampleType", sampleType);
                         values.put("Recipe", recipe);
@@ -78,10 +79,8 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                 }
                 for (char c : TO_APPEND_2) {
                     for (int i = 2; i <= 24; i+=2) {
-                        values.put("OtherSampleId", otherSampleId + "_" + TO_APPEND_2 + i);
-                        logInfo("Sample name: " + otherSampleId + "_" + TO_APPEND_2 + i);
-                        values.put("SampleId", sampleId + "_" + idIndex++);
-                        logInfo("Sample ID: " + sampleId + "_" + idIndex++);
+                        values.put("OtherSampleId", otherSampleId + "_" + c + i);
+                        logInfo("Sample name: " + otherSampleId + "_" + c + i + "\n");
                         values.put("RequestId", requestId);
                         values.put("ExemplarSampleType", sampleType);
                         values.put("Recipe", recipe);
@@ -99,8 +98,10 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                 this.activeTask.removeTaskAttachments(attachedSamples);
                 this.activeTask.addAttachedRecordIdList(toGetAttached);
             }
+            activeTask.getTask().getTaskOptions().put("_SMARTSEQ SAMPLE SPLITTED", "");
 
         } catch (NotFound | InvalidValue e) {
+            String errMsg = String.format("Not Found or Invalid Value exception while splitting SmartSeq samples:\n%s", ExceptionUtils.getStackTrace(e));
 
         } catch (ServerException e) {
             String errMsg = String.format("ServerException while splitting SmartSeq samples:\n%s", ExceptionUtils.getStackTrace(e));
