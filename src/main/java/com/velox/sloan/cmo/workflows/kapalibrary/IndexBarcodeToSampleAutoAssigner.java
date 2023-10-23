@@ -119,11 +119,11 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                 Double minAdapterVol = autoHelper.getMinAdapterVolumeRequired(plateSize, isTCRseq);
                 String sampleType = attachedSamplesList.get(0).getStringVal("ExemplarSampleType", user);
                 if (plateSize == 96) {
-                    assignIndicesToSamples(sortedProtocolRecords, indexConfigsToUse, minAdapterVol, plateSize, sampleType, isTCRseq);
+                    assignIndicesToSamples(sortedProtocolRecords, indexConfigsToUse, minAdapterVol, plateSize, sampleType, isTCRseq, recipes);
                 } else if (plateSize == 384) {
                     List<List<DataRecord>> protocolsSplitByAlternateWell = getQuadrantsFromProtocols(sortedProtocolRecords);
                     for (List<DataRecord> protocolsList : protocolsSplitByAlternateWell) {
-                        assignIndicesToSamples(protocolsList, indexConfigsToUse, minAdapterVol, plateSize, sampleType, isTCRseq);
+                        assignIndicesToSamples(protocolsList, indexConfigsToUse, minAdapterVol, plateSize, sampleType, isTCRseq, recipes);
                     }
                 }
             }
@@ -337,7 +337,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
      */
     private Map<String, Object> setAssignedIndicesDataRecordFieldValues(DataRecord indexBarcode, DataRecord indexAssignmentConfig,
                                                                         Double minVolInAdapterPlate, Double maxPlateVolume,
-                                                                        Integer plateSize, String sampleType, boolean isTCRseq) throws NotFound,
+                                                                        Integer plateSize, String sampleType, boolean isTCRseq, boolean isCrisprOrAmpliconSeq) throws NotFound,
             RemoteException, InvalidValue, IoError, ServerException {
         Double sampleInputAmount = 0.0;
         if (indexBarcode.getValue("InitialInput", user) != null && indexBarcode.getStringVal("InitialInput", user).length() > 0) {
@@ -357,8 +357,8 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         String adapterSourceCol = autoHelper.getAdapterColPosition(wellPosition);
         Double adapterStartConc = indexAssignmentConfig.getDoubleVal("AdapterConcentration", user);
 
-        Double adapterVolume = autoHelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType, isTCRseq);
-        Double waterVolume = autoHelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume, sampleType);
+        Double adapterVolume = autoHelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType, isTCRseq, isCrisprOrAmpliconSeq);
+        Double waterVolume = autoHelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume, sampleType,isCrisprOrAmpliconSeq);
         Double actualTargetAdapterConc = adapterStartConc / ((waterVolume + adapterVolume) / adapterVolume);
         setUpdatedIndexAssignmentConfigVol(indexAssignmentConfig, adapterVolume);
         Map<String, Object> indexAssignmentValues = new HashMap<>();
@@ -460,8 +460,9 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
      * @throws ServerException
      */
     private void assignIndicesToSamples(List<DataRecord> indexAssignmentProtocolRecordsSortedColumnWise, List<DataRecord>
-            indexAssignmentConfigs, Double minAdapterVol, Integer plateSize, String sampleType, boolean isTCRseq) throws NotFound,
+            indexAssignmentConfigs, Double minAdapterVol, Integer plateSize, String sampleType, boolean isTCRseq, List<String> recipes) throws NotFound,
             RemoteException, IoError, InvalidValue, ServerException {
+        boolean isCrisprOrAmpliconSeq = recipes.stream().anyMatch(RECIPES_TO_USE_SPECIAL_ADAPTERS::contains);
         Integer positionOfLastUsedIndex = getPositionOfLastUsedIndex(indexAssignmentConfigs);
         Double maxPlateVolume = autoHelper.getMaxVolumeLimit(plateSize);
         Integer updatedLastIndexUsed = getStartIndexAssignmentConfigPosition(positionOfLastUsedIndex, indexAssignmentConfigs);
@@ -470,7 +471,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
             DataRecord indexAssignmentConfig = indexAssignmentConfigs.get(i);
             DataRecord indexBarcodeProtocolRecord = indexAssignmentProtocolRecordsSortedColumnWise.get(j);
             Map<String, Object> indexAssignmentValues = setAssignedIndicesDataRecordFieldValues(indexBarcodeProtocolRecord,
-                    indexAssignmentConfig, minAdapterVol, maxPlateVolume, plateSize, sampleType, isTCRseq);
+                    indexAssignmentConfig, minAdapterVol, maxPlateVolume, plateSize, sampleType, isTCRseq, isCrisprOrAmpliconSeq);
             indexBarcodeProtocolRecord.setFields(indexAssignmentValues, user);
             indexAssignmentConfigPlatesToUse.add(indexAssignmentConfig.getStringVal("AdapterPlateId", user));
             if (i == indexAssignmentConfigs.size() - 1 && j <= indexAssignmentProtocolRecordsSortedColumnWise.size()) {

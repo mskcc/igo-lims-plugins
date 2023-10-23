@@ -22,6 +22,7 @@ import java.util.*;
  * @author sharmaa1
  */
 public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
+    private final List<String> RECIPES_TO_USE_SPECIAL_ADAPTERS = Arrays.asList("CRISPRSeq", "AmpliconSeq", "SingleCellCNV");
     private final String INDEX_ASSIGNMENT_CONFIG_DATATYPE = "AutoIndexAssignmentConfig";
     AutoIndexAssignmentHelper autohelper;
     private boolean isTCRseq = false;
@@ -187,6 +188,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                                                  Double minVolInAdapterPlate, Double maxPlateVolume, Integer plateSize,
                                                  String sampleType, boolean isTCRseq, String species, String aliquotRecipe) throws NotFound, RemoteException,
             InvalidValue, IoError, ServerException {
+        boolean isCrisprOrAmpliconSeq = RECIPES_TO_USE_SPECIAL_ADAPTERS.contains(aliquotRecipe);
         for (DataRecord indexBarcodeRec : indexBarcodeRecords) {
             boolean found = false;
             for (DataRecord indexConfig : indexAssignmentConfigs) {
@@ -201,8 +203,8 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                     String adapterSourceCol = autohelper.getAdapterColPosition(wellPosition);
                     Double adapterStartConc = indexConfig.getDoubleVal("AdapterConcentration", user);
                     Double targetAdapterConc = autohelper.getCalculatedTargetAdapterConcentration(dnaInputAmount, plateSize, sampleType);
-                    Double adapterVolume = autohelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType, isTCRseq);
-                    Double waterVolume = autohelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume, sampleType);
+                    Double adapterVolume = autohelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType, isTCRseq, isCrisprOrAmpliconSeq);
+                    Double waterVolume = autohelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume, sampleType, isCrisprOrAmpliconSeq);
                     Double actualTargetAdapterConc = adapterStartConc / ((waterVolume + adapterVolume) / adapterVolume);
                     //Double adapterConcentration = autohelper.getAdapterConcentration(indexConfig, adapterVolume, waterVolume);
                     setUpdatedIndexAssignmentConfigVol(indexConfig, adapterVolume);

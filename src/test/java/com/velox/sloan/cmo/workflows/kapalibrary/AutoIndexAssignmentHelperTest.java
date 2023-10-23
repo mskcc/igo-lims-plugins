@@ -34,10 +34,10 @@ public class AutoIndexAssignmentHelperTest {
         String rnaSampleType = "rna";
         String rnaSampleType2="cdna";
 
-        assertTrue(autoHelper.getAdapterInputVolume(startConc, minVolumeForAdapter, targetConcentration, sampleType, false) == 5.0);
-        assertTrue(autoHelper.getAdapterInputVolume(startConc2, minVolumeForAdapter2, targetConcentration2, sampleType, false) == 2.0);
-        assertTrue(autoHelper.getAdapterInputVolume(startConc2, minVolumeForAdapter2, targetConcentration2, rnaSampleType, false) == 5.0);
-        assertTrue(autoHelper.getAdapterInputVolume(startConc2, minVolumeForAdapter2, targetConcentration2, rnaSampleType2, false) == 5.0);
+        assertTrue(autoHelper.getAdapterInputVolume(startConc, minVolumeForAdapter, targetConcentration, sampleType, false, false) == 5.0);
+        assertTrue(autoHelper.getAdapterInputVolume(startConc2, minVolumeForAdapter2, targetConcentration2, sampleType, false, false) == 2.0);
+        assertTrue(autoHelper.getAdapterInputVolume(startConc2, minVolumeForAdapter2, targetConcentration2, rnaSampleType, false, false) == 5.0);
+        assertTrue(autoHelper.getAdapterInputVolume(startConc2, minVolumeForAdapter2, targetConcentration2, rnaSampleType2, false, false) == 5.0);
     }
 
     @Test
@@ -87,14 +87,14 @@ public class AutoIndexAssignmentHelperTest {
 
         Double targetAdapterConcentration384 = 5.0; // for 384 well plate
         Double maxPlateVolume384 = 40.00; // for 384 well plate
-        assertTrue(autoHelper.getVolumeOfWater(startAdapterConc, minVolumeForAdapter, targetAdapterConcentration, maxPlateVolume, dnaSampleType) == 2.5);
-        assertTrue(autoHelper.getVolumeOfWater(startAdapterConc, minVolumeForAdapter, targetAdapterConcentration384, maxPlateVolume384, dnaSampleType) == 5.00);
+        assertTrue(autoHelper.getVolumeOfWater(startAdapterConc, minVolumeForAdapter, targetAdapterConcentration, maxPlateVolume, dnaSampleType, false) == 2.5);
+        assertTrue(autoHelper.getVolumeOfWater(startAdapterConc, minVolumeForAdapter, targetAdapterConcentration384, maxPlateVolume384, dnaSampleType, false) == 5.00);
 
-        assertFalse(autoHelper.getVolumeOfWater(startAdapterConc, minVolumeForAdapter, targetAdapterConcentration384, maxPlateVolume384, rnaSampleType) == 5.00);
-        assertFalse(autoHelper.getVolumeOfWater(startAdapterConc, minVolumeForAdapter, targetAdapterConcentration384, maxPlateVolume384, rnaSampleType2) == 5.00);
+        assertFalse(autoHelper.getVolumeOfWater(startAdapterConc, minVolumeForAdapter, targetAdapterConcentration384, maxPlateVolume384, rnaSampleType, false) == 5.00);
+        assertFalse(autoHelper.getVolumeOfWater(startAdapterConc, minVolumeForAdapter, targetAdapterConcentration384, maxPlateVolume384, rnaSampleType2, false) == 5.00);
 
-        assertTrue(autoHelper.getVolumeOfWater(startAdapterConc, minVolumeForAdapter, targetAdapterConcentration384, maxPlateVolume384, rnaSampleType) == 0.00);
-        assertTrue(autoHelper.getVolumeOfWater(startAdapterConc, minVolumeForAdapter, targetAdapterConcentration384, maxPlateVolume384, rnaSampleType2) == 0.00);
+        assertTrue(autoHelper.getVolumeOfWater(startAdapterConc, minVolumeForAdapter, targetAdapterConcentration384, maxPlateVolume384, rnaSampleType, false) == 0.00);
+        assertTrue(autoHelper.getVolumeOfWater(startAdapterConc, minVolumeForAdapter, targetAdapterConcentration384, maxPlateVolume384, rnaSampleType2, false) == 0.00);
     }
 
 
