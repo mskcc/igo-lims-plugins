@@ -36,15 +36,13 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
     public PluginResult run () throws RemoteException, com.velox.api.util.ServerException {
         try {
             List<DataRecord> samplesAttachedToTask = activeTask.getAttachedDataRecords("Sample", user);
-            Map<String, Object> values = new HashMap<>();
-            List<Long> attachedSamples = new LinkedList<>();
-            List<Long> toGetAttached = new LinkedList<>();
-            List<DataRecord> newSamples = new LinkedList<>();
 
             for (DataRecord sample : samplesAttachedToTask) {
-                int idIndex = 1;
-                Long attachedSampleRecordId = sample.getRecordId();
-                attachedSamples.add(attachedSampleRecordId);
+                List<Long> attachedSamples = new LinkedList<>();
+                attachedSamples.add(sample.getRecordId());
+                List<Long> toGetAttached = new LinkedList<>();
+                //List<DataRecord> newSamples = new LinkedList<>();
+
                 String sampleId = sample.getStringVal("SampleId", user);
                 String recipe = sample.getStringVal("Recipe", user);
                 String otherSampleId = sample.getStringVal("OtherSampleId", user);
@@ -56,13 +54,16 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                 String preservation = sample.getStringVal("Preservation", user);
                 String plateId = sample.getParentsOfType("Plate", user).get(0).getStringVal("PlateId", user);
 
-                values.put("SampleId", sampleId + "_" + idIndex++);
-                logInfo("Sample ID: " + sampleId + "_" + idIndex + "\n");
+                int idIndex = 1;
 
                 for (int i = 1; i <= 23; i+=2) {
                     for (char c : TO_APPEND_1) {
-                        values.put("OtherSampleId", otherSampleId + "_" + c + i);
-                        logInfo("Sample name: " + otherSampleId + "_" + c + i + "\n");
+                        Map<String, Object> values = new HashMap<>();
+                        values.put("SampleId", sampleId + "_" + idIndex++);
+                        logInfo("Sample ID: " + sampleId + "_" + idIndex + "\n");
+
+                        values.put("OtherSampleId", otherSampleId + "_" + String.valueOf(c) + String.valueOf(i));
+                        logInfo("Sample name: " + otherSampleId + "_" + String.valueOf(c) + String.valueOf(i) + "\n");
                         values.put("RequestId", requestId);
                         values.put("ExemplarSampleType", sampleType);
                         values.put("Recipe", recipe);
@@ -73,14 +74,18 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         values.put("Preservation", preservation);
                         DataRecord newRecord = dataRecordManager.addDataRecord("Sample", user);
                         newRecord.setFields(values, user);
-                        newSamples.add(newRecord);
+                        //newSamples.add(newRecord);
                         toGetAttached.add(newRecord.getRecordId());
                     }
                 }
-                for (char c : TO_APPEND_2) {
-                    for (int i = 2; i <= 24; i+=2) {
-                        values.put("OtherSampleId", otherSampleId + "_" + c + i);
-                        logInfo("Sample name: " + otherSampleId + "_" + c + i + "\n");
+                for (int i = 1; i <= 23; i+=2) {
+                    for (char c : TO_APPEND_2) {
+                        Map<String, Object> values = new HashMap<>();
+                        values.put("SampleId", sampleId + "_" + idIndex++);
+                        logInfo("Sample ID: " + sampleId + "_" + idIndex + "\n");
+
+                        values.put("OtherSampleId", otherSampleId + "_" + String.valueOf(c) + String.valueOf(i));
+                        logInfo("Sample name: " + otherSampleId + "_" + String.valueOf(c) + String.valueOf(i) + "\n");
                         values.put("RequestId", requestId);
                         values.put("ExemplarSampleType", sampleType);
                         values.put("Recipe", recipe);
@@ -91,14 +96,64 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         values.put("Preservation", preservation);
                         DataRecord newRecord = dataRecordManager.addDataRecord("Sample", user);
                         newRecord.setFields(values, user);
-                        newSamples.add(newRecord);
+                        //newSamples.add(newRecord);
                         toGetAttached.add(newRecord.getRecordId());
                     }
+                }
+                for (int i = 2; i <= 24; i+=2) {
+                    for (char c : TO_APPEND_1) {
+                        Map<String, Object> values = new HashMap<>();
+                        values.put("SampleId", sampleId + "_" + idIndex++);
+                        logInfo("Sample ID: " + sampleId + "_" + idIndex + "\n");
+
+                        values.put("OtherSampleId", otherSampleId + "_" + String.valueOf(c) + String.valueOf(i));
+                        logInfo("Sample name: " + otherSampleId + "_" + String.valueOf(c) + String.valueOf(i) + "\n");
+                        values.put("RequestId", requestId);
+                        values.put("ExemplarSampleType", sampleType);
+                        values.put("Recipe", recipe);
+                        values.put("StorageUnitPath", plateId);
+                        values.put("CellCount", cellCount);
+                        values.put("Species", species);
+                        values.put("SampleOrigin", sampleOrigin);
+                        values.put("Preservation", preservation);
+                        DataRecord newRecord = dataRecordManager.addDataRecord("Sample", user);
+                        newRecord.setFields(values, user);
+                        //newSamples.add(newRecord);
+                        toGetAttached.add(newRecord.getRecordId());
+                    }
+                }
+                for (int i = 2; i <= 24; i+=2) {
+                    for (char c : TO_APPEND_2) {
+                        Map<String, Object> values = new HashMap<>();
+                        values.put("SampleId", sampleId + "_" + idIndex++);
+                        logInfo("Sample ID: " + sampleId + "_" + idIndex + "\n");
+
+                        values.put("OtherSampleId", otherSampleId + "_" + String.valueOf(c) + String.valueOf(i));
+                        logInfo("Sample name: " + otherSampleId + "_" + String.valueOf(c) + String.valueOf(i) + "\n");
+                        values.put("RequestId", requestId);
+                        values.put("ExemplarSampleType", sampleType);
+                        values.put("Recipe", recipe);
+                        values.put("StorageUnitPath", plateId);
+                        values.put("CellCount", cellCount);
+                        values.put("Species", species);
+                        values.put("SampleOrigin", sampleOrigin);
+                        values.put("Preservation", preservation);
+                        DataRecord newRecord = dataRecordManager.addDataRecord("Sample", user);
+                        newRecord.setFields(values, user);
+                        //newSamples.add(newRecord);
+                        toGetAttached.add(newRecord.getRecordId());
+                    }
+                }
+                for (int i = 0; i < attachedSamples.size(); i++) {
+                    logInfo("attached sample: " + attachedSamples.get(i) + "\n");
                 }
                 this.activeTask.removeTaskAttachments(attachedSamples);
+                logInfo("Removed originally attached samples");
                 this.activeTask.addAttachedRecordIdList(toGetAttached);
+                logInfo("Attached new splitted samples");
             }
             activeTask.getTask().getTaskOptions().put("_SMARTSEQ SAMPLE SPLITTED", "");
+            logInfo("Task option updated!");
 
         } catch (NotFound | InvalidValue e) {
             String errMsg = String.format("Not Found or Invalid Value exception while splitting SmartSeq samples:\n%s", ExceptionUtils.getStackTrace(e));
@@ -119,6 +174,7 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
         } catch (AlreadyExists e) {
             throw new RuntimeException(e);
         }
+        logInfo("Right before returning true for plugin result!");
         return new PluginResult(true);
     }
 }
