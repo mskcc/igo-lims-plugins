@@ -1,5 +1,6 @@
 package com.velox.sloan.cmo.workflows.qualitycontrol.sequencingqc;
 
+
 import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
@@ -11,7 +12,6 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-
 import javax.xml.crypto.Data;
 import java.rmi.RemoteException;
 import java.util.*;
@@ -63,7 +63,7 @@ public class FixAvgLibSize extends DefaultGenericPlugin {
         return new PluginResult(true);
     }
 
-    private List<DataRecord> getQcRecordsForSamples(List<Object> sampleIdList, String table) {
+    public List<DataRecord> getQcRecordsForSamples(List<Object> sampleIdList, String table) {
         List<DataRecord> qcRecords = new ArrayList<>();
         try {
             qcRecords = dataRecordManager.queryDataRecords(table, "SampleId", sampleIdList, user);
@@ -79,7 +79,7 @@ public class FixAvgLibSize extends DefaultGenericPlugin {
         return qcRecords;
     }
 
-    private List<Object> getSampleIds(List<DataRecord> samples) {
+    public List<Object> getSampleIds(List<DataRecord> samples) {
         List<Object> sampleIds = new ArrayList<>();
         for (DataRecord sample : samples) {
             String sampleId = null;
@@ -98,7 +98,7 @@ public class FixAvgLibSize extends DefaultGenericPlugin {
         return sampleIds;
     }
 
-    private void updateAvgSize(List<DataRecord> QCDatum, List<DataRecord> MCA){ //throws IoError, RemoteException, NotFound, ServerException, InvalidValue {
+    public void updateAvgSize(List<DataRecord> QCDatum, List<DataRecord> MCA){
         for (DataRecord rectoupdate : QCDatum) {
             for (DataRecord rec : MCA) {
             try {
