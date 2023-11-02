@@ -36,12 +36,15 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
     public PluginResult run () throws RemoteException, com.velox.api.util.ServerException {
         try {
             List<DataRecord> samplesAttachedToTask = activeTask.getAttachedDataRecords("Sample", user);
+            activeTask.removeTaskAttachment(samplesAttachedToTask.get(0).getRecordId());
+            logInfo("Removed the attached sample!!");
 
+            List<Long> attachedSamples = new LinkedList<>();
+            List<Long> toGetAttached = new LinkedList<>();
             for (DataRecord sample : samplesAttachedToTask) {
-                List<Long> attachedSamples = new LinkedList<>();
                 attachedSamples.add(sample.getRecordId());
-                List<Long> toGetAttached = new LinkedList<>();
                 //List<DataRecord> newSamples = new LinkedList<>();
+                logInfo("Removed sample with record id: " + sample.getRecordId() + "\n");
 
                 String sampleId = sample.getStringVal("SampleId", user);
                 String recipe = sample.getStringVal("Recipe", user);
@@ -144,14 +147,12 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         toGetAttached.add(newRecord.getRecordId());
                     }
                 }
-                for (int i = 0; i < attachedSamples.size(); i++) {
-                    logInfo("attached sample: " + attachedSamples.get(i) + "\n");
-                }
-                this.activeTask.removeTaskAttachments(attachedSamples);
-                logInfo("Removed originally attached samples");
                 this.activeTask.addAttachedRecordIdList(toGetAttached);
                 logInfo("Attached new splitted samples");
             }
+//            this.activeTask.removeTaskAttachments(attachedSamples);
+//            logInfo("Removed originally attached samples");
+
             activeTask.getTask().getTaskOptions().put("_SMARTSEQ SAMPLE SPLITTED", "");
             logInfo("Task option updated!");
 
