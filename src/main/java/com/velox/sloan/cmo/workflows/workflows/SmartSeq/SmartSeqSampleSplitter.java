@@ -24,8 +24,8 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
     public static final char[] TO_APPEND_1 = {'A', 'C', 'E', 'G', 'I', 'K', 'M', 'O'};
     public static final char[] TO_APPEND_2 = {'B', 'D', 'F', 'H', 'J', 'L', 'N', 'P'};
     public SmartSeqSampleSplitter () {
-        setTaskEntry(true);
-        setOrder(PluginOrder.EARLY.getOrder());
+        setTaskSubmit(true);
+        setOrder(PluginOrder.MIDDLE.getOrder());
     }
     @Override
     public boolean shouldRun() throws RemoteException {
@@ -40,7 +40,7 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
             List<Long> attachedSamples = new LinkedList<>();
             List<Long> toGetAttached = new LinkedList<>();
             for (DataRecord sample : samplesAttachedToTask) {
-                attachedSamples.add(sample.getRecordId());
+                //attachedSamples.add(sample.getRecordId());
                 //List<DataRecord> newSamples = new LinkedList<>();
                 logInfo("Removed sample with record id: " + sample.getRecordId() + "\n");
 
@@ -150,8 +150,7 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                 this.activeTask.removeTaskAttachment(sample.getRecordId());
                 logInfo("Removed the attached sample!!");
             }
-//            this.activeTask.removeTaskAttachments(attachedSamples);
-//            logInfo("Removed originally attached samples");
+
 
             activeTask.getTask().getTaskOptions().put("_SMARTSEQ SAMPLE SPLITTED", "");
             logInfo("Task option updated!");
