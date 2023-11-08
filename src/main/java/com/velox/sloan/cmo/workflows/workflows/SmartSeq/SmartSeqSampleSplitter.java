@@ -36,8 +36,6 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
     public PluginResult run () throws RemoteException, com.velox.api.util.ServerException {
         try {
             List<DataRecord> samplesAttachedToTask = activeTask.getAttachedDataRecords("Sample", user);
-            activeTask.removeTaskAttachment(samplesAttachedToTask.get(0).getRecordId());
-            logInfo("Removed the attached sample!!");
 
             List<Long> attachedSamples = new LinkedList<>();
             List<Long> toGetAttached = new LinkedList<>();
@@ -149,6 +147,8 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                 }
                 this.activeTask.addAttachedRecordIdList(toGetAttached);
                 logInfo("Attached new splitted samples");
+                this.activeTask.removeTaskAttachment(sample.getRecordId());
+                logInfo("Removed the attached sample!!");
             }
 //            this.activeTask.removeTaskAttachments(attachedSamples);
 //            logInfo("Removed originally attached samples");
