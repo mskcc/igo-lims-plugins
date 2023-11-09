@@ -79,8 +79,8 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         toGetAttached.add(newRecord.getRecordId());
                     }
                 }
-                for (int i = 1; i <= 23; i+=2) {
-                    for (char c : TO_APPEND_2) {
+                for (int i = 2; i <= 24; i+=2) {
+                    for (char c : TO_APPEND_1) {
                         Map<String, Object> values = new HashMap<>();
                         values.put("SampleId", sampleId + "_" + idIndex++);
                         logInfo("Sample ID: " + sampleId + "_" + idIndex + "\n");
@@ -101,8 +101,8 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         toGetAttached.add(newRecord.getRecordId());
                     }
                 }
-                for (int i = 2; i <= 24; i+=2) {
-                    for (char c : TO_APPEND_1) {
+                for (int i = 1; i <= 23; i+=2) {
+                    for (char c : TO_APPEND_2) {
                         Map<String, Object> values = new HashMap<>();
                         values.put("SampleId", sampleId + "_" + idIndex++);
                         logInfo("Sample ID: " + sampleId + "_" + idIndex + "\n");
