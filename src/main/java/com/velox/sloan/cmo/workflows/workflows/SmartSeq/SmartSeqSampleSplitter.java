@@ -75,7 +75,7 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         values.put("Preservation", preservation);
                         DataRecord newRecord = dataRecordManager.addDataRecord("Sample", user);
                         newRecord.setFields(values, user);
-                        //newSamples.add(newRecord);
+                        sample.addChild("Sample", values, user);
                         toGetAttached.add(newRecord.getRecordId());
                     }
                 }
@@ -97,7 +97,7 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         values.put("Preservation", preservation);
                         DataRecord newRecord = dataRecordManager.addDataRecord("Sample", user);
                         newRecord.setFields(values, user);
-                        //newSamples.add(newRecord);
+                        sample.addChild("Sample", values, user);
                         toGetAttached.add(newRecord.getRecordId());
                     }
                 }
@@ -119,7 +119,7 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         values.put("Preservation", preservation);
                         DataRecord newRecord = dataRecordManager.addDataRecord("Sample", user);
                         newRecord.setFields(values, user);
-                        //newSamples.add(newRecord);
+                        sample.addChild("Sample", values, user);
                         toGetAttached.add(newRecord.getRecordId());
                     }
                 }
@@ -141,12 +141,14 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         values.put("Preservation", preservation);
                         DataRecord newRecord = dataRecordManager.addDataRecord("Sample", user);
                         newRecord.setFields(values, user);
-                        //newSamples.add(newRecord);
+                        sample.addChild("Sample", values, user);
                         toGetAttached.add(newRecord.getRecordId());
                     }
                 }
                 this.activeTask.addAttachedRecordIdList(toGetAttached);
                 logInfo("Attached new splitted samples");
+                sample.setDataField("ExemplarSampleStatus", "Completed - Smart-Seq cDNA Preparation", user);
+                logInfo("Original sample status updated to: Completed - Smart-Seq cDNA Preparation");
                 this.activeTask.removeTaskAttachment(sample.getRecordId());
                 logInfo("Removed the attached sample!!");
             }
