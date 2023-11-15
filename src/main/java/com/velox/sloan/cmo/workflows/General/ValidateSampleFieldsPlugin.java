@@ -85,12 +85,12 @@ public class ValidateSampleFieldsPlugin extends DefaultGenericPlugin {
         try {
             Object sampleType = rec.getValue("ExemplarSampleType", user);
             Object altIds = rec.getStringVal("AltId", user);
-            if (altIds!=null){
-                return altIds.toString().split(",").length>1;
-            }
             if (sampleType != null) {
                 logInfo("Sample Type: " + sampleType.toString());
                 return "Pooled Library".equalsIgnoreCase(sampleType.toString().trim());
+            }
+            if (altIds!=null){
+                return altIds.toString().split(",").length>1;
             }
         } catch (NotFound | RemoteException e) {
             error = String.format("Cannot validate SampleType:\n%s", e.getMessage());
