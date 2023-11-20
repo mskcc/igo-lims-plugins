@@ -1,6 +1,5 @@
 package com.velox.sloan.cmo.workflows.qualitycontrol.sequencingqc;
 
-
 import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
