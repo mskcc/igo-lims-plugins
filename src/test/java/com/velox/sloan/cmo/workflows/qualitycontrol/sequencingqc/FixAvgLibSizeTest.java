@@ -27,11 +27,11 @@ public class FixAvgLibSizeTest {
     DataRecordManager dataRecordManager;
     DataMgmtServer dataMgmtServer;
     VeloxConnection connection = null;
+    FixAvgLibSize fixAvgLibSize = new FixAvgLibSize();
 
     @Before
     public void setUp() {
         try {
-            FixAvgLibSize fixAvgLibSize = new FixAvgLibSize();
             connection = new VeloxConnection("/Users/lambed/igo-lims-plugins/Connection.txt");
             System.out.println("Connection start");
             connection.open();
@@ -65,17 +65,18 @@ public class FixAvgLibSizeTest {
         try {
             List<DataRecord> QCDatum = fixAvgLibSize.getQcRecordsForSamples(testSamples, "QCDatum");
             List<DataRecord> MCA = fixAvgLibSize.getQcRecordsForSamples(testSamples, "MolarConcentrationAssignment");
+
+
+            // Modify MCA
+            for (DataRecord sampleMCA : MCA) {
+                try {
+                    sampleMCA.setDataField("AvgSize", "500", user);
+                } catch (NotFound | RemoteException | ServerException | IoError | InvalidValue e) {
+                    e.printStackTrace();
+                }
+            }
         } catch (NotFound | RemoteException | ServerException | IoError | InvalidValue e) {
             e.printStackTrace();
-        }
-
-        // Modify MCA
-        for (DataRecord sampleMCA : MCA) {
-            try {
-                sampleMCA.setDataField("AvgSize", "500", user);
-            } catch (NotFound | RemoteException | ServerException | IoError | InvalidValue e) {
-                e.printStackTrace();
-            }
         }
 
         //call updateAvgSize
