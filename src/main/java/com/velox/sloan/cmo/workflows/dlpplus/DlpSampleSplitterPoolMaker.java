@@ -1040,7 +1040,9 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                         row.getCell(10).setCellValue("-1");
 
                         if ((row.getCell(1).getNumericCellValue() >= Double.parseDouble(minRowOfCurrentSample) &&
-                                row.getCell(1).getNumericCellValue() <= Double.parseDouble(maxRowOfCurrentSample))) {
+                                row.getCell(1).getNumericCellValue() <= Double.parseDouble(maxRowOfCurrentSample))
+                                && (row.getCell(2).getNumericCellValue() >= Double.parseDouble(minColOfCurrentSample) &&
+                                row.getCell(2).getNumericCellValue() <= Double.parseDouble(maxColOfCurrentSample))) {
                             row.getCell(0).setCellValue(sampleId);
                             if (usualControlLocation) {
                                 if (row.getCell(2).getNumericCellValue() == Double.valueOf("3") &&
