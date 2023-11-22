@@ -14,6 +14,8 @@ public class SampleQcResult {
     private final String TRY = "Try";
     private final String FAILED = "Failed";
     private String igoRecommendation;
+    private double calibratedConcentration;
+    private int sizeBp;
 
     public SampleQcResult( String sampleDescription, double quantity, double adapterPercentage, double fragmentsLargerThan1kb, boolean isUserLibrary){
         this.sampleDescription = sampleDescription;
@@ -23,6 +25,11 @@ public class SampleQcResult {
         this.percentfragmentsUpTo1kb = getPercentFragmentsUpTo1kb();
         this.isUserLibrary = isUserLibrary;
         this.igoRecommendation = getIgoRecommendationAnnotation();
+    }
+    public SampleQcResult(String sampleDescription, int sizeBp, double calibratedConcentration) {
+        this.sampleDescription = sampleDescription;
+        this.sizeBp = sizeBp;
+        this.calibratedConcentration = calibratedConcentration;
     }
 
     /**

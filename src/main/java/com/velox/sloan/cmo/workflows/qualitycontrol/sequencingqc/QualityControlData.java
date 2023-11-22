@@ -7,8 +7,11 @@ class QualityControlData {
     private double concentration;
     private double fractionVal;
     private String observation;
+    private double calibratedConcentration;
+    private double integratedArea;
+    private int sizeBp;
 
-    QualityControlData(String sampleDescription, int fromBp, int toBp, double concentration, double fractionVal, String observation){
+    QualityControlData(String sampleDescription, int fromBp, int toBp, double concentration, double fractionVal, String observation) {
         this.sampleDescription = sampleDescription;
         this.fromBp = fromBp;
         this.toBp = toBp;
@@ -16,8 +19,17 @@ class QualityControlData {
         this.fractionVal = fractionVal;
         this.observation = observation;
     }
+    QualityControlData(String sampleDescription, int fromBp, int toBp, double calibratedConcentration, double integratedArea, String observation, int sizeBp) {
+        this.sampleDescription = sampleDescription;
+        this.fromBp = fromBp;
+        this.toBp = toBp;
+        this.calibratedConcentration = calibratedConcentration;
+        this.integratedArea = integratedArea;
+        this.observation = observation;
+        this.sizeBp = sizeBp;
+    }
 
-    private String getSampleDescription() {
+    public String getSampleDescription() {
         return sampleDescription;
     }
 
@@ -73,6 +85,16 @@ class QualityControlData {
         this.observation = observation;
     }
 
+    public void setCalibratedConcentration(double calibratedConcentration) { this.calibratedConcentration = calibratedConcentration; }
+
+    public double getCalibratedConcentration() {return calibratedConcentration; }
+
+    public void setIntegratedArea(double integratedArea) { this.integratedArea = integratedArea; }
+    public double getIntegratedArea() {return integratedArea; }
+    public int getSizeBp() { return sizeBp; }
+
+    public void setSizeBp(int sizeBp) { this.sizeBp = sizeBp; }
+
     @Override
     public String toString() {
         return "QualityControlData{" +
@@ -81,7 +103,8 @@ class QualityControlData {
                 ", toBp=" + toBp +
                 ", concentration=" + concentration +
                 ", fractionVal=" + fractionVal +
-                ", observation='" + observation + '\'' +
+                ", observation='" + observation +
+                ", sizeBp=" + sizeBp + '\'' +
                 '}';
     }
 

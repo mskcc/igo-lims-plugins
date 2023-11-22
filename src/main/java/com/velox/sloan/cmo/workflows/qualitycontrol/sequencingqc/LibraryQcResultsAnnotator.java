@@ -41,6 +41,9 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
     private List<String> EXPECTED_TAPESTATION_HEADER_VALS = Arrays.asList("FileName", "WellId", "Sample Description", "From [bp]",
             "To [bp]", "Average Size [bp]", "Conc. [ng/�l]", "Region Molarity [nmol/l]", "% of Total");
 
+    private List<String> EXPECTED_GDNA_TAPESTATION_HEADER_VALS = Arrays.asList("FileName", "Well", "Sample Description", "Size [bp]",
+            "Calibrated Conc. [ng/µl]", "Assigned Conc. [ng/µl]", "% Integrated Area", "From [bp]", "To [bp]", "Peak Comment", "Observations");
+
     public LibraryQcResultsAnnotator() {
         setTaskToolbar(true);
         setLine1Text("Add QC");
@@ -79,6 +82,7 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
             }
             List<SampleQcResult> bioaResults = new ArrayList<>();
             List<SampleQcResult> tapeStationResults = new ArrayList<>();
+            List<SampleQcResult> gDNAtapeStationResults = new ArrayList<>();
             for (String file : files) {
                 logInfo(String.format("Reading Quality control data from file %s", file));
                 if (!isValidFileType(file)) {
@@ -90,8 +94,11 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
                     List<SampleQcResult> bioaData = new ArrayList<>(getBioAnalyzerData(fileData, file, samples));
                     bioaResults.addAll(bioaData);
                 } else if (isValidTapestationData(fileData, file)) {
-                    List<SampleQcResult> tapestationData = new ArrayList<>(getTapeStationData(fileData, file, samples));
+                    List<SampleQcResult> tapestationData = new ArrayList<>(getTapeStationData(fileData, file, samples, false));
                     tapeStationResults.addAll(tapestationData);
+                } else if (isValidGDNAData(fileData, file)) { // gDNA Tapestation
+                    List<SampleQcResult> gDNATapestationData = new ArrayList<>(getTapeStationData(fileData, file, samples, true));
+                    gDNAtapeStationResults.addAll(gDNATapestationData);
                 } else {
                     String errMsg = String.format("Cannot identify file %s as Bioanalyzer or Tapestation data. Please check the files again.", file);
                     clientCallback.displayError(errMsg);
@@ -150,12 +157,18 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
      * @param fileName
      * @return
      */
-    private List<SampleQcResult> getTapeStationData(List<String> fileData, String fileName, List<DataRecord> attachedSamples) throws ServerException, RemoteException {
+    private List<SampleQcResult> getTapeStationData(List<String> fileData, String fileName, List<DataRecord> attachedSamples, boolean isGDNA) throws ServerException, RemoteException {
         List<SampleQcResult> qcResults = new ArrayList<>();
         try {
             Map<String, Integer> headerValueMap = utils.getCsvHeaderValueMap(fileData);
             TapeStationResultParser parser = new TapeStationResultParser(fileData, fileName, headerValueMap, clientCallback, pluginLogger, user);
-            qcResults = parser.parseData(attachedSamples);
+            if (!isGDNA) {
+                qcResults = parser.parseData(attachedSamples, false);
+            }
+            else {
+                qcResults = parser.parseData(attachedSamples, true);
+            }
+
         } catch (Exception e) {
             String errMsg = String.format("%s Error while parsing tapestation data from uploaded file %s .\n%s", ExceptionUtils.getRootCauseMessage(e), fileName, ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
@@ -235,7 +248,30 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
                 return false;
             }
         } catch (Exception e) {
-            String errMsg = String.format("Error while parsing tapestation data from uploaded file %s .\n%s", file, ExceptionUtils.getStackTrace(e));
+            String errMsg = String.format("Error while parsing bioanalyzer data from uploaded file %s .\n%s", file, ExceptionUtils.getStackTrace(e));
+            clientCallback.displayError(errMsg);
+            logError(errMsg);
+            return false;
+        }
+        return true;
+    }
+
+    public boolean isValidGDNAData(List<String> fileData, String file) throws ServerException, RemoteException {
+        try {
+            if (fileData.isEmpty() || !utils.csvFileContainsRequiredHeaders(fileData, EXPECTED_GDNA_TAPESTATION_HEADER_VALS)) {
+                String errMsg = String.format("Uploaded file %s is missing valid header values. Expected header values are %s.", file, EXPECTED_GDNA_TAPESTATION_HEADER_VALS);
+                clientCallback.displayError(errMsg);
+                logError(errMsg);
+                return false;
+            }
+            if (!utils.csvFileHasData(fileData)) {
+                String errMsg = String.format("Uploaded file %s does not have parsable data rows.", file);
+                clientCallback.displayError(errMsg);
+                logError(errMsg);
+                return false;
+            }
+        } catch (Exception e) {
+            String errMsg = String.format("Error while parsing gDNA tapestation data from uploaded file %s .\n%s", file, ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return false;

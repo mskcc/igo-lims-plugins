@@ -72,6 +72,49 @@ class TapeStationResultParser extends ManagerBase {
         return groupedData;
     }
 
+    private Map<String, List<QualityControlData>> groupGDNAQualityControlDataBySampleId(List<String> gDNATapeStationFileData) throws ServerException, RemoteException {
+        Map<String, List<QualityControlData>> groupedData = new HashMap<>();
+        String SAMPLE_DESCRIPTION = "Sample Description";
+        String TO_BP = "To [bp]";
+        String SIZE_BP = "Size [bp]";
+        String CALIBRATED_CONCENTRATION = "Calibrated Conc. [ng/µl]";
+        String ASSIGNED_CONCENTRATION = "Assigned Conc. [ng/µl]";
+        String PERCENT_INTEGRATED_AREA = "% Integrated Area";
+        String OBSERVATIONS = "Observations";
+        String PEAK_COMMENT = "Peak Comment";
+        try {
+            for (int i = 1; i < gDNATapeStationFileData.size(); i++) {
+                String row = utils.removeThousandSeparator(gDNATapeStationFileData.get(i));
+                List<String> rowDataValues = Arrays.asList(row.split(","));
+                logger.logInfo(String.format("gDNA tapestation data from file %s.\n%s", fileName, rowDataValues.toString()));
+                String observation = rowDataValues.get(headerMapValues.get(OBSERVATIONS));
+                if (observation.isBlank() || observation.isEmpty()) {
+                    String sampleId = rowDataValues.get(headerMapValues.get(SAMPLE_DESCRIPTION));
+                    int fromBp = Integer.parseInt(rowDataValues.get(headerMapValues.get(FROM_BP)));
+                    int toBp = Integer.parseInt(rowDataValues.get(headerMapValues.get(TO_BP)));
+                    String sizeBp = rowDataValues.get(headerMapValues.get(SIZE_BP));
+                    if (sizeBp.trim().startsWith(">")) {
+                        sizeBp = sizeBp.substring(1);
+                    }
+                    int sizeBpDigit = Integer.parseInt(sizeBp);
+                    double calibratedConcentration = Double.parseDouble(rowDataValues.get(headerMapValues.get(CALIBRATED_CONCENTRATION)));
+                    double assignedConcentration = Double.parseDouble(rowDataValues.get(headerMapValues.get(ASSIGNED_CONCENTRATION)));
+                    double integratedArea = Double.parseDouble(rowDataValues.get(headerMapValues.get(PERCENT_INTEGRATED_AREA)));
+                    QualityControlData QualityControlData = new QualityControlData(sampleId, fromBp, toBp, calibratedConcentration, integratedArea, observation, sizeBpDigit);
+                    groupedData.putIfAbsent(sampleId, new ArrayList<>());
+                    groupedData.get(sampleId).add(QualityControlData);
+                }
+            }
+        } catch (Exception e) {
+            String errMsg = String.format("Error while grouping the data by 'SampleId'.\n%s", ExceptionUtils.getStackTrace(e));
+            clientCallback.displayInfo(errMsg);
+            logger.logError(errMsg);
+            return groupedData;
+        }
+        return groupedData;
+    }
+
+
 
     /**
      * Method to sort Tapestation objects in Ascending order by fromBp property values.
@@ -238,8 +281,8 @@ class TapeStationResultParser extends ManagerBase {
                 if (sample != null) {
                     double quantity = utils.getSampleQuantity(sample, clientCallback, logger, user);
                     double sumConcTo1Kb = getConcentrationSumForUpto1kb(qualityControlData);
-                    double adapterPercentage = calculateAdapterPercentage(qualityControlData, sumConcTo1Kb);
-                    double percentFragmentsUpto1kb = calculatePercentageFragmentsUpto1kb(qualityControlData, sumConcTo1Kb);
+                    double adapterPercentage = calculateAdapterPercentage(qualityControlData, sumConcTo1Kb); //not required
+                    double percentFragmentsUpto1kb = calculatePercentageFragmentsUpto1kb(qualityControlData, sumConcTo1Kb); //not required
 //                    double percentFragmentLargerThan1Kb = 0.0;
 //                    if (qualityControlData.size()>2){
                     double sumConcGreaterThan1Kb = getConcentrationSumForGreaterThan1kb(qualityControlData);
@@ -258,7 +301,7 @@ class TapeStationResultParser extends ManagerBase {
                     qcResults.add(qcResult);
                 }
             }
-        }catch (Exception e){
+        } catch (Exception e){
             String errMsg = String.format("%s -> while getting tapeStation Data.\n%s", ExceptionUtils.getRootCauseMessage(e), ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logger.logError(errMsg);
@@ -272,13 +315,25 @@ class TapeStationResultParser extends ManagerBase {
      * @return
      * @throws ServerException
      */
-    List<SampleQcResult> parseData(List<DataRecord> attachedSamples) throws ServerException, RemoteException {
+    List<SampleQcResult> parseData(List<DataRecord> attachedSamples, boolean isGDNA) throws ServerException, RemoteException {
         List<SampleQcResult> qcResults = new ArrayList<>();
         try {
-            Map<String, List<QualityControlData>> groupedData = groupQualityControlDataBySampleId(this.fileData);
-            qcResults = getQualityControlData(groupedData, attachedSamples);
+            if (!isGDNA) {
+                Map<String, List<QualityControlData>> groupedData = groupQualityControlDataBySampleId(this.fileData);
+                qcResults = getQualityControlData(groupedData, attachedSamples);
+            }
+            else {
+                Map<String, List<QualityControlData>> groupedData = groupGDNAQualityControlDataBySampleId(this.fileData);
+                for (Map.Entry<String, List<QualityControlData>> entry : groupedData.entrySet()) {
+                    String sampleId = entry.getValue().get(0).getSampleDescription();
+                    int sizeBp = entry.getValue().get(0).getSizeBp();
+                    double calibratedConc = entry.getValue().get(0).getCalibratedConcentration();
+                    SampleQcResult qcResult = new SampleQcResult(sampleId, sizeBp, calibratedConc);
+                    qcResults.add(qcResult);
+                }
+            }
             logger.logInfo(String.format("Parsed SampleQcResults: %s", qcResults.toString()));
-        }catch (Exception e){
+        } catch (Exception e) {
             String errMsg = String.format("%s -> while parsing Tapestation data.\n%s", ExceptionUtils.getRootCauseMessage(e), ExceptionUtils.getStackTrace(e));
             clientCallback.displayInfo(errMsg);
             logger.logError(errMsg);
