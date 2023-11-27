@@ -29,12 +29,15 @@ public class FixAvgLibSizeTest {
     DataRecordManager dataRecordManager;
     DataMgmtServer dataMgmtServer;
     VeloxConnection connection = null;
+    FixAvgLibSize fixAvgLibSize = new FixAvgLibSize();
 
     @Before
     public void setUp() {
         try {
+
             //FixAvgLibSize fixAvgLibSize = new FixAvgLibSize();
             connection = new VeloxConnection("/Users/desmondlambe/igo-lims-plugins/Connection.txt");
+
             System.out.println("Connection start");
             connection.open();
             user = connection.getUser();
@@ -58,6 +61,7 @@ public class FixAvgLibSizeTest {
     @Test
     public void testUpdateAvgSize() {
         try {
+<<<<<<< HEAD
             // Create sample DataRecords for testing
             List<DataRecord> QCDatum;
             List<DataRecord> MCA;
@@ -74,12 +78,28 @@ public class FixAvgLibSizeTest {
 //            }
             QCDatum = dataRecordManager.queryDataRecords("QCDatum", "SampleId", testSamples, user);
             MCA = dataRecordManager.queryDataRecords("MolarConcentrationAssignment", "SampleId", testSamples, user);
+=======
+            List<DataRecord> QCDatum = fixAvgLibSize.getQcRecordsForSamples(testSamples, "QCDatum");
+            List<DataRecord> MCA = fixAvgLibSize.getQcRecordsForSamples(testSamples, "MolarConcentrationAssignment");
+>>>>>>> d9c7ba660305688a465fb8524fdd3eaa6de370c5
 
 
             // Modify MCA
             for (DataRecord sampleMCA : MCA) {
+<<<<<<< HEAD
                 sampleMCA.setDataField("AvgSize", "500", user);
             }
+=======
+                try {
+                    sampleMCA.setDataField("AvgSize", "500", user);
+                } catch (NotFound | RemoteException | ServerException | IoError | InvalidValue e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (NotFound | RemoteException | ServerException | IoError | InvalidValue e) {
+            e.printStackTrace();
+        }
+>>>>>>> d9c7ba660305688a465fb8524fdd3eaa6de370c5
 
             //call updateAvgSize
             fixAvgLibSize.updateAvgSize(QCDatum, MCA);
