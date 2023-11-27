@@ -638,7 +638,7 @@ public class IgoLimsPluginUtils {
 
     /**
      * Method to remove 1000 separator from CSV files. Such values in CSV files are enclosed with double quotes ("123,100")
-     * This method can be used to fined such values and remove comma (",") to split the lines more efficiently and
+     * This method can be used to find such values and remove comma (",") to split the lines more efficiently and
      * extract column values.
      *
      * @param line
