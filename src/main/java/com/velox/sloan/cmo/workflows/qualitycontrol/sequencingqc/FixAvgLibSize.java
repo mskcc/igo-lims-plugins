@@ -11,8 +11,11 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import javax.xml.crypto.Data;
+import com.velox.api.user.User;
+//import javax.xml.crypto.Data;
 import java.rmi.RemoteException;
+import java.util.List;
+import java.util.Arrays;
 import java.util.*;
 
 /**
@@ -21,6 +24,8 @@ import java.util.*;
  * step of the Lib/Pool QC workflow
  */
 public class FixAvgLibSize extends DefaultGenericPlugin {
+    User user;
+
 
     public FixAvgLibSize() {
         setTaskSubmit(true);
@@ -65,6 +70,8 @@ public class FixAvgLibSize extends DefaultGenericPlugin {
     public List<DataRecord> getQcRecordsForSamples(List<Object> sampleIdList, String table) {
         List<DataRecord> qcRecords = new ArrayList<>();
         try {
+
+
             qcRecords = dataRecordManager.queryDataRecords(table, "SampleId", sampleIdList, user);
         } catch (NotFound notFound) {
             logError(String.format("NotFound Exception while getting QC records for attached Samples:\n%s", ExceptionUtils.getStackTrace(notFound)));
