@@ -31,7 +31,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
     private final String QC_TYPE_FOR_RIN = "bioanalyzer rna pico, bioanalyzer rna nano, tapestation rna screentape hisense sample table, tapestation rna screentape sample table";
     private final String QC_TYPE_FOR_A260280 = "nanodrop nano";
     private final String QC_TYPE_FOR_A260230 = "nanodrop nano";
-    private final String QC_TYPE_FOR_CALBRATED_CONCENTRATION = "quant it";
+    private final String QC_TYPE_FOR_CALBRATED_CONCENTRATION = "quant-it";
     private final String QC_TYPE_FOR_AVERAGE_BP_SIZE = "TapeStation Compact Peak Table, TapeStation Compact Pico Region Table, " +
             "TapeStation D1000 Compact Region Table, TapeStation D1000 HiSense Compact Region Table, Bioanalyzer DNA High Sens Region Table";
     private final String TAPESTATION_QC_FOR_AVERAGE_BP_SIZE = "TapeStation Compact Peak Table, TapeStation Compact Pico Region Table, " +
