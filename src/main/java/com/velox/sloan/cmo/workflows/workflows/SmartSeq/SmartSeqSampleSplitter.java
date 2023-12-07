@@ -24,8 +24,10 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
     public static final char[] TO_APPEND_1 = {'A', 'C', 'E', 'G', 'I', 'K', 'M', 'O'};
     public static final char[] TO_APPEND_2 = {'B', 'D', 'F', 'H', 'J', 'L', 'N', 'P'};
     public SmartSeqSampleSplitter () {
-        setTaskSubmit(true);
-        setOrder(PluginOrder.MIDDLE.getOrder());
+//        setTaskSubmit(true);
+//        setOrder(PluginOrder.LAST.getOrder());
+        setTaskEntry(true);
+        setOrder(PluginOrder.EARLY.getOrder());
     }
     @Override
     public boolean shouldRun() throws RemoteException {
@@ -33,7 +35,7 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                 && !activeTask.getTask().getTaskOptions().containsKey("_SMARTSEQ SAMPLE SPLITTED");
     }
 
-    public PluginResult run () throws RemoteException, com.velox.api.util.ServerException {
+    public PluginResult run() throws RemoteException, com.velox.api.util.ServerException {
         try {
             List<DataRecord> samplesAttachedToTask = activeTask.getAttachedDataRecords("Sample", user);
 
@@ -53,7 +55,10 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                 String species = sample.getStringVal("Species", user);
                 String sampleOrigin = sample.getStringVal("SampleOrigin", user);
                 String preservation = sample.getStringVal("Preservation", user);
-                String plateId = sample.getParentsOfType("Plate", user).get(0).getStringVal("PlateId", user);
+                String plateId = "";
+                if (sample.getParentsOfType("Plate", user).size() > 0) {
+                    plateId = sample.getParentsOfType("Plate", user).get(0).getStringVal("PlateId", user);
+                }
 
                 int idIndex = 1;
 
@@ -75,7 +80,7 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         values.put("Preservation", preservation);
                         DataRecord newRecord = dataRecordManager.addDataRecord("Sample", user);
                         newRecord.setFields(values, user);
-                        sample.addChild("Sample", values, user);
+                        //sample.addChild("Sample", values, user);
                         toGetAttached.add(newRecord.getRecordId());
                     }
                 }
@@ -97,7 +102,7 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         values.put("Preservation", preservation);
                         DataRecord newRecord = dataRecordManager.addDataRecord("Sample", user);
                         newRecord.setFields(values, user);
-                        sample.addChild("Sample", values, user);
+                        //sample.addChild("Sample", values, user);
                         toGetAttached.add(newRecord.getRecordId());
                     }
                 }
@@ -119,7 +124,7 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         values.put("Preservation", preservation);
                         DataRecord newRecord = dataRecordManager.addDataRecord("Sample", user);
                         newRecord.setFields(values, user);
-                        sample.addChild("Sample", values, user);
+                        //sample.addChild("Sample", values, user);
                         toGetAttached.add(newRecord.getRecordId());
                     }
                 }
@@ -141,7 +146,7 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         values.put("Preservation", preservation);
                         DataRecord newRecord = dataRecordManager.addDataRecord("Sample", user);
                         newRecord.setFields(values, user);
-                        sample.addChild("Sample", values, user);
+                        //sample.addChild("Sample", values, user);
                         toGetAttached.add(newRecord.getRecordId());
                     }
                 }
