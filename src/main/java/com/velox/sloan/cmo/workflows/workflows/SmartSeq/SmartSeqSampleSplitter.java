@@ -24,10 +24,10 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
     public static final char[] TO_APPEND_1 = {'A', 'C', 'E', 'G', 'I', 'K', 'M', 'O'};
     public static final char[] TO_APPEND_2 = {'B', 'D', 'F', 'H', 'J', 'L', 'N', 'P'};
     public SmartSeqSampleSplitter () {
-//        setTaskSubmit(true);
-//        setOrder(PluginOrder.LAST.getOrder());
-        setTaskEntry(true);
-        setOrder(PluginOrder.EARLY.getOrder());
+        setTaskSubmit(true);
+        setOrder(PluginOrder.LAST.getOrder());
+//        setTaskEntry(true);
+//        setOrder(PluginOrder.EARLY.getOrder());
     }
     @Override
     public boolean shouldRun() throws RemoteException {
@@ -40,7 +40,7 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
             List<DataRecord> samplesAttachedToTask = activeTask.getAttachedDataRecords("Sample", user);
 
             List<Long> attachedSamples = new LinkedList<>();
-            List<Long> toGetAttached = new LinkedList<>();
+            List<DataRecord> toGetAttached = new LinkedList<>();
             for (DataRecord sample : samplesAttachedToTask) {
                 //attachedSamples.add(sample.getRecordId());
                 //List<DataRecord> newSamples = new LinkedList<>();
@@ -80,8 +80,8 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         values.put("Preservation", preservation);
                         DataRecord newRecord = dataRecordManager.addDataRecord("Sample", user);
                         newRecord.setFields(values, user);
-                        //sample.addChild("Sample", values, user);
-                        toGetAttached.add(newRecord.getRecordId());
+                        sample.addChild(newRecord, user);
+                        toGetAttached.add(newRecord);
                     }
                 }
                 for (int i = 2; i <= 24; i+=2) {
@@ -102,8 +102,8 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         values.put("Preservation", preservation);
                         DataRecord newRecord = dataRecordManager.addDataRecord("Sample", user);
                         newRecord.setFields(values, user);
-                        //sample.addChild("Sample", values, user);
-                        toGetAttached.add(newRecord.getRecordId());
+                        sample.addChild(newRecord, user);
+                        toGetAttached.add(newRecord);
                     }
                 }
                 for (int i = 1; i <= 23; i+=2) {
@@ -124,8 +124,8 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         values.put("Preservation", preservation);
                         DataRecord newRecord = dataRecordManager.addDataRecord("Sample", user);
                         newRecord.setFields(values, user);
-                        //sample.addChild("Sample", values, user);
-                        toGetAttached.add(newRecord.getRecordId());
+                        sample.addChild(newRecord, user);
+                        toGetAttached.add(newRecord);
                     }
                 }
                 for (int i = 2; i <= 24; i+=2) {
@@ -146,16 +146,20 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                         values.put("Preservation", preservation);
                         DataRecord newRecord = dataRecordManager.addDataRecord("Sample", user);
                         newRecord.setFields(values, user);
-                        //sample.addChild("Sample", values, user);
-                        toGetAttached.add(newRecord.getRecordId());
+                        sample.addChild(newRecord, user);
+                        toGetAttached.add(newRecord);
                     }
                 }
-                this.activeTask.addAttachedRecordIdList(toGetAttached);
+                this.activeTask.removeTaskAttachment(sample.getRecordId());
+                logInfo("Removed the attached sample!!");
+                this.activeTask.addAttachedDataRecords(toGetAttached);
                 logInfo("Attached new splitted samples");
                 sample.setDataField("ExemplarSampleStatus", "Completed - Smart-Seq cDNA Preparation", user);
                 logInfo("Original sample status updated to: Completed - Smart-Seq cDNA Preparation");
-                this.activeTask.removeTaskAttachment(sample.getRecordId());
-                logInfo("Removed the attached sample!!");
+                activeWorkflow.getNext(activeTask).addAttachedDataRecords(toGetAttached);
+                logInfo("Add new attachments to the next step!");
+                //this.activeTask.removeTaskAttachment(sample.getRecordId());
+
             }
 
 
