@@ -18,6 +18,12 @@ import java.util.Map;
 
 /**
  * This plugin is designed to split each SMART Seq sample to 384 samples.
+ * Four quarters of samples are getting generated. Following is the logic for appending a suffix to sample names:
+ * Q1: odd number _ 'A', 'C', 'E', 'G', 'I', 'K', 'M', 'O' (sequentially)
+ * Q2 even number _ 'A', 'C', 'E', 'G', 'I', 'K', 'M', 'O' (sequentially)
+ * Q3: odd number _ 'B', 'D', 'F', 'H', 'J', 'L', 'N', 'P' (sequentially)
+ * Q4: even number _ 'B', 'D', 'F', 'H', 'J', 'L', 'N', 'P' (sequentially)
+ * Original request link: https://mskcc.teamwork.com/app/tasks/28451141
  * @author Fahimeh Mirhaj
  * */
 public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
@@ -42,8 +48,6 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
             List<Long> attachedSamples = new LinkedList<>();
             List<DataRecord> toGetAttached = new LinkedList<>();
             for (DataRecord sample : samplesAttachedToTask) {
-                //attachedSamples.add(sample.getRecordId());
-                //List<DataRecord> newSamples = new LinkedList<>();
                 logInfo("Removed sample with record id: " + sample.getRecordId() + "\n");
 
                 String sampleId = sample.getStringVal("SampleId", user);
