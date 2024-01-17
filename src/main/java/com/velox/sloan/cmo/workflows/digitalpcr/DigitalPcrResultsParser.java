@@ -24,9 +24,11 @@ import java.util.*;
 public class DigitalPcrResultsParser extends DefaultGenericPlugin {
 
     private final String HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME = "Mouse_Human_CNV_PTGER2";
-    private final List<String> expectedRawResultsHeaders = Arrays.asList("Well", "ExptType", "Experiment", "Sample", "TargetType", "Target",
-            "Status", "Concentration", "Supermix", "CopiesPer20uLWell", "TotalConfMax", "TotalConfMin", "PoissonConfMax", "PoissonConfMin",
-            "Positives", "Negatives", "Ch1+Ch2+", "Ch1+Ch2-", "Ch1-Ch2+", "Ch1-Ch2-", "Linkage", "AcceptedDroplets");
+
+    private final List<String> expectedRawResultsHeaders = Arrays.asList("Well", "Sample description 1", "Target", "Conc(copies/µL)",
+            "Status", "Experiment", "TargetType", "Supermix", "Copies/20µLWell", "TotalConfMax", "TotalConfMin", "PoissonConfMax",
+            "PoissonConfMin", "AcceptedDroplets", "Positives", "Negatives", "Copies/uL linked molecules", "Ch1+Ch2+", "Ch1+Ch2-",
+            "Ch1-Ch2+", "Ch1-Ch2-");
     IgoLimsPluginUtils igoUtils = new IgoLimsPluginUtils();
     DdPcrResultsProcessor resultsProcessor = new DdPcrResultsProcessor();
 
@@ -69,6 +71,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 Map<String, Integer> headerValueMap = igoUtils.getCsvHeaderValueMap(fileData);
                 List<List<String>> channel1Data = getChannel1Data(fileData, headerValueMap);
                 List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap);
+                //List<List<String>> channelsData = getChannelData(fileData, headerValueMap, channel);
                 List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap);
                 logInfo("Flattened data");
                 logInfo(channel1Channe2CombinedData.toString());
@@ -149,6 +152,10 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
         }
     }
 
+
+    private List<List<String>> getChannelData(List<String> fileData, Map<String, Integer> headerValueMap, String channel) {
+        return resultsProcessor.readChannelData(fileData, headerValueMap, channel);
+    }
     /**
      * Get the data related to channel1 in the raw data under "TargetType" column in ddPCR results.
      *

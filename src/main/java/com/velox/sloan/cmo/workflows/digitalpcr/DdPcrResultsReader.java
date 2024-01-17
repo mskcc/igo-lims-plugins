@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface DdPcrResultsReader {
+    List<List<String>> readChannelData(List<String> fileData, Map<String, Integer> headerValueMap, String channel);
     List<List<String>> readChannel1Data(List<String> fileData, Map<String, Integer> headerValueMap);
 
     List<List<String>> readChannel2Data(List<String> fileData, Map<String, Integer> headerValueMap);

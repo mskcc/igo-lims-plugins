@@ -5,6 +5,17 @@ import java.util.*;
 public class DdPcrResultsProcessor implements DdPcrResultsReader {
 
     @Override
+    public List<List<String>> readChannelData(List<String> fileData, Map<String, Integer> headerValueMap, String channel) {
+        List<List<String>> channel1RawData = new ArrayList<>();
+        for (String row : fileData) {
+            List<String> valuesInRow = Arrays.asList(row.split(","));
+            if (valuesInRow.get(headerValueMap.get("TargetType")).contains(channel)) {
+                channel1RawData.add(valuesInRow);
+            }
+        }
+        return channel1RawData;
+    }
+    @Override
     public List<List<String>> readChannel1Data(List<String> fileData, Map<String, Integer> headerValueMap) {
         List<List<String>> channel1RawData = new ArrayList<>();
         for (String row : fileData) {
