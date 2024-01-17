@@ -996,7 +996,6 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             for (DataRecord sample : samples) {
                 rowCount = 0;
                 String sampleId = sample.getStringVal("SampleId", user);
-                logInfo("sample id is: " + sampleId);
                 String sampleName = sample.getStringVal("OtherSampleId", user);
                 int selectedPositiveControl = 0;
                 String[] positiveLocations = {};
@@ -1045,7 +1044,6 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                                 && (row.getCell(2).getNumericCellValue() >= Double.parseDouble(minColOfCurrentSample) &&
                                 row.getCell(2).getNumericCellValue() <= Double.parseDouble(maxColOfCurrentSample))) {
                             row.getCell(0).setCellValue(sampleId);
-                            logInfo("Setting sample is to (1) :"  + sampleId);
                             if (usualControlLocation) {
                                 if (row.getCell(2).getNumericCellValue() == Double.valueOf("3") &&
                                         row.getCell(15).getStringCellValue().equals("~")) { // negative control
@@ -1081,7 +1079,6 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                                 row.getCell(2).getNumericCellValue() <= Double.parseDouble(maxColOfCurrentSample))) {
 
                             row.getCell(0).setCellValue(sampleId);
-                            logInfo("Setting sample is to (2) :"  + sampleId);
                             if (!controlExperiment) {
                                 row.getCell(15).setCellValue(sampleName);
                             } else {
