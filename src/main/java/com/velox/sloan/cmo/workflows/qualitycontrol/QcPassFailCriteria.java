@@ -18,11 +18,13 @@ import java.io.IOException;
 import java.rmi.RemoteException;
 import com.velox.api.util.ServerException;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import javax.xml.crypto.Data;
+import java.util.*;
+import java.util.regex.Pattern;
 
 public class QcPassFailCriteria extends DefaultGenericPlugin {
+    private final static String IGO_ID_WITHOUT_ALPHABETS_PATTERN = "^[0-9]+_[0-9]+.*$";  // sample id without alphabets
+    private final static String IGO_ID_WITH_ALPHABETS_PATTERN = "^[0-9]+_[A-Z]+_[0-9]+.*$";  // sample id without alphabets
     public boolean isRNAQcReportStep = false;
     public boolean isDNAQcReportStep = false;
     public QcPassFailCriteria() {
@@ -45,18 +47,41 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
             List<DataRecord> attachedSamples = this.activeTask.getAttachedDataRecords("Sample", this.user);
             List<DataRecord> attachedQcDNAReports = this.activeTask.getAttachedDataRecords("QcReportDna", this.user);
             List<DataRecord> attachedQcRNAReports = this.activeTask.getAttachedDataRecords("QcReportRna", this.user);
-            List<Object> sampleObjects = new LinkedList<>();
-            for (DataRecord sample : attachedSamples) {
-                sampleObjects.add(sample);
-            }
+            List<Object> sampleObjects = new LinkedList<>(attachedSamples);
             List<DataRecord> qcReports = getQcReportRecordsForSamples(sampleObjects, isDNAQcReportStep);
+            Map<String, List<DataRecord>> requestIdToSampleMap = new HashMap<>();
+            Map<String, Boolean> requestToAllSamplesQcStatus = new HashMap<>();
+
+            for (DataRecord sample : attachedSamples) {
+                String requestId = getRequestId(sample.getStringVal("SampleId", user));
+                if(!requestIdToSampleMap.containsKey(requestId)) {
+                    requestIdToSampleMap.put(requestId, new LinkedList<>());
+                }
+                requestIdToSampleMap.get(requestId).add(sample);
+            }
+
+            for (Map.Entry<String, List<DataRecord>> entry : requestIdToSampleMap.entrySet()) {
+                boolean currentRequestSamplesQcStatus = true;
+                List<Object> entryValueObjects = new LinkedList<>(entry.getValue());
+                List<DataRecord> qcRecs = getQcRecordsForSamples(entryValueObjects);
+                for (DataRecord qcRecords : qcRecs) {
+                    if(!qcRecords.getBooleanVal("QCStatus", user)) {
+                        currentRequestSamplesQcStatus = false;
+                        break;
+                    }
+                }
+                requestToAllSamplesQcStatus.put(entry.getKey(), currentRequestSamplesQcStatus);
+            }
+
+
+
             for (DataRecord sample : attachedSamples) {
                 String recipe = sample.getStringVal("Recipe", user);
                 int mass = Integer.parseInt(sample.getStringVal("TotalMass", user));
                 String igoId = sample.getStringVal("SampleId", user);
                 String preservation = sample.getStringVal("Preservation", user);
                 String sampleType = sample.getStringVal("ExemplarSampleType", user);
-
+                String requestId = getRequestId(igoId);
 
                 if (recipe.toLowerCase().equals("ampliconseq")) {
                     if (isDNAQcReportStep) {
@@ -117,7 +142,7 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Passed", user);
-                                    if (true) { // all samples passed
+                                    if (requestToAllSamplesQcStatus.get(requestId)) { // all samples passed
                                         qcReport.setDataField("InvestigatorDecision", "Already moved forward by IGO", user);
                                     }
                                 }
@@ -144,7 +169,7 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Passed", user);
-                                    if (true) { // all samples passed
+                                    if (requestToAllSamplesQcStatus.get(requestId)) { // all samples passed
                                         qcReport.setDataField("InvestigatorDecision", "Already moved forward by IGO", user);
                                     }
                                 }
@@ -171,7 +196,7 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Passed", user);
-                                    if (true) { // all samples passed
+                                    if (requestToAllSamplesQcStatus.get(requestId)) { // all samples passed
                                         qcReport.setDataField("InvestigatorDecision", "Already moved forward by IGO", user);
                                     }
                                 }
@@ -199,7 +224,6 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
             }
         } catch (NotFound | ServerException | IoError | InvalidValue | RemoteException e) {
             String errMsg = String.format("Remote Exception while QC report generation:\n%s", ExceptionUtils.getStackTrace(e));
-            //clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
         }
@@ -226,5 +250,52 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
             logError(String.format("RemoteException while getting QC report records for attached Samples:\n%s", ExceptionUtils.getStackTrace(e)));
         }
         return qcReportRecords;
+    }
+
+    /**
+     * get QCDatum DataRecords for a sample.
+     *
+     * @param sampleIdList
+     * @return List<DataRecord>
+     * @throws RemoteException
+     * @throws IoError
+     * @throws NotFound
+     * @throws ServerException
+     */
+    private List<DataRecord> getQcRecordsForSamples(List<Object> sampleIdList) {
+        List<DataRecord> qcRecords = new ArrayList<>();
+        try {
+            qcRecords = dataRecordManager.queryDataRecords("QCDatum", "SampleId", sampleIdList, user);
+        } catch (NotFound notFound) {
+            logError(String.format("NotFound Exception while getting QC records for attached Samples:\n%s", ExceptionUtils.getStackTrace(notFound)));
+        } catch (IoError ioError) {
+            logError(String.format("IoError Exception while getting QC records for attached Samples:\n%s", ExceptionUtils.getStackTrace(ioError)));
+        } catch (ServerException e) {
+            logError(String.format("ServerException while getting QC records for attached Samples:\n%s", ExceptionUtils.getStackTrace(e)));
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException while getting QC records for attached Samples:\n%s", ExceptionUtils.getStackTrace(e)));
+        }
+        return qcRecords;
+    }
+
+    /**
+     * Method to get base Sample ID when aliquot annotation is present.
+     * Example: for sample id 012345_1_1_2, base sample id is 012345
+     * Example2: for sample id 012345_B_1_1_2, base sample id is 012345_B
+     * @param sampleId
+     * @return
+     */
+    public static String getRequestId(String sampleId){
+        Pattern alphabetPattern = Pattern.compile(IGO_ID_WITH_ALPHABETS_PATTERN);
+        Pattern withoutAlphabetPattern = Pattern.compile(IGO_ID_WITHOUT_ALPHABETS_PATTERN);
+        if (alphabetPattern.matcher(sampleId).matches()){
+            String[] sampleIdValues =  sampleId.split("_");
+            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,2));
+        }
+        if(withoutAlphabetPattern.matcher(sampleId).matches()){
+            String[] sampleIdValues =  sampleId.split("_");
+            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,1));
+        }
+        return sampleId;
     }
 }
