@@ -28,8 +28,8 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
     public boolean isRNAQcReportStep = false;
     public boolean isDNAQcReportStep = false;
     public QcPassFailCriteria() {
-        setTaskEntry(true);
-        setOrder(PluginOrder.LAST.getOrder());
+        setTaskSubmit(true);
+        setOrder(PluginOrder.FIRST.getOrder());
     }
 
     public boolean shouldRun() throws RemoteException {
@@ -38,64 +38,79 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
     }
     public PluginResult run() throws RemoteException {
         try {
-            if (this.activeTask.getTask().getTaskName().contains("Generate QC Report DNA")) {
+            if (this.activeTask.getTask().getTaskName().trim().equalsIgnoreCase("Generate QC report for DNA")) {
                 this.isDNAQcReportStep = true;
+                logInfo("It's a DNA QC Report step!!");
             }
-            if (this.activeTask.getTask().getTaskName().contains("Generate QC Report RNA")) {
+            if (this.activeTask.getTask().getTaskName().trim().equalsIgnoreCase("Generate QC report for RNA")) {
                 this.isRNAQcReportStep = true;
+                logInfo("It's a RNA QC Report step!!");
             }
             List<DataRecord> attachedSamples = this.activeTask.getAttachedDataRecords("Sample", this.user);
-            List<DataRecord> attachedQcDNAReports = this.activeTask.getAttachedDataRecords("QcReportDna", this.user);
+            List<DataRecord>  attachedQcDNAReports = this.activeTask.getAttachedDataRecords("QcReportDna", this.user);
             List<DataRecord> attachedQcRNAReports = this.activeTask.getAttachedDataRecords("QcReportRna", this.user);
             List<Object> sampleObjects = new LinkedList<>(attachedSamples);
-            List<DataRecord> qcReports = getQcReportRecordsForSamples(sampleObjects, isDNAQcReportStep);
-            Map<String, List<DataRecord>> requestIdToSampleMap = new HashMap<>();
+            List<DataRecord> qcReports = new LinkedList<>();//getQcReportRecordsForSamples(sampleObjects, isDNAQcReportStep);
+
+            Map<String, List<Object>> requestIdToSampleMap = new HashMap<>();
             Map<String, Boolean> requestToAllSamplesQcStatus = new HashMap<>();
 
             for (DataRecord sample : attachedSamples) {
-                String requestId = getRequestId(sample.getStringVal("SampleId", user));
+                String sampleId = sample.getStringVal("SampleId", user);
+                String requestId = getRequestId(sampleId);
+                logInfo("Retrieved request id  for sample: " + sample.getStringVal("SampleId", user) + " = " + requestId);
                 if(!requestIdToSampleMap.containsKey(requestId)) {
                     requestIdToSampleMap.put(requestId, new LinkedList<>());
                 }
-                requestIdToSampleMap.get(requestId).add(sample);
+                requestIdToSampleMap.get(requestId).add(sampleId);
+                logInfo("Added " + sampleId + " for request " + requestId + " to the request to samples map");
             }
 
-            for (Map.Entry<String, List<DataRecord>> entry : requestIdToSampleMap.entrySet()) {
+            for (Map.Entry<String, List<Object>> entry : requestIdToSampleMap.entrySet()) {
                 boolean currentRequestSamplesQcStatus = true;
-                List<Object> entryValueObjects = new LinkedList<>(entry.getValue());
-                List<DataRecord> qcRecs = getQcRecordsForSamples(entryValueObjects);
+                //List<Object> entryValueObjects = new LinkedList<>(entry.getValue());
+                List<DataRecord> qcRecs = getQcRecordsForSamples(entry.getValue());
                 for (DataRecord qcRecords : qcRecs) {
-                    if(!qcRecords.getBooleanVal("QCStatus", user)) {
+                    if(qcRecords.getStringVal("QCStatus", user).trim().equalsIgnoreCase("failed")) {
                         currentRequestSamplesQcStatus = false;
+                        logInfo("QC status become failed.");
                         break;
                     }
                 }
                 requestToAllSamplesQcStatus.put(entry.getKey(), currentRequestSamplesQcStatus);
+                logInfo("Value " + currentRequestSamplesQcStatus + " has been initialized for request " + entry.getKey() + " in requestToAllSamplesQcStatus map.");
             }
 
+            if (isDNAQcReportStep) {
+                if(attachedQcDNAReports.isEmpty()) {
+                    this.clientCallback.displayError("No DNA QC report attached to this task.");
+                    return new PluginResult(false);
+                }
+                qcReports.addAll(attachedQcDNAReports);
+                logInfo("qcReports populated for DNA");
 
+            } else if (isRNAQcReportStep) {
+                if(attachedQcRNAReports.isEmpty()) {
+                    this.clientCallback.displayError("No RNA QC report attached to this task.");
+                    return new PluginResult(false);
+                }
+                qcReports.addAll(attachedQcRNAReports);
+                logInfo("qcReports populated for RNA");
+            }
 
             for (DataRecord sample : attachedSamples) {
                 String recipe = sample.getStringVal("Recipe", user);
-                int mass = Integer.parseInt(sample.getStringVal("TotalMass", user));
+                double mass = sample.getDoubleVal("TotalMass", user);
                 String igoId = sample.getStringVal("SampleId", user);
                 String preservation = sample.getStringVal("Preservation", user);
                 String sampleType = sample.getStringVal("ExemplarSampleType", user);
                 String requestId = getRequestId(igoId);
 
-                if (recipe.toLowerCase().equals("ampliconseq")) {
-                    if (isDNAQcReportStep) {
-                        if(attachedQcDNAReports.isEmpty()) {
-                            this.clientCallback.displayError("No DNA QC report attached to this task.");
-                            return new PluginResult(false);
-                        }
+                logInfo("Logging sample info: \nIGO ID = " + igoId + "\nrecipe = " + recipe + "\ntotal mass = " + mass
+                 + "\npreservation = " + preservation + "\nsample type = " + sampleType);
 
-                    } else if (isRNAQcReportStep) {
-                        if(attachedQcRNAReports.isEmpty()) {
-                            this.clientCallback.displayError("No RNA QC report attached to this task.");
-                            return new PluginResult(false);
-                        }
-                    }
+                if (recipe.trim().equalsIgnoreCase("ampliconseq")) {
+                    logInfo("ampliconseq logic!");
                     if (mass > 100) {
                         for (DataRecord qcReport : qcReports) {
                             if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
@@ -112,14 +127,16 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                         }
 
                     } else if (mass < 10) {
+                        logInfo("mass is < 10");
                         for (DataRecord qcReport : qcReports) {
+                            logInfo("amliconseq sample with mass < 10. Qc reports are getting modified!");
                             if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                 qcReport.setDataField("IgoQcRecommendation", "Failed", user);
                                 qcReport.setDataField("Comments", "Low quantity", user);
                             }
                         }
                     }
-                } else if (recipe.toLowerCase().equals("chipseq")) {
+                } else if (recipe.trim().equalsIgnoreCase("chipseq")) {
                     if (mass >= 10) {
                         for (DataRecord qcReport : qcReports) {
                             if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
@@ -136,12 +153,14 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                         }
                     }
 
-                } else if (recipe.toLowerCase().equals("impact505")) {
+                } else if (recipe.trim().equalsIgnoreCase("impact505")) {
                     if (sampleType.equalsIgnoreCase("cfDNA")) {
+                        logInfo("recipe impact 505, sample type cfdna");
                         if (mass > 100) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Passed", user);
+                                    logInfo("requestToAllSamplesQcStatus.get(requestId) for requestId" + requestId + " is: " + requestToAllSamplesQcStatus.get(requestId));
                                     if (requestToAllSamplesQcStatus.get(requestId)) { // all samples passed
                                         qcReport.setDataField("InvestigatorDecision", "Already moved forward by IGO", user);
                                     }
@@ -156,19 +175,23 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                                 }
                             }
                         } else if (mass < 5) {
+                            logInfo("mass is < 10");
+                            logInfo("qcReports size  = " + qcReports.size());
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
+                                    logInfo("SampleId matched!!");
                                     qcReport.setDataField("IgoQcRecommendation", "Failed", user);
                                     qcReport.setDataField("Comments", "Low quantity", user);
                                 }
                             }
                         }
                     }
-                    if (preservation.equalsIgnoreCase("FFPE")) {
+                    if (preservation.trim().equalsIgnoreCase("FFPE")) {
                         if (mass > 200) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Passed", user);
+                                    logInfo("requestToAllSamplesQcStatus.get(requestId) = " + requestToAllSamplesQcStatus.get(requestId));
                                     if (requestToAllSamplesQcStatus.get(requestId)) { // all samples passed
                                         qcReport.setDataField("InvestigatorDecision", "Already moved forward by IGO", user);
                                     }
@@ -218,7 +241,6 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                                 }
                             }
                         }
-
                     }
                 }
             }
@@ -227,7 +249,7 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
             logError(errMsg);
             return new PluginResult(false);
         }
-
+        this.activeTask.getTask().getTaskOptions().put("_Autofilled", "");
         return new PluginResult(true);
     }
 
@@ -283,7 +305,7 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
      * Example: for sample id 012345_1_1_2, base sample id is 012345
      * Example2: for sample id 012345_B_1_1_2, base sample id is 012345_B
      * @param sampleId
-     * @return
+     * @return requestId
      */
     public static String getRequestId(String sampleId){
         Pattern alphabetPattern = Pattern.compile(IGO_ID_WITH_ALPHABETS_PATTERN);
