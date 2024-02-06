@@ -66,21 +66,6 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                 logInfo("Added " + sampleId + " for request " + requestId + " to the request to samples map");
             }
 
-            for (Map.Entry<String, List<Object>> entry : requestIdToSampleMap.entrySet()) {
-                boolean currentRequestSamplesQcStatus = true;
-                //List<Object> entryValueObjects = new LinkedList<>(entry.getValue());
-                List<DataRecord> qcRecs = getQcRecordsForSamples(entry.getValue());
-                for (DataRecord qcRecords : qcRecs) {
-                    if(qcRecords.getStringVal("QCStatus", user).trim().equalsIgnoreCase("failed")) {
-                        currentRequestSamplesQcStatus = false;
-                        logInfo("QC status become failed.");
-                        break;
-                    }
-                }
-                requestToAllSamplesQcStatus.put(entry.getKey(), currentRequestSamplesQcStatus);
-                logInfo("Value " + currentRequestSamplesQcStatus + " has been initialized for request " + entry.getKey() + " in requestToAllSamplesQcStatus map.");
-            }
-
             if (isDNAQcReportStep) {
                 if(attachedQcDNAReports.isEmpty()) {
                     this.clientCallback.displayError("No DNA QC report attached to this task.");
@@ -111,14 +96,14 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
 
                 if (recipe.trim().equalsIgnoreCase("ampliconseq")) {
                     logInfo("ampliconseq logic!");
-                    if (mass > 100) {
+                    if (mass >= 100) {
                         for (DataRecord qcReport : qcReports) {
                             if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                 qcReport.setDataField("IgoQcRecommendation", "Passed", user);
                             }
                         }
 
-                    } else if (10 < mass && mass < 100) {
+                    } else if (10 <= mass && mass < 100) {
                         for (DataRecord qcReport : qcReports) {
                             if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                 qcReport.setDataField("IgoQcRecommendation", "Try", user);
@@ -156,18 +141,15 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                 } else if (recipe.trim().equalsIgnoreCase("impact505")) {
                     if (sampleType.equalsIgnoreCase("cfDNA")) {
                         logInfo("recipe impact 505, sample type cfdna");
-                        if (mass > 100) {
+                        if (mass >= 100) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Passed", user);
                                     logInfo("requestToAllSamplesQcStatus.get(requestId) for requestId" + requestId + " is: " + requestToAllSamplesQcStatus.get(requestId));
-                                    if (requestToAllSamplesQcStatus.get(requestId)) { // all samples passed
-                                        qcReport.setDataField("InvestigatorDecision", "Already moved forward by IGO", user);
-                                    }
                                 }
                             }
 
-                        } else if (mass > 5 && mass < 100) {
+                        } else if (mass >= 5 && mass < 100) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Try", user);
@@ -187,18 +169,15 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                         }
                     }
                     if (preservation.trim().equalsIgnoreCase("FFPE")) {
-                        if (mass > 200) {
+                        if (mass >= 200) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Passed", user);
                                     logInfo("requestToAllSamplesQcStatus.get(requestId) = " + requestToAllSamplesQcStatus.get(requestId));
-                                    if (requestToAllSamplesQcStatus.get(requestId)) { // all samples passed
-                                        qcReport.setDataField("InvestigatorDecision", "Already moved forward by IGO", user);
-                                    }
                                 }
                             }
 
-                        } else if (mass > 40 && mass < 200) {
+                        } else if (mass >= 40 && mass < 200) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Try", user);
@@ -215,17 +194,14 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                         }
                     }
                     else { // other preservations than FFPE
-                        if (mass > 100) {
+                        if (mass >= 100) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Passed", user);
-                                    if (requestToAllSamplesQcStatus.get(requestId)) { // all samples passed
-                                        qcReport.setDataField("InvestigatorDecision", "Already moved forward by IGO", user);
-                                    }
                                 }
                             }
 
-                        } else if (mass > 20 && mass < 100) {
+                        } else if (mass >= 20 && mass < 100) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Try", user);
@@ -243,6 +219,71 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                         }
                     }
                 }
+            }
+            // Map of request ID to boolean value indicating if all samples under that request have igo QC recommendation value of "passed"
+            for (Map.Entry<String, List<Object>> entry : requestIdToSampleMap.entrySet()) {
+                boolean currentRequestSamplesQcStatus = true;
+                //List<Object> entryValueObjects = new LinkedList<>(entry.getValue());
+                List<DataRecord> qcRecs = getQcReportRecordsForSamples(entry.getValue(), isDNAQcReportStep);
+                for (DataRecord qcRecords : qcRecs) {
+                    if(!qcRecords.getStringVal("IgoQcRecommendation", user).trim().equalsIgnoreCase("passed")) {
+                        currentRequestSamplesQcStatus = false;
+                        logInfo("QC report of the project has a failed value.");
+                        break;
+                    }
+                }
+                requestToAllSamplesQcStatus.put(entry.getKey(), currentRequestSamplesQcStatus);
+                logInfo("Value " + currentRequestSamplesQcStatus + " has been initialized for request " + entry.getKey() + " in requestToAllSamplesQcStatus map.");
+            }
+
+            // Setting the investigator decision for each sample based on the all samples in a request igo QC recommendation field value
+            for (DataRecord sample : attachedSamples) {
+                String recipe = sample.getStringVal("Recipe", user);
+                double mass = sample.getDoubleVal("TotalMass", user);
+                String igoId = sample.getStringVal("SampleId", user);
+                String preservation = sample.getStringVal("Preservation", user);
+                String sampleType = sample.getStringVal("ExemplarSampleType", user);
+                String requestId = getRequestId(igoId);
+
+                if (recipe.trim().equalsIgnoreCase("impact505")) {
+                    if (sampleType.equalsIgnoreCase("cfDNA")) {
+                        logInfo("recipe impact 505, sample type cfdna");
+                        if (mass >= 100) {
+                            for (DataRecord qcReport : qcReports) {
+                                if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
+                                    if (requestToAllSamplesQcStatus.get(requestId)) {
+                                        qcReport.setDataField("InvestigatorDecision", "Already moved forward by IGO", user);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (preservation.trim().equalsIgnoreCase("FFPE")) {
+                        if (mass >= 200) {
+                            for (DataRecord qcReport : qcReports) {
+                                if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
+                                    if (requestToAllSamplesQcStatus.get(requestId)) {
+                                        qcReport.setDataField("InvestigatorDecision", "Already moved forward by IGO", user);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else { // other preservations than FFPE
+                        if (mass >= 100) {
+                            for (DataRecord qcReport : qcReports) {
+                                if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
+                                    if (requestToAllSamplesQcStatus.get(requestId)) {
+                                        qcReport.setDataField("InvestigatorDecision", "Already moved forward by IGO", user);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+
+
             }
         } catch (NotFound | ServerException | IoError | InvalidValue | RemoteException e) {
             String errMsg = String.format("Remote Exception while QC report generation:\n%s", ExceptionUtils.getStackTrace(e));
