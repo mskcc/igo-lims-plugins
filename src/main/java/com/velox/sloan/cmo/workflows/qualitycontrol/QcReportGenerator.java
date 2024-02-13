@@ -412,7 +412,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         try {
             if (!qcRecordsWithRinForSample.isEmpty()) {
                 for (DataRecord qcRecord : qcRecordsWithRinForSample) {
-                    if (qcRecord.getValue("RIN", user) != null) {
+                    if (qcRecord.getValue("RIN", user) != null && !StringUtils.isBlank(qcRecord.getValue("RIN", user).toString())) {
                         rinValue = qcRecord.getStringVal("RIN", user);
                     }
                 }
