@@ -90,10 +90,12 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                 put("ampliconseq", 50);
                 put("chipseq", 50);
                 put("impact505", 50);
+                put("ddpcr", 20);
             }};
             for (DataRecord sample : attachedSamples) {
                 String recipe = sample.getStringVal("Recipe", user);
                 double mass = sample.getDoubleVal("TotalMass", user);
+                double volume = sample.getDoubleVal("Volume", user);
                 double concentration = sample.getDoubleVal("Concentration", user);
                 String igoId = sample.getStringVal("SampleId", user);
                 String preservation = sample.getStringVal("Preservation", user);
@@ -103,17 +105,19 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                 logInfo("Logging sample info: \nIGO ID = " + igoId + "\nrecipe = " + recipe + "\ntotal mass = " + mass
                  + "\npreservation = " + preservation + "\nsample type = " + sampleType);
 
-                double calculatedMass = concentration * recipeToVolCoefficient.get(recipe);
+                if (volume > recipeToVolCoefficient.get(recipe.trim().toLowerCase())) {
+                    mass = concentration * recipeToVolCoefficient.get(recipe.trim().toLowerCase());
+                }
                 if (recipe.trim().equalsIgnoreCase("ampliconseq")) {
                     logInfo("ampliconseq logic!");
-                    if (calculatedMass >= 100) {
+                    if (mass >= 100) {
                         for (DataRecord qcReport : qcReports) {
                             if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                 qcReport.setDataField("IgoQcRecommendation", "Passed", user);
                             }
                         }
 
-                    } else if (10 <= calculatedMass && calculatedMass < 100) {
+                    } else if (10 <= mass && mass < 100) {
                         for (DataRecord qcReport : qcReports) {
                             if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                 qcReport.setDataField("IgoQcRecommendation", "Try", user);
@@ -121,7 +125,7 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                             }
                         }
 
-                    } else if (calculatedMass < 10) {
+                    } else if (mass < 10) {
                         logInfo("mass is < 10");
                         for (DataRecord qcReport : qcReports) {
                             logInfo("amliconseq sample with mass < 10. Qc reports are getting modified!");
@@ -132,7 +136,7 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                         }
                     }
                 } else if (recipe.trim().equalsIgnoreCase("chipseq")) {
-                    if (calculatedMass >= 10) {
+                    if (mass >= 10) {
                         for (DataRecord qcReport : qcReports) {
                             if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                 qcReport.setDataField("IgoQcRecommendation", "Passed", user);
@@ -151,7 +155,7 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                 } else if (recipe.trim().equalsIgnoreCase("impact505")) {
                     if (sampleType.equalsIgnoreCase("cfDNA")) {
                         logInfo("recipe impact 505, sample type cfdna");
-                        if (calculatedMass >= 100) {
+                        if (mass >= 100) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Passed", user);
@@ -159,14 +163,14 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                                 }
                             }
 
-                        } else if (calculatedMass >= 5 && calculatedMass < 100) {
+                        } else if (mass >= 5 && mass < 100) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Try", user);
                                     qcReport.setDataField("Comments", "Suboptimal quantity", user);
                                 }
                             }
-                        } else if (calculatedMass < 5) {
+                        } else if (mass < 5) {
                             logInfo("mass is < 10");
                             logInfo("qcReports size  = " + qcReports.size());
                             for (DataRecord qcReport : qcReports) {
@@ -179,7 +183,7 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                         }
                     }
                     if (preservation.trim().equalsIgnoreCase("FFPE")) {
-                        if (calculatedMass >= 200) {
+                        if (mass >= 200) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Passed", user);
@@ -187,14 +191,14 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                                 }
                             }
 
-                        } else if (calculatedMass >= 40 && calculatedMass < 200) {
+                        } else if (mass >= 40 && mass < 200) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Try", user);
                                     qcReport.setDataField("Comments", "Suboptimal quantity", user);
                                 }
                             }
-                        } else if (calculatedMass < 40) {
+                        } else if (mass < 40) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Failed", user);
@@ -204,14 +208,14 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                         }
                     }
                     else { // other preservations than FFPE
-                        if (calculatedMass >= 100) {
+                        if (mass >= 100) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Passed", user);
                                 }
                             }
 
-                        } else if (calculatedMass >= 20 && calculatedMass < 100) {
+                        } else if (mass >= 20 && mass < 100) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Try", user);
@@ -219,7 +223,7 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                                 }
                             }
 
-                        } else if (calculatedMass < 20) {
+                        } else if (mass < 20) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                     qcReport.setDataField("IgoQcRecommendation", "Failed", user);
@@ -230,12 +234,13 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                     }
                 }
                 else if (recipe.trim().equalsIgnoreCase("ddpcr")) {
-                    String[] assays = sample.getStringVal("Assay", user).split(";");
+                    String[] assays = sample.getStringVal("Assay", user).split(",");
+
                     if(isDNAQcReportStep) {
                         if (sampleType.equalsIgnoreCase("cDNA")) {
-                            mass = 9 * concentration;
-                            calculatedMass = assays.length * 1;
-                            if (mass >= calculatedMass) {
+                            int minimumRequiredMass = assays.length * 1;
+                            logInfo("minimumRequiredMass = " + minimumRequiredMass);
+                            if (mass >= minimumRequiredMass) {
                                 for (DataRecord qcReport : qcReports) {
                                     if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                         qcReport.setDataField("IgoQcRecommendation", "Passed", user);
@@ -251,9 +256,9 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                             }
                         }
                         else { // Other sample types than cDNA
-                            mass = 9 * concentration;
-                            calculatedMass = assays.length * 20;
-                            if (mass >= calculatedMass) {
+                            int minimumRequiredMass = assays.length * 20;
+                            logInfo("minimumRequiredMass = " + minimumRequiredMass);
+                            if (mass >= minimumRequiredMass) {
                                 for (DataRecord qcReport : qcReports) {
                                     if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                         qcReport.setDataField("IgoQcRecommendation", "Passed", user);
@@ -271,9 +276,8 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                     }
                     else { //RNA QC step
                         if (sampleType.equalsIgnoreCase("cDNA")) {
-                            mass = 9 * concentration;
-                            calculatedMass = assays.length * 1;
-                            if (mass >= calculatedMass) {
+                            int minimumRequiredMass = assays.length * 1;
+                            if (mass >= minimumRequiredMass) {
                                 for (DataRecord qcReport : qcReports) {
                                     if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                         qcReport.setDataField("IgoQcRecommendation", "Passed", user);
@@ -289,9 +293,8 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                             }
                         }
                         if (preservation.equalsIgnoreCase("FFPE")) {
-                            mass = 18 * concentration;
-                            calculatedMass = assays.length * 2;
-                            if (mass >= calculatedMass) {
+                            int minimunRequiredMass = assays.length * 2;
+                            if (mass >= minimunRequiredMass) {
                                 for (DataRecord qcReport : qcReports) {
                                     if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                         qcReport.setDataField("IgoQcRecommendation", "Try", user);
@@ -319,9 +322,8 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                             }
                         }
                         else { //preservation other than FFPE
-                            mass = 18 * concentration;
-                            calculatedMass = assays.length * 2;
-                            if (mass >= calculatedMass) {
+                            int minimunRequiredMass = assays.length * 2;
+                            if (mass >= minimunRequiredMass) {
                                 for (DataRecord qcReport : qcReports) {
                                     if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
                                         if (!qcReport.getStringVal("RIN", user).isEmpty() && Integer.parseInt(qcReport.getStringVal("RIN", user)) >= 6) {
