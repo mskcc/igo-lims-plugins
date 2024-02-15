@@ -120,67 +120,144 @@ public class QcPassFailGeneric extends DefaultGenericPlugin {
             String DIN = qcReportRecord.getStringVal("DIN", user);
 
             String whereClause = String.format("%s='%s'", "Recipe", recipe);
-            qcRecords = dataRecordManager.queryDataRecords("QCPassFailCriteria", whereClause , user);
+            qcRecords = dataRecordManager.queryDataRecords("QCPassFailCriteria", whereClause, user);
             List<DataRecord> shrinkedList = new LinkedList<>();
             for (DataRecord passFailCriteria : qcRecords) { // Or checking all criteria for a sample in a row
                 if (!StringUtils.isBlank(passFailCriteria.getStringVal("ExemplarSampleType", user)) &&
-                    !passFailCriteria.getStringVal("ExemplarSampleType", user).isEmpty()) {
+                        !passFailCriteria.getStringVal("ExemplarSampleType", user).isEmpty()) {
                     if (sampleType.trim().equalsIgnoreCase(passFailCriteria.getStringVal("ExemplarSampleType", user))) {
                         shrinkedList.add(passFailCriteria);
                     }
                 }
+            }
+            List<DataRecord> shrinkedList1 = new LinkedList<>();
+            for (DataRecord passFailCriteria : shrinkedList) {
                 if (!StringUtils.isBlank(passFailCriteria.getStringVal("Preservation", user)) &&
                         !passFailCriteria.getStringVal("Preservation", user).isEmpty()) {
                     if (preservation.trim().equalsIgnoreCase(passFailCriteria.getStringVal("Preservation", user))) {
-                        shrinkedList.add(passFailCriteria);
+                        shrinkedList1.add(passFailCriteria);
                     }
                 }
+            }
+            List<DataRecord> shrinkedList2 = new LinkedList<>();
+            for (DataRecord passFailCriteria : shrinkedList1) {
                 if (!StringUtils.isBlank(passFailCriteria.getStringVal("A260230", user)) &&
                         !passFailCriteria.getStringVal("A260230", user).isEmpty()) {
+                    //filtering the field to find the value
                     String[] A260230Criteria = passFailCriteria.getStringVal("A260230", user).split("A260/230 >=");
                     if (A260230Criteria.length == 0) {
                         A260230Criteria = passFailCriteria.getStringVal("A260230", user).split("A260/230 <");
-                        if (Double.parseDouble(A260230) < Double.parseDouble(A260230Criteria[1])) {
-
+                        if (A260230Criteria.length != 0 && Double.parseDouble(A260230) < Double.parseDouble(A260230Criteria[1])) {
+                            shrinkedList2.add(passFailCriteria);
                         }
-                    }
-                    else {
+                    } else {
                         if (Double.parseDouble(A260230) >= Double.parseDouble(A260230Criteria[1])) {
-
+                            shrinkedList2.add(passFailCriteria);
                         }
                     }
                 }
+            }
+            List<DataRecord> shrinkedList3 = new LinkedList<>();
+            for (DataRecord passFailCriteria : shrinkedList2) {
                 if (!StringUtils.isBlank(passFailCriteria.getStringVal("A260280", user)) &&
                         !passFailCriteria.getStringVal("A260280", user).isEmpty()) {
-                    if (A260280.trim().equalsIgnoreCase(passFailCriteria.getStringVal("A260280", user))) {
-
+                    //filtering the field to find the value
+                    String[] A260280Criteria = passFailCriteria.getStringVal("A260280", user).split("A260/280 >=");
+                    if (A260280Criteria.length == 0) {
+                        A260280Criteria = passFailCriteria.getStringVal("A260280", user).split("A260/280 <");
+                        if (A260280Criteria.length != 0 && Double.parseDouble(A260280) < Double.parseDouble(A260280Criteria[1])) {
+                            shrinkedList3.add(passFailCriteria);
+                        }
+                    } else {
+                        if (Double.parseDouble(A260280) >= Double.parseDouble(A260280Criteria[1])) {
+                            shrinkedList3.add(passFailCriteria);
+                        }
                     }
                 }
+            }
+            List<DataRecord> shrinkedList4 = new LinkedList<>();
+            for (DataRecord passFailCriteria : shrinkedList3) {
                 if (!StringUtils.isBlank(passFailCriteria.getStringVal("DV200", user)) &&
                         !passFailCriteria.getStringVal("DV200", user).isEmpty()) {
-                    if (DV200.trim().equalsIgnoreCase(passFailCriteria.getStringVal("DV200", user))) {
-
+                    //filtering the field to find the value
+                    String[] DV200Criteria = passFailCriteria.getStringVal("DV200", user).split("DV200 >=");
+                    if (DV200Criteria.length == 0) {
+                        DV200Criteria = passFailCriteria.getStringVal("DV200", user).split("DV200 <");
+                        if (DV200Criteria.length != 0 && Double.parseDouble(DV200) < Double.parseDouble(DV200Criteria[1])) {
+                            shrinkedList4.add(passFailCriteria);
+                        }
+                    } else {
+                        if (Double.parseDouble(DV200) >= Double.parseDouble(DV200Criteria[1])) {
+                            shrinkedList4.add(passFailCriteria);
+                        }
                     }
                 }
+            }
+            List<DataRecord> shrinkedList5 = new LinkedList<>();
+            for (DataRecord passFailCriteria : shrinkedList4) {
                 if (!StringUtils.isBlank(passFailCriteria.getStringVal("RIN", user)) &&
                         !passFailCriteria.getStringVal("RIN", user).isEmpty()) {
-                    if (RIN.trim().equalsIgnoreCase(passFailCriteria.getStringVal("RIN", user))) {
-
+                    //filtering the field to find the value
+                    String[] RINCriteria = passFailCriteria.getStringVal("RIN", user).split("RIN >=");
+                    if (RINCriteria.length == 0) {
+                        RINCriteria = passFailCriteria.getStringVal("RIN", user).split("RIN <");
+                        if (RINCriteria.length != 0 && Double.parseDouble(RIN) < Double.parseDouble(RINCriteria[1])) {
+                            shrinkedList5.add(passFailCriteria);
+                        }
+                    } else {
+                        if (Double.parseDouble(RIN) >= Double.parseDouble(RINCriteria[1])) {
+                            shrinkedList5.add(passFailCriteria);
+                        }
                     }
                 }
+            }
+            List<DataRecord> shrinkedList6 = new LinkedList<>();
+            for (DataRecord passFailCriteria : shrinkedList5) {
                 if (!StringUtils.isBlank(passFailCriteria.getStringVal("DIN", user)) &&
                         !passFailCriteria.getStringVal("DIN", user).isEmpty()) {
-                    if (DIN.trim().equalsIgnoreCase(passFailCriteria.getStringVal("DIN", user))) {
-
+                    //filtering the field to find the value
+                    String[] DINCriteria = passFailCriteria.getStringVal("DIN", user).split("DIN >=");
+                    if (DINCriteria.length == 0) {
+                        DINCriteria = passFailCriteria.getStringVal("DIN", user).split("DIN <");
+                        if (DINCriteria.length != 0 && Double.parseDouble(RIN) < Double.parseDouble(DINCriteria[1])) {
+                            shrinkedList6.add(passFailCriteria);
+                        }
+                    } else {
+                        if (Double.parseDouble(RIN) >= Double.parseDouble(DINCriteria[1])) {
+                            shrinkedList6.add(passFailCriteria);
+                        }
                     }
                 }
-
             }
-
-        } catch (NotFound | IoError | ServerException | RemoteException e) {
+            List<DataRecord> shrinkedList7 = new LinkedList<>();
+            for (DataRecord passFailCriteria : shrinkedList6) {
+                if (!StringUtils.isBlank(passFailCriteria.getStringVal("TotalMass", user)) &&
+                        !passFailCriteria.getStringVal("TotalMass", user).isEmpty()) {
+                    String[] totalMassCriteria = passFailCriteria.getStringVal("TotalMass", user).split("<= TotalMass <");
+                    if (totalMassCriteria.length == 0) {
+                        totalMassCriteria = passFailCriteria.getStringVal("TotalMass", user).split("TotalMass >=");
+                        if (totalMassCriteria.length == 0) {
+                            totalMassCriteria = passFailCriteria.getStringVal("TotalMass", user).split("TotalMass <");
+                            if (totalMassCriteria.length != 0 && Double.parseDouble(totalMassCriteria[1]) > mass) {
+                                shrinkedList7.add(passFailCriteria);
+                            }
+                        } else {
+                            if (Double.parseDouble(totalMassCriteria[1]) <= mass) {
+                                shrinkedList7.add(passFailCriteria);
+                            }
+                        }
+                    } else {
+                        if (Double.parseDouble(totalMassCriteria[0]) <= mass && Double.parseDouble(totalMassCriteria[1]) > mass) {
+                            shrinkedList7.add(passFailCriteria);
+                        }
+                    }
+                }
+            }
+            return shrinkedList7.get(0);
+        } catch(NotFound | IoError | ServerException | RemoteException e) {
             logError(String.format("Exception while querying QCPassFailCriteria table for sample: %s" + e.getMessage()));
         }
-
+        return null;
     }
 
     /**
