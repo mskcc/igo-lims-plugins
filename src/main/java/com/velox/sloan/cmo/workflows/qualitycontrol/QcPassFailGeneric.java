@@ -1,6 +1,7 @@
 package com.velox.sloan.cmo.workflows.qualitycontrol;
 
 import com.velox.api.datarecord.DataRecord;
+import com.velox.api.datarecord.InvalidValue;
 import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
@@ -85,32 +86,99 @@ public class QcPassFailGeneric extends DefaultGenericPlugin {
             for (DataRecord sample : attachedSamples) {
                 String recipe = sample.getStringVal("Recipe", user);
                 double mass = sample.getDoubleVal("TotalMass", user);
+                double volume = sample.getDoubleVal("Volume", user);
                 String igoId = sample.getStringVal("SampleId", user);
-                String preservation = sample.getStringVal("Preservation", user);
-                String sampleType = sample.getStringVal("ExemplarSampleType", user);
-                String requestId = getRequestId(igoId);
+                double concentration = sample.getDoubleVal("Concentration", user);
                 DataRecord currentSampleQcReportRec = null;
                 for (DataRecord qcReport : qcReportRecords) {
                     if (qcReport.getStringVal("SampleId", user).trim().equalsIgnoreCase(igoId)) {
                         currentSampleQcReportRec = qcReport;
                     }
                 }
-                DataRecord relatedPassFailCriteriaRecords = getPassFailCriteria(sample, currentSampleQcReportRec);
+                Map<String, Integer> recipeToVolCoefficient = new HashMap<>();
+                List<DataRecord> relatedPassFailCriteriaRecords = getPassFailCriteria(sample, currentSampleQcReportRec);
+                for (DataRecord filteredRecs : relatedPassFailCriteriaRecords) {
+                    recipeToVolCoefficient.put(filteredRecs.getStringVal("Recipe", user), filteredRecs.getIntegerVal("VolumeCoefficient", user));
+                }
+                if (volume > recipeToVolCoefficient.get(recipe)) {
+                    mass = concentration * recipeToVolCoefficient.get(recipe);
+                }
+                List<DataRecord> filteredByMass = new LinkedList<>();
+                for (DataRecord passFailCriteria : relatedPassFailCriteriaRecords) {
+                    if (!StringUtils.isBlank(passFailCriteria.getStringVal("TotalMass", user)) &&
+                            !passFailCriteria.getStringVal("TotalMass", user).isEmpty()) {
+                        String[] totalMassCriteria = passFailCriteria.getStringVal("TotalMass", user).split("<= TotalMass <");
+                        if (totalMassCriteria.length == 0) {
+                            totalMassCriteria = passFailCriteria.getStringVal("TotalMass", user).split("TotalMass >=");
+                            if (totalMassCriteria.length == 0) {
+                                totalMassCriteria = passFailCriteria.getStringVal("TotalMass", user).split("TotalMass <");
+                                if (totalMassCriteria.length != 0 && Double.parseDouble(totalMassCriteria[1]) > mass) {
+                                    filteredByMass.add(passFailCriteria);
+                                }
+                            } else {
+                                if (Double.parseDouble(totalMassCriteria[1]) <= mass) {
+                                    filteredByMass.add(passFailCriteria);
+                                }
+                            }
+                        } else {
+                            if (Double.parseDouble(totalMassCriteria[0]) <= mass && Double.parseDouble(totalMassCriteria[1]) > mass) {
+                                filteredByMass.add(passFailCriteria);
+                            }
+                        }
+                    }
+                }
+                for (DataRecord qcReport : qcReports) {
+                    if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
+                        qcReport.setDataField("IgoQcRecommendation", filteredByMass.get(0).getStringVal("IgoQcRecommendation", user), user);
+                        qcReport.setDataField("Comments", filteredByMass.get(0).getStringVal("Comments", user), user);
+                    }
+                }
             }
 
-        } catch (Exception e) {
+            // Map of request ID to boolean value indicating if all samples under that request have igo QC recommendation value of "passed"
+            for (Map.Entry<String, List<Object>> entry : requestIdToSampleMap.entrySet()) {
+                boolean currentRequestSamplesQcStatus = true;
+                List<DataRecord> qcRecs = getQcReportRecordsForSamples(entry.getValue(), isDNAQcReportStep);
+                for (DataRecord qcRecords : qcRecs) {
+                    if(!qcRecords.getStringVal("IgoQcRecommendation", user).trim().equalsIgnoreCase("passed")) {
+                        currentRequestSamplesQcStatus = false;
+                        logInfo("QC report of the project has a failed value.");
+                        break;
+                    }
+                }
+                requestToAllSamplesQcStatus.put(entry.getKey(), currentRequestSamplesQcStatus);
+                logInfo("Value " + currentRequestSamplesQcStatus + " has been initialized for request " + entry.getKey() + " in requestToAllSamplesQcStatus map.");
+            }
 
+            // Setting the investigator decision for each sample based on the all samples in a request igo QC recommendation field value
+            for (DataRecord sample : attachedSamples) {
+                String igoId = sample.getStringVal("SampleId", user);
+                String requestId = getRequestId(igoId);
+
+                for (DataRecord qcReport : qcReports) {
+                    if (igoId.equals(qcReport.getStringVal("SampleId", user)) &&
+                            qcReport.getStringVal("IgoQcRecommendation", user).trim().equalsIgnoreCase("passed")) {
+                        if (requestToAllSamplesQcStatus.get(requestId)) {
+                            qcReport.setDataField("InvestigatorDecision", "Already moved forward by IGO", user);
+                        }
+                    }
+                }
+            }
+
+        } catch (NotFound | ServerException | IoError | RemoteException | InvalidValue e) {
+            String errMsg = String.format("Remote Exception while QC report generation:\n%s", ExceptionUtils.getStackTrace(e));
+            logError(errMsg);
+            return new PluginResult(false);
         }
         this.activeTask.getTask().getTaskOptions().put("_Autofilled", "");
         return new PluginResult(true);
     }
 
 
-    public DataRecord getPassFailCriteria(DataRecord sample, DataRecord qcReportRecord) {
+    public List<DataRecord> getPassFailCriteria(DataRecord sample, DataRecord qcReportRecord) {
         List<DataRecord> qcRecords = new LinkedList<>();
         try {
             String recipe = sample.getStringVal("Recipe", user);
-            double mass = sample.getDoubleVal("TotalMass", user);
             String preservation = sample.getStringVal("Preservation", user);
             String sampleType = sample.getStringVal("ExemplarSampleType", user);
             String A260230 = qcReportRecord.getStringVal("A260230", user);
@@ -229,33 +297,9 @@ public class QcPassFailGeneric extends DefaultGenericPlugin {
                     }
                 }
             }
-            List<DataRecord> shrinkedList7 = new LinkedList<>();
-            for (DataRecord passFailCriteria : shrinkedList6) {
-                if (!StringUtils.isBlank(passFailCriteria.getStringVal("TotalMass", user)) &&
-                        !passFailCriteria.getStringVal("TotalMass", user).isEmpty()) {
-                    String[] totalMassCriteria = passFailCriteria.getStringVal("TotalMass", user).split("<= TotalMass <");
-                    if (totalMassCriteria.length == 0) {
-                        totalMassCriteria = passFailCriteria.getStringVal("TotalMass", user).split("TotalMass >=");
-                        if (totalMassCriteria.length == 0) {
-                            totalMassCriteria = passFailCriteria.getStringVal("TotalMass", user).split("TotalMass <");
-                            if (totalMassCriteria.length != 0 && Double.parseDouble(totalMassCriteria[1]) > mass) {
-                                shrinkedList7.add(passFailCriteria);
-                            }
-                        } else {
-                            if (Double.parseDouble(totalMassCriteria[1]) <= mass) {
-                                shrinkedList7.add(passFailCriteria);
-                            }
-                        }
-                    } else {
-                        if (Double.parseDouble(totalMassCriteria[0]) <= mass && Double.parseDouble(totalMassCriteria[1]) > mass) {
-                            shrinkedList7.add(passFailCriteria);
-                        }
-                    }
-                }
-            }
-            return shrinkedList7.get(0);
+            return shrinkedList6;
         } catch(NotFound | IoError | ServerException | RemoteException e) {
-            logError(String.format("Exception while querying QCPassFailCriteria table for sample: %s" + e.getMessage()));
+            logError("Exception while querying QCPassFailCriteria table for sample: " + e.getMessage());
         }
         return null;
     }
