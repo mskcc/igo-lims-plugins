@@ -120,7 +120,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                         Object dlpRequestedReads = getDlpRequestedReads(recipe);
                         Map<String, List<DataRecord>> newDlpSamples = createDlpSamplesAndProtocolRecords(rowsSeparatedBySampleMap, headerValuesMap, samplesAttachedToTask, cellTypeToProcess);
                         assert dlpRequestedReads != null;
-                        createPools(newDlpSamples, (Double) dlpRequestedReads);
+                        createPools(newDlpSamples, (Double) dlpRequestedReads, true);
                     }
                 }
             }
@@ -189,7 +189,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                             logInfo("After createDlpSamplesAndProtocolRecords function call");
                             assert dlpRequestedReads != null;
                             logInfo("After assert");
-                            createPools(newDlpSamples, (Double) dlpRequestedReads);
+                            createPools(newDlpSamples, (Double) dlpRequestedReads, false);
                         }
                     }
                 }
@@ -587,6 +587,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     private String getRequestIdsAsString(List<DataRecord> samples, String quadrant) throws NotFound, RemoteException {
         Set<String> requestIds = new HashSet<>();
         for (DataRecord sam : samples) {
+            //SampleId
             if (sam.getValue("RequestId", user) != null || sam.getValue("RequestId", user) != "") {
                 requestIds.add(sam.getStringVal("RequestId", user));
                 logInfo("requestIds:" + requestIds.toString());
@@ -839,7 +840,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
      * @throws AlreadyExists
      * @throws ServerException
      */
-    private void createPools(Map<String, List<DataRecord>> newlyCreatedChildSamplesByQuadrant, Double requestedReadsPerSample) throws NotFound, RemoteException, IoError, AlreadyExists, ServerException {
+    private void createPools(Map<String, List<DataRecord>> newlyCreatedChildSamplesByQuadrant, Double requestedReadsPerSample, boolean multipleSample) throws NotFound, RemoteException, IoError, AlreadyExists, ServerException {
         List<DataRecord> pooledSampleRecords = new ArrayList<>();
         for (Map.Entry entry : newlyCreatedChildSamplesByQuadrant.entrySet()) {
             String quadrant = (String) entry.getKey();
