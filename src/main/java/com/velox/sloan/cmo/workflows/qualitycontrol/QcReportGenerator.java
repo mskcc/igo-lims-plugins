@@ -36,7 +36,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
     private final String TAPESTATION_QC_FOR_AVERAGE_BP_SIZE = "TapeStation Compact Peak Table, TapeStation Compact Pico Region Table, " +
             "TapeStation D1000 Compact Region Table, TapeStation D1000 HiSense Compact Region Table";
     private final String BIOA_QC_FOR_AVERAGE_BP_SIZE = "Bioanalyzer DNA High Sens Region Table";
-    private final List<String> DNA_SAMPLE_TYPES = Arrays.asList("cdna", "cfdna", "dna");
+    private final List<String> DNA_SAMPLE_TYPES = Arrays.asList("cdna", "cfdna", "dna", "hmwdna");
     private final List<String> RNA_SAMPLE_TYPES = Arrays.asList("rna");
     private final List<String> LIBRARY_SAMPLE_TYPES = Arrays.asList("dna library", "pooled library", "cdna library", "protein library");
     private final double NANOMOLAR_TO_FEMTOMOLAR_CONVERSION_FACTOR = 1000000.00;
