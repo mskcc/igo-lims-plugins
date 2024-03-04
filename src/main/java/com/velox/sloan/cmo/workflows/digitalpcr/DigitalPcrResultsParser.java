@@ -77,10 +77,10 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 logInfo(channel1Channe2CombinedData.toString());
                 Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData);
                 logInfo(groupedData.toString());
-                List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1", user);
+                List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1", user); // DdPcrProtocol1SixChannels
                 if (attachedProtocolRecords.isEmpty()) {
-                    clientCallback.displayError("No attached 'DdPcrProtocol1' records found attached to this task.");
-                    logError("No attached 'DdPcrProtocol1' records found attached to this task.");
+                    clientCallback.displayError("No attached 'DdPcrProtocol1' records found attached to this task."); // DdPcrProtocol1SixChannels
+                    logError("No attached 'DdPcrProtocol1' records found attached to this task."); // DdPcrProtocol1SixChannels
                     return new PluginResult(false);
                 }
                 List<Map<String, Object>> analyzedData = runDataAnalysisForAssays(groupedData, attachedProtocolRecords);
