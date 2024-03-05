@@ -33,6 +33,7 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
     IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
 
     public DdPcrSampleToPlateAssigner() {
+        // Set to trigger upon task submit, to prevent the default values to get over-written
         setTaskSubmit(true);
         setOrder(PluginOrder.LAST.getOrder());
     }

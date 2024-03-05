@@ -14,6 +14,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+* This plugin is making a duplicate record for existing DdPcrProtocol1SixChannels at step 10 of Digital Droplet PCR workflow
+ * This makes the records expected as what QX600 software with 6 channels is expecting.
+ * Expand team is using 2 channels at the moment.
+ * @author mirhajf
+ * @
+* */
 public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
 
     public DdPcrMultiChannelRecordGenerator() {
@@ -31,6 +38,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
         try {
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
             List<DataRecord> attachedDdpcrSixChannels = activeTask.getAttachedDataRecords("DdPcrProtocol1SixChannels", user);
+
             Map<String, Object> dataFieldValueMap = new HashMap<>();
             List<DataRecord> ddPcrSixChannelRecords = new ArrayList<>();
 
