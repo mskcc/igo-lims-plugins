@@ -19,7 +19,6 @@ import java.util.Map;
  * This makes the records expected as what QX600 software with 6 channels is expecting.
  * Expand team is using 2 channels at the moment.
  * @author mirhajf
- * @
 * */
 public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
 
@@ -50,6 +49,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                 dataFieldValueMap.put("Aliq1TargetConcentration", sixChannelRec.getValue("Aliq1TargetConcentration", user));
                 dataFieldValueMap.put("Aliq1SourceVolumeToUse", sixChannelRec.getValue("Aliq1SourceVolumeToUse", user));
                 dataFieldValueMap.put("Aliq1DilutantVolumeToUse", sixChannelRec.getValue("Aliq1DilutantVolumeToUse", user));
+                dataFieldValueMap.put("Aliq1TargetPlateId", sixChannelRec.getValue("Aliq1TargetPlateId", user));
 
                 dataFieldValueMap.put("AltId", sixChannelRec.getValue("AltId", user));
                 dataFieldValueMap.put("SampleId", sixChannelRec.getValue("SampleId", user));
