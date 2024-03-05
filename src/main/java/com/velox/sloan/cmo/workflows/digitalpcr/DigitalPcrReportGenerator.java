@@ -34,11 +34,11 @@ import java.util.*;
  */
 public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
     private List<String> ddPCRReportTypes = Arrays.asList("GEX", "RED", "CNV", "LAB MEDICINE", "METHYLATED");
-    private List<String> gexReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration", "Droplet # gene", "Droplet # Ref", "Ratio ([GOI]/[Ref])", "Accepted Droplets", "Micronic Tube Barcode");
-    private List<String> cnvReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration", "Droplet Count Mu", "Droplet Count WT", "Ratio ([Mu]/[WT])", "Accepted Droplets", "Micronic Tube Barcode");
-    private List<String> redReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration", "Droplet Count Mu", "Droplet Count WT", "Ratio ([Mu]/[WT])", "Accepted Droplets", "Micronic Tube Barcode", "Human %");
-    private List<String> methylatedReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration", "Droplet Count MethyFam", "Droplet Count MethyHex", "Ratio ([MethyFam]/[MethyHex])", "Accepted Droplets");
-    private List<String> labMedicineReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration", "Droplet Count# gene", "Droplet Count# Ref", "Total Detected (ng)", "Ratio ([Gene]/[Ref])", "Accepted Droplets", "Micronic Tube Barcode");
+    private List<String> gexReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Mu (Copies/ul)", "Droplet # gene", "Droplet # Ref", "Ratio ([GOI]/[Ref])", "Accepted Droplets", "Micronic Tube Barcode");
+    private List<String> cnvReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Mu (Copies/ul)", "Droplet Count Mu", "Droplet Count WT", "Ratio ([Mu]/[WT])", "Accepted Droplets", "Micronic Tube Barcode");
+    private List<String> redReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Mu (Copies/ul)", "Droplet Count Mu", "Droplet Count WT", "Ratio ([Mu]/[WT])", "Accepted Droplets", "Micronic Tube Barcode", "Human %");
+    private List<String> methylatedReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Mu (Copies/ul)", "Droplet Count MethyFam", "Droplet Count MethyHex", "Ratio ([MethyFam]/[MethyHex])", "Accepted Droplets");
+    private List<String> labMedicineReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Mu (Copies/ul)", "Droplet Count# gene", "Droplet Count# Ref", "Total Detected (ng)", "Ratio ([Gene]/[Ref])", "Accepted Droplets", "Micronic Tube Barcode");
 
     public DigitalPcrReportGenerator() {
         setTaskToolbar(true);

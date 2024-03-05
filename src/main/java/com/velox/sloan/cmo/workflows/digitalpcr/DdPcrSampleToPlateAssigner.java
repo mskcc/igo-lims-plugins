@@ -197,9 +197,6 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
             if (dataFieldValueMap.get("TargetName").toString().trim().equalsIgnoreCase("Mdm2_Mm_Neo")) {
                 dataFieldValueMap.put("SignalCh1", "FAM");
             }
-            if (dataFieldValueMap.get("TargetName").toString().trim().equalsIgnoreCase("mPTGER2")) {
-                dataFieldValueMap.put("SignalCh2", "HEX");
-            }
             dataFieldValuesMaps.add(dataFieldValueMap);
         }
         return dataFieldValuesMaps;
@@ -243,7 +240,6 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
                 for (Map<String, Object> map : dataFieldValuesMaps) {
                     logInfo("map plate id is: " + map.get("Aliq1TargetPlateId"));
                     if (map.get("SampleId").toString().equals(sampleId) && map.get("OtherSampleId").toString().equals(otherSampleId)) {
-                        logInfo("sample.addChild(targetDataTypeName, map, user)");
                         newDataRecords.add(sample.addChild(targetDataTypeName, map, user));
                     }
                 }
