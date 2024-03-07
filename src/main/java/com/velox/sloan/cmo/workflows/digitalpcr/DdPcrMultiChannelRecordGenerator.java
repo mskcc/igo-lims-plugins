@@ -1,6 +1,7 @@
 package com.velox.sloan.cmo.workflows.digitalpcr;
 
 import com.velox.api.datarecord.DataRecord;
+import com.velox.api.datarecord.InvalidValue;
 import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
 import com.velox.api.plugin.PluginResult;
@@ -41,6 +42,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
             Map<String, Object> dataFieldValueMap = new HashMap<>();
             List<DataRecord> ddPcrSixChannelRecords = new ArrayList<>();
 
+
             for (DataRecord sixChannelRec : attachedDdpcrSixChannels) {
                 dataFieldValueMap.put("Aliq1StartingVolume", sixChannelRec.getValue("Aliq1StartingVolume", user));
                 dataFieldValueMap.put("Aliq1StartingConcentration", sixChannelRec.getValue("Aliq1StartingConcentration", user));
@@ -51,49 +53,79 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                 dataFieldValueMap.put("Aliq1DilutantVolumeToUse", sixChannelRec.getValue("Aliq1DilutantVolumeToUse", user));
                 dataFieldValueMap.put("Aliq1TargetPlateId", sixChannelRec.getValue("Aliq1TargetPlateId", user));
 
-                dataFieldValueMap.put("AltId", sixChannelRec.getValue("AltId", user));
-                dataFieldValueMap.put("SampleId", sixChannelRec.getValue("SampleId", user));
-                logInfo("duplicate records plugin: sample ID = " + sixChannelRec.getValue("SampleId", user));
-                dataFieldValueMap.put("OtherSampleId", sixChannelRec.getValue("OtherSampleId", user));
 
                 dataFieldValueMap.put("Aliq1TargetWellPosition", sixChannelRec.getValue("Aliq1TargetWellPosition", user));
-                logInfo("current record well loc is: " + sixChannelRec.getValue("Aliq1TargetWellPosition", user));
                 dataFieldValueMap.put("DropletReading", sixChannelRec.getValue("DropletReading", user));
-                dataFieldValueMap.put("ExperimentType", sixChannelRec.getValue("ExperimentType", user));
-                dataFieldValueMap.put("Sampledescription1", sixChannelRec.getValue("Sampledescription1", user));
-                dataFieldValueMap.put("Sampledescription2", sixChannelRec.getValue("Sampledescription2", user));
+
                 dataFieldValueMap.put("Sampledescription3", sixChannelRec.getValue("Sampledescription3", user));
                 dataFieldValueMap.put("Sampledescription4", sixChannelRec.getValue("Sampledescription4", user));
                 dataFieldValueMap.put("ExemplarSampleType", sixChannelRec.getValue("ExemplarSampleType", user));
+                dataFieldValueMap.put("ExperimentType", "Rare Event Detection (RED)");
+                sixChannelRec.setDataField("ExperimentType", "Rare Event Detection (RED)", user);
+                dataFieldValueMap.put("AssayType", "Single Target per Channel");
+                sixChannelRec.setDataField("AssayType", "Single Target per Channel", user);
                 dataFieldValueMap.put("SupermixName", sixChannelRec.getValue("SupermixName", user));
                 dataFieldValueMap.put("AssayType", sixChannelRec.getValue("AssayType", user));
-                dataFieldValueMap.put("TargetName", "mPTGER2");
-                dataFieldValueMap.put("TargetType", sixChannelRec.getValue("TargetType", user));
                 dataFieldValueMap.put("SignalCh1", "None");
-                if (dataFieldValueMap.get("TargetName").toString().trim().equalsIgnoreCase("mPTGER2")) {
+
+                if (sixChannelRec.getBooleanVal("Aliq1IsNewControl", user) == Boolean.FALSE) {
+                    String[] targetReference = sixChannelRec.getStringVal("TargetName", user).split(",");
+                    if (targetReference.length < 2) {
+                        clientCallback.displayError("Please include target and reference targets separated by comma; like: target, reference");
+                    }
+                    String target = targetReference[0].trim();
+                    String reference = targetReference[1].trim();
+                    sixChannelRec.setDataField("TargetName", target, user);
+                    sixChannelRec.setDataField("SignalCh1", "FAM", user);
+                    dataFieldValueMap.put("TargetName", reference);
                     dataFieldValueMap.put("SignalCh2", "HEX");
+                    dataFieldValueMap.put("TargetType", "Reference");
+                    dataFieldValueMap.put("ReferenceCopies", "2");
                 }
+                dataFieldValueMap.put("Aliq1ControlType", sixChannelRec.getStringVal("Aliq1ControlType", user));
+                dataFieldValueMap.put("Aliq1IsNewControl", sixChannelRec.getBooleanVal("Aliq1IsNewControl", user));
                 dataFieldValueMap.put("SignalCh3", sixChannelRec.getValue("SignalCh3", user));
                 dataFieldValueMap.put("SignalCh4", sixChannelRec.getValue("SignalCh4", user));
                 dataFieldValueMap.put("SignalCh5", sixChannelRec.getValue("SignalCh5", user));
                 dataFieldValueMap.put("SignalCh6", sixChannelRec.getValue("SignalCh6", user));
-                dataFieldValueMap.put("ReferenceCopies", sixChannelRec.getValue("ReferenceCopies", user));
                 dataFieldValueMap.put("WellNotes", sixChannelRec.getValue("WellNotes", user));
                 dataFieldValueMap.put("Plot", sixChannelRec.getValue("Plot", user));
                 dataFieldValueMap.put("RdqConversionFactor", sixChannelRec.getValue("RdqConversionFactor", user));
 
                 for (DataRecord sample : attachedSamples) {
-                    logInfo("parent sample igo id = " + sample.getParentsOfType("Sample", user).get(0).getStringVal("SampleId", user));
-                    if (sixChannelRec.getStringVal("SampleId", user).equals(sample.getParentsOfType("Sample", user).get(0).getStringVal("SampleId", user))) {
-                        logInfo("Adding duplicate, second channel, records to DdPcrProtocol1SixChannels");
+                    if (sample.getBooleanVal("IsControl", user) == Boolean.TRUE) {
+                        dataFieldValueMap.put("SampleId", sample.getStringVal("SampleId", user));
+                        dataFieldValueMap.put("OtherSampleId", sample.getStringVal("OtherSampleId", user));
+
+                        sixChannelRec.setDataField("Sampledescription1", sample.getStringVal("SampleId", user), user);
+                        sixChannelRec.setDataField("Sampledescription2", sample.getStringVal("OtherSampleId", user), user);
+                        dataFieldValueMap.put("Sampledescription1", sample.getStringVal("SampleId", user));
+                        dataFieldValueMap.put("Sampledescription2", sample.getStringVal("OtherSampleId", user));
+                    }
+                    else if (sample.getBooleanVal("IsControl", user) == Boolean.FALSE) {
+                        dataFieldValueMap.put("AltId", sample.getParentsOfType("Sample", user).get(0).getStringVal("AltId", user));
+                        dataFieldValueMap.put("SampleId", sample.getParentsOfType("Sample", user).get(0).getStringVal("SampleId", user));
+                        dataFieldValueMap.put("OtherSampleId", sample.getParentsOfType("Sample", user).get(0).getStringVal("OtherSampleId", user));
+
+                        sixChannelRec.setDataField("Sampledescription1", sample.getParentsOfType("Sample", user).get(0).getStringVal("SampleId", user), user);
+                        sixChannelRec.setDataField("Sampledescription2", sample.getParentsOfType("Sample", user).get(0).getStringVal("OtherSampleId", user), user);
+                        dataFieldValueMap.put("Sampledescription1", sample.getParentsOfType("Sample", user).get(0).getStringVal("SampleId", user));
+                        dataFieldValueMap.put("Sampledescription2", sample.getParentsOfType("Sample", user).get(0).getStringVal("OtherSampleId", user));
+                        }
+                    if (sample.getBooleanVal("IsControl", user) == Boolean.FALSE &&
+                            sixChannelRec.getStringVal("SampleId", user).equals(sample.getParentsOfType("Sample", user).get(0).getStringVal("SampleId", user))) {
                         ddPcrSixChannelRecords.add(sample.addChild("DdPcrProtocol1SixChannels", dataFieldValueMap, user));
                         break;
+                    }
+                    else if (sample.getBooleanVal("IsControl", user) == Boolean.TRUE &&
+                            sixChannelRec.getStringVal("SampleId", user).equals(sample.getStringVal("SampleId", user))) {
+                        ddPcrSixChannelRecords.add(sample.addChild("DdPcrProtocol1SixChannels", dataFieldValueMap, user));
                     }
                 }
             }
             activeTask.addAttachedDataRecords(ddPcrSixChannelRecords);
             this.activeTask.getTask().getTaskOptions().put("_DUPLICATE RECORDS CREATED", "");
-        } catch (NotFound | IoError e) {
+        } catch (NotFound | IoError | InvalidValue e) {
             throw new RuntimeException(e);
         }
         return new PluginResult(true);

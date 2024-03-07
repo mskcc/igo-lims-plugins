@@ -33,9 +33,8 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
     IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
 
     public DdPcrSampleToPlateAssigner() {
-        // Set to trigger upon task submit, to prevent the default values to get over-written
-        setTaskSubmit(true);
-        setOrder(PluginOrder.LAST.getOrder());
+        setTaskEntry(true);
+        setOrder(PluginOrder.MIDDLE.getOrder());
     }
 
     @Override
@@ -195,9 +194,6 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
         List<Map<String, Object>> dataFieldValuesMaps = new ArrayList<>();
         for (Row row : fileData) {
             Map<String, Object> dataFieldValueMap = getDataFieldsValueMapFromRowData(row, headerValueMap);
-            if (dataFieldValueMap.get("TargetName").toString().trim().equalsIgnoreCase("Mdm2_Mm_Neo")) {
-                dataFieldValueMap.put("SignalCh1", "FAM");
-            }
             dataFieldValuesMaps.add(dataFieldValueMap);
         }
         return dataFieldValuesMaps;
@@ -239,7 +235,6 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
                 String sampleId = sample.getStringVal("SampleId", user);
                 String otherSampleId = sample.getStringVal("OtherSampleId", user);
                 for (Map<String, Object> map : dataFieldValuesMaps) {
-                    logInfo("map plate id is: " + map.get("Aliq1TargetPlateId"));
                     if (map.get("SampleId").toString().equals(sampleId) && map.get("OtherSampleId").toString().equals(otherSampleId)) {
                         newDataRecords.add(sample.addChild(targetDataTypeName, map, user));
                     }
