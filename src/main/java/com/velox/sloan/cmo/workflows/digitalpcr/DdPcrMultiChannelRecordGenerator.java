@@ -59,7 +59,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
 
                 dataFieldValueMap.put("Sampledescription3", sixChannelRec.getValue("Sampledescription3", user));
                 dataFieldValueMap.put("Sampledescription4", sixChannelRec.getValue("Sampledescription4", user));
-                dataFieldValueMap.put("ExemplarSampleType", sixChannelRec.getValue("ExemplarSampleType", user));
+                sixChannelRec.setDataField("ExemplarSampleType", "Unknown", user);
                 dataFieldValueMap.put("ExperimentType", "Rare Event Detection (RED)");
                 sixChannelRec.setDataField("ExperimentType", "Rare Event Detection (RED)", user);
                 dataFieldValueMap.put("AssayType", "Single Target per Channel");
@@ -67,6 +67,8 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                 dataFieldValueMap.put("SupermixName", sixChannelRec.getValue("SupermixName", user));
                 dataFieldValueMap.put("AssayType", sixChannelRec.getValue("AssayType", user));
                 dataFieldValueMap.put("SignalCh1", "None");
+                dataFieldValueMap.put("Aliq1ControlType", sixChannelRec.getStringVal("Aliq1ControlType", user));
+                dataFieldValueMap.put("Aliq1IsNewControl", sixChannelRec.getBooleanVal("Aliq1IsNewControl", user));
 
                 if (sixChannelRec.getBooleanVal("Aliq1IsNewControl", user) == Boolean.FALSE) {
                     String[] targetReference = sixChannelRec.getStringVal("TargetName", user).split(",");
@@ -82,8 +84,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                     dataFieldValueMap.put("TargetType", "Reference");
                     dataFieldValueMap.put("ReferenceCopies", "2");
                 }
-                dataFieldValueMap.put("Aliq1ControlType", sixChannelRec.getStringVal("Aliq1ControlType", user));
-                dataFieldValueMap.put("Aliq1IsNewControl", sixChannelRec.getBooleanVal("Aliq1IsNewControl", user));
+
                 dataFieldValueMap.put("SignalCh3", sixChannelRec.getValue("SignalCh3", user));
                 dataFieldValueMap.put("SignalCh4", sixChannelRec.getValue("SignalCh4", user));
                 dataFieldValueMap.put("SignalCh5", sixChannelRec.getValue("SignalCh5", user));
@@ -93,7 +94,8 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                 dataFieldValueMap.put("RdqConversionFactor", sixChannelRec.getValue("RdqConversionFactor", user));
 
                 for (DataRecord sample : attachedSamples) {
-                    if (sample.getBooleanVal("IsControl", user) == Boolean.TRUE) {
+                    if (sample.getBooleanVal("IsControl", user) == Boolean.TRUE &&
+                        sixChannelRec.getStringVal("SampleId", user).equals(sample.getStringVal("SampleId", user))) {
                         dataFieldValueMap.put("SampleId", sample.getStringVal("SampleId", user));
                         dataFieldValueMap.put("OtherSampleId", sample.getStringVal("OtherSampleId", user));
 
@@ -101,8 +103,12 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                         sixChannelRec.setDataField("Sampledescription2", sample.getStringVal("OtherSampleId", user), user);
                         dataFieldValueMap.put("Sampledescription1", sample.getStringVal("SampleId", user));
                         dataFieldValueMap.put("Sampledescription2", sample.getStringVal("OtherSampleId", user));
+
+                        ddPcrSixChannelRecords.add(sample.addChild("DdPcrProtocol1SixChannels", dataFieldValueMap, user));
+                        break;
                     }
-                    else if (sample.getBooleanVal("IsControl", user) == Boolean.FALSE) {
+                    else if (sample.getBooleanVal("IsControl", user) == Boolean.FALSE &&
+                            sixChannelRec.getStringVal("SampleId", user).equals(sample.getParentsOfType("Sample", user).get(0).getStringVal("SampleId", user))) {
                         dataFieldValueMap.put("AltId", sample.getParentsOfType("Sample", user).get(0).getStringVal("AltId", user));
                         dataFieldValueMap.put("SampleId", sample.getParentsOfType("Sample", user).get(0).getStringVal("SampleId", user));
                         dataFieldValueMap.put("OtherSampleId", sample.getParentsOfType("Sample", user).get(0).getStringVal("OtherSampleId", user));
@@ -111,15 +117,8 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                         sixChannelRec.setDataField("Sampledescription2", sample.getParentsOfType("Sample", user).get(0).getStringVal("OtherSampleId", user), user);
                         dataFieldValueMap.put("Sampledescription1", sample.getParentsOfType("Sample", user).get(0).getStringVal("SampleId", user));
                         dataFieldValueMap.put("Sampledescription2", sample.getParentsOfType("Sample", user).get(0).getStringVal("OtherSampleId", user));
-                        }
-                    if (sample.getBooleanVal("IsControl", user) == Boolean.FALSE &&
-                            sixChannelRec.getStringVal("SampleId", user).equals(sample.getParentsOfType("Sample", user).get(0).getStringVal("SampleId", user))) {
                         ddPcrSixChannelRecords.add(sample.addChild("DdPcrProtocol1SixChannels", dataFieldValueMap, user));
                         break;
-                    }
-                    else if (sample.getBooleanVal("IsControl", user) == Boolean.TRUE &&
-                            sixChannelRec.getStringVal("SampleId", user).equals(sample.getStringVal("SampleId", user))) {
-                        ddPcrSixChannelRecords.add(sample.addChild("DdPcrProtocol1SixChannels", dataFieldValueMap, user));
                     }
                 }
             }
