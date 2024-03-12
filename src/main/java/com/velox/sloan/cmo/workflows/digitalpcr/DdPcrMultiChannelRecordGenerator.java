@@ -70,7 +70,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                 dataFieldValueMap.put("Aliq1ControlType", sixChannelRec.getStringVal("Aliq1ControlType", user));
                 dataFieldValueMap.put("Aliq1IsNewControl", sixChannelRec.getBooleanVal("Aliq1IsNewControl", user));
 
-                if (sixChannelRec.getBooleanVal("Aliq1IsNewControl", user) == Boolean.FALSE) {
+                //if (sixChannelRec.getBooleanVal("Aliq1IsNewControl", user) == Boolean.FALSE) {
                     String[] targetReference = sixChannelRec.getStringVal("TargetName", user).split(",");
                     if (targetReference.length < 2) {
                         clientCallback.displayError("Please include target and reference targets separated by comma; like: target, reference");
@@ -78,13 +78,16 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                     String target = targetReference[0].trim();
                     String reference = targetReference[1].trim();
                     sixChannelRec.setDataField("TargetName", target, user);
-                    sixChannelRec.setDataField("SignalCh1", "FAM", user);
+                    //sixChannelRec.setDataField("SignalCh1", "FAM", user);
                     dataFieldValueMap.put("TargetName", reference);
-                    dataFieldValueMap.put("SignalCh2", "HEX");
-                    dataFieldValueMap.put("TargetType", "Reference");
-                    dataFieldValueMap.put("ReferenceCopies", "2");
-                }
+                    //dataFieldValueMap.put("SignalCh2", "HEX");
 
+                //}
+                dataFieldValueMap.put("TargetType", "Reference");
+                dataFieldValueMap.put("ReferenceCopies", "2");
+
+                sixChannelRec.setDataField("SignalCh1", "FAM", user);
+                dataFieldValueMap.put("SignalCh2", "HEX");
                 dataFieldValueMap.put("SignalCh3", sixChannelRec.getValue("SignalCh3", user));
                 dataFieldValueMap.put("SignalCh4", sixChannelRec.getValue("SignalCh4", user));
                 dataFieldValueMap.put("SignalCh5", sixChannelRec.getValue("SignalCh5", user));
