@@ -18,6 +18,16 @@ public class FilterDLPSampleSheet {
 //        String filePath = "example.fld";
 
         try {
+            // make a copy of the original sample sheet
+            FileInputStream inputStream = new FileInputStream(inputSampleSheet);
+            FileOutputStream outputStream = new FileOutputStream("DLPSampleSheetCopied.csv");
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+            System.out.println("File copied successfully!");
+
             BufferedReader sampleSheetReader = new BufferedReader(new FileReader(inputSampleSheet));
             BufferedReader fieldFileReader = new BufferedReader(new FileReader(fld));
             String fieldLine, sampleSheetLine;
@@ -35,6 +45,9 @@ public class FilterDLPSampleSheet {
             while ((fieldLine = fieldFileReader.readLine()) != null) {
                 String fieldRow = fieldLine.split("/")[0];
                 String fieldCol = fieldLine.split("/")[1];
+                if (fieldLine.split(",").length > 0) {
+
+                }
                 while ((sampleSheetLine = sampleSheetReader.readLine()) != null) {
                     String[] sampleFields = sampleSheetLine.split(",");
                     String fieldWithChipLocInfo = sampleFields[4];
