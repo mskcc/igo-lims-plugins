@@ -60,8 +60,8 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                 dataFieldValueMap.put("Sampledescription3", sixChannelRec.getValue("Sampledescription3", user));
                 dataFieldValueMap.put("Sampledescription4", sixChannelRec.getValue("Sampledescription4", user));
                 sixChannelRec.setDataField("ExemplarSampleType", "Unknown", user);
-                dataFieldValueMap.put("ExperimentType", "Rare Event Detection (RED)");
-                sixChannelRec.setDataField("ExperimentType", "Rare Event Detection (RED)", user);
+//                dataFieldValueMap.put("ExperimentType", "Rare Event Detection (RED)");
+//                sixChannelRec.setDataField("ExperimentType", "Rare Event Detection (RED)", user);
                 dataFieldValueMap.put("AssayType", "Single Target per Channel");
                 sixChannelRec.setDataField("AssayType", "Single Target per Channel", user);
                 dataFieldValueMap.put("SupermixName", sixChannelRec.getValue("SupermixName", user));
@@ -81,11 +81,10 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                     //sixChannelRec.setDataField("SignalCh1", "FAM", user);
                     dataFieldValueMap.put("TargetName", reference);
                     //dataFieldValueMap.put("SignalCh2", "HEX");
-
                 }
                 dataFieldValueMap.put("TargetType", "Reference");
                 dataFieldValueMap.put("ReferenceCopies", "2");
-
+                sixChannelRec.setDataField("ReferenceCopies", "1", user);
                 sixChannelRec.setDataField("SignalCh1", "FAM", user);
                 dataFieldValueMap.put("SignalCh2", "HEX");
                 dataFieldValueMap.put("SignalCh3", sixChannelRec.getValue("SignalCh3", user));
