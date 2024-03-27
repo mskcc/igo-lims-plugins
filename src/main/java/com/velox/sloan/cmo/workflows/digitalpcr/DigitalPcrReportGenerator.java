@@ -33,12 +33,13 @@ import java.util.*;
  * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
 public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
-    private List<String> ddPCRReportTypes = Arrays.asList("GEX", "RED", "CNV", "LAB MEDICINE", "METHYLATED");
-    private List<String> gexReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Mu (Copies/ul)", "Droplet # gene", "Droplet # Ref", "Ratio ([GOI]/[Ref])", "Accepted Droplets", "Micronic Tube Barcode");
-    private List<String> cnvReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Mu (Copies/ul)", "Droplet Count Mu", "Droplet Count WT", "Ratio ([Mu]/[WT])", "Accepted Droplets", "Micronic Tube Barcode");
-    private List<String> redReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Mu (Copies/ul)", "Droplet Count Mu", "Droplet Count WT", "Ratio ([Mu]/[WT])", "Accepted Droplets", "Micronic Tube Barcode", "Human %");
-    private List<String> methylatedReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Mu (Copies/ul)", "Droplet Count MethyFam", "Droplet Count MethyHex", "Ratio ([MethyFam]/[MethyHex])", "Accepted Droplets");
-    private List<String> labMedicineReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Mu (Copies/ul)", "Droplet Count# gene", "Droplet Count# Ref", "Total Detected (ng)", "Ratio ([Gene]/[Ref])", "Accepted Droplets", "Micronic Tube Barcode");
+    private List<String> ddPCRReportTypes = Arrays.asList("GEX", "RED", "CNV", "LAB MEDICINE", "METHYLATED", "PDX");
+    private List<String> gexReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Gene", "Concentration Ref", "Ratio ([Gene]/[Ref])", "Droplet Count Gene", "Droplet Count Ref", "Accepted Droplets");
+    private List<String> cnvReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Gene", "Concentration Ref", "CNV", "Droplet Count Gene", "Droplet Count Ref", "Accepted Droplets");
+    private List<String> redReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration MU", "Concentration WT", "Fractional abundance", "Droplet Count MU", "Droplet Count WT", "Accepted Droplets");
+    private List<String> PDXReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Human", "Concentration Mouse", "Ratio ([Human]/[Mouse])", "Droplet Count Human", "Droplet Count Mouse", "Accepted Droplets", "Human %");
+    private List<String> methylatedReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Methylated", "Concentration Unmethylated", "Ratio ([Methylated]/[Unmethylated])", "Droplet Count Methylated", "Droplet Count Unmethylated", "Accepted Droplets");
+    private List<String> labMedicineReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Gene", "Concentration Ref", "Ratio ([Gene]/[Ref])", "Droplet Count Gene", "Droplet Count Ref", "Total Detected (ng)", "Accepted Droplets", "Micronic Tube Barcode");
 
     public DigitalPcrReportGenerator() {
         setTaskToolbar(true);
@@ -159,7 +160,10 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
                 reportFieldValues.put("AcceptedDroplets", record.getValue("AcceptedDroplets", user));
                 reportFieldValues.put("HumanPercentage", record.getValue("HumanPercentage", user));
                 reportFieldValues.put("MicronicTubeBarcode", getMicronicTubeIdFromParentSample(record));
-                //ConcentrationMutation
+                reportFieldValues.put("FractionalAbundance", record.getValue("FractionalAbundance", user));
+                reportFieldValues.put("CNV", record.getValue("CNV", user));
+                reportFieldValues.put("ConcentrationMu", record.getValue("ConcentrationMu", user));
+                reportFieldValues.put("ConcentrationRef", record.getValue("ConcentrationRef", user));
                 reportFieldValueMaps.add(reportFieldValues);
             } catch (RemoteException e) {
                 logError(String.format("RemoteException -> Error setting field values for report:\n%s", ExceptionUtils.getStackTrace(e)));
@@ -204,6 +208,8 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
                 return gexReportHeaders;
             case "red":
                 return redReportHeaders;
+            case "PDX":
+                return PDXReportHeaders;
             case "lab medicine":
                 return labMedicineReportHeaders;
             case "methylated":
@@ -284,31 +290,47 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
             sheet.autoSizeColumn(cellId);
             cellId++;
         }
+        /** private List<String> gexReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Gene", "Concentration Ref", "Ratio ([Gene]/[Ref])", "Droplet Count Gene", "Droplet Count Ref", "Accepted Droplets");
+         *     private List<String> cnvReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Gene", "Concentration Ref", "CNV", "Droplet Count Gene", "Droplet Count Ref", "Accepted Droplets");
+         *     private List<String> redReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration MU", "Concentration WT", "Fractional abundance", "Droplet Count MU", "Droplet Count WT", "Accepted Droplets");
+         *     private List<String> PDXReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Human", "Concentration Mouse", "Ratio ([Human]/[Mouse])", "Droplet Count Human", "Droplet Count Mouse", "Accepted Droplets", "Human %");
+         *     private List<String> methylatedReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Methylated", "Concentration Unmethylated", "Ratio ([Methylated]/[Unmethylated])", "Droplet Count Methylated", "Droplet Count Unmethylated", "Accepted Droplets");
+         *     private List<String> labMedicineReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Gene", "Concentration Ref", "Ratio ([Gene]/[Ref])", "Droplet Count Gene", "Droplet Count Ref", "Total Detected (ng)", "Accepted Droplets", "Micronic Tube Barcode");
+         */
         for (Map<String, Object> data : dataValues) {
             row = sheet.createRow(rowId);
             setDataCellStyle(workbook, row.createCell(0)).setCellValue(data.get("Assay").toString());
             setDataCellStyle(workbook, row.createCell(1)).setCellValue(data.get("OtherSampleId").toString());
             setDataCellStyle(workbook, row.createCell(2)).setCellValue(data.get("SampleId").toString());
             setDataCellStyle(workbook, row.createCell(3)).setCellValue(Double.parseDouble(data.get("TotalInput").toString()));
-            setDataCellStyle(workbook, row.createCell(4)).setCellValue(Integer.parseInt(data.get("DropletCountTest").toString()));
-            setDataCellStyle(workbook, row.createCell(5)).setCellValue(Integer.parseInt(data.get("DropletCountRef").toString()));
-            if (!reportType.equals("LAB MEDICINE")) {
-                setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("Ratio").toString()));
-                setDataCellStyle(workbook, row.createCell(7)).setCellValue(Integer.parseInt(data.get("AcceptedDroplets").toString()));
+            setDataCellStyle(workbook, row.createCell(4)).setCellValue(Integer.parseInt(data.get("ConcentrationMu").toString()));
+            setDataCellStyle(workbook, row.createCell(5)).setCellValue(Integer.parseInt(data.get("ConcentrationRef").toString()));
+            setDataCellStyle(workbook, row.createCell(7)).setCellValue(Integer.parseInt(data.get("DropletCountTest").toString()));
+            setDataCellStyle(workbook, row.createCell(8)).setCellValue(Integer.parseInt(data.get("DropletCountRef").toString()));
 
-                if (data.get("MicronicTubeBarcode") != null) {
-                    setDataCellStyle(workbook, row.createCell(8)).setCellValue(data.get("MicronicTubeBarcode").toString());
-                } else {
-                    setDataCellStyle(workbook, row.createCell(8)).setCellValue("");
-                }
-                if (headerValues.contains("Human %")) {
-                    if (data.get("HumanPercentage") != null) {
-                        setDataCellStyle(workbook, row.createCell(9)).setCellValue(Double.parseDouble(data.get("HumanPercentage").toString()));
-                    } else {
-                        setDataCellStyle(workbook, row.createCell(9)).setCellValue("");
-                    }
-                }
+            if (reportType.equals("CNV")) {
+                setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("CNV").toString()));
             }
+            if (reportType.equals("RED")) {
+                setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("FractionalAbundance").toString()));
+            }
+//            if (!reportType.equals("CNV")) {
+//                setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("Ratio").toString()));
+//                setDataCellStyle(workbook, row.createCell(7)).setCellValue(Integer.parseInt(data.get("AcceptedDroplets").toString()));
+//
+//                if (data.get("MicronicTubeBarcode") != null) {
+//                    setDataCellStyle(workbook, row.createCell(8)).setCellValue(data.get("MicronicTubeBarcode").toString());
+//                } else {
+//                    setDataCellStyle(workbook, row.createCell(8)).setCellValue("");
+//                }
+//                if (headerValues.contains("Human %")) {
+//                    if (data.get("HumanPercentage") != null) {
+//                        setDataCellStyle(workbook, row.createCell(9)).setCellValue(Double.parseDouble(data.get("HumanPercentage").toString()));
+//                    } else {
+//                        setDataCellStyle(workbook, row.createCell(9)).setCellValue("");
+//                    }
+//                }
+//            }
             else { // if LAB MEDICINE
                 setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("TotalDetected").toString()));
                 setDataCellStyle(workbook, row.createCell(7)).setCellValue(Double.parseDouble(data.get("Ratio").toString()));
