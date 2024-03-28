@@ -82,9 +82,9 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                     dataFieldValueMap.put("TargetName", reference);
                     //dataFieldValueMap.put("SignalCh2", "HEX");
                 }
-                dataFieldValueMap.put("TargetType", "Reference");
-                dataFieldValueMap.put("ReferenceCopies", "2");
-                sixChannelRec.setDataField("ReferenceCopies", "1", user);
+                dataFieldValueMap.put("TargetType", "Unknown");
+                //dataFieldValueMap.put("ReferenceCopies", "2");
+                //sixChannelRec.setDataField("ReferenceCopies", "1", user);
                 sixChannelRec.setDataField("SignalCh1", "FAM", user);
                 dataFieldValueMap.put("SignalCh2", "HEX");
                 dataFieldValueMap.put("SignalCh3", sixChannelRec.getValue("SignalCh3", user));
@@ -126,6 +126,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
             }
             activeTask.addAttachedDataRecords(ddPcrSixChannelRecords);
             this.activeTask.getTask().getTaskOptions().put("_DUPLICATE RECORDS CREATED", "");
+            logInfo("Added the duplicated task option to this step!");
         } catch (NotFound | IoError | InvalidValue e) {
             throw new RuntimeException(e);
         }

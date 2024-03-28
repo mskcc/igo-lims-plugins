@@ -310,39 +310,31 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
 
             if (reportType.equals("CNV")) {
                 setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("CNV").toString()));
+                setDataCellStyle(workbook, row.createCell(9)).setCellValue(Integer.parseInt(data.get("AcceptedDroplets").toString()));
             }
-            if (reportType.equals("RED")) {
+            else if (reportType.equals("RED")) {
                 setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("FractionalAbundance").toString()));
+                setDataCellStyle(workbook, row.createCell(9)).setCellValue(Integer.parseInt(data.get("AcceptedDroplets").toString()));
             }
-//            if (!reportType.equals("CNV")) {
-//                setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("Ratio").toString()));
-//                setDataCellStyle(workbook, row.createCell(7)).setCellValue(Integer.parseInt(data.get("AcceptedDroplets").toString()));
-//
-//                if (data.get("MicronicTubeBarcode") != null) {
-//                    setDataCellStyle(workbook, row.createCell(8)).setCellValue(data.get("MicronicTubeBarcode").toString());
-//                } else {
-//                    setDataCellStyle(workbook, row.createCell(8)).setCellValue("");
-//                }
-//                if (headerValues.contains("Human %")) {
-//                    if (data.get("HumanPercentage") != null) {
-//                        setDataCellStyle(workbook, row.createCell(9)).setCellValue(Double.parseDouble(data.get("HumanPercentage").toString()));
-//                    } else {
-//                        setDataCellStyle(workbook, row.createCell(9)).setCellValue("");
-//                    }
-//                }
-//            }
-            else { // if LAB MEDICINE
-                setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("TotalDetected").toString()));
-                setDataCellStyle(workbook, row.createCell(7)).setCellValue(Double.parseDouble(data.get("Ratio").toString()));
-                setDataCellStyle(workbook, row.createCell(8)).setCellValue(Integer.parseInt(data.get("AcceptedDroplets").toString()));
-
+            else if (reportType.equals("GEX") || reportType.equals("METHYLATED")) {
+                setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("Ratio").toString()));
+                setDataCellStyle(workbook, row.createCell(9)).setCellValue(Integer.parseInt(data.get("AcceptedDroplets").toString()));
+            }
+            else if (reportType.equals("PDX")) {
+                setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("Ratio").toString()));
+                setDataCellStyle(workbook, row.createCell(9)).setCellValue(Integer.parseInt(data.get("AcceptedDroplets").toString()));
+                setDataCellStyle(workbook, row.createCell(10)).setCellValue(Double.parseDouble(data.get("HumanPercentage").toString()));
+            }
+            else if (reportType.equals("LAB MEDICINE")) {
+                setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("Ratio").toString()));
+                setDataCellStyle(workbook, row.createCell(9)).setCellValue(Double.parseDouble(data.get("TotalDetected").toString()));
+                setDataCellStyle(workbook, row.createCell(10)).setCellValue(Integer.parseInt(data.get("AcceptedDroplets").toString()));
                 if (data.get("MicronicTubeBarcode") != null) {
-                    setDataCellStyle(workbook, row.createCell(9)).setCellValue(data.get("MicronicTubeBarcode").toString());
+                    setDataCellStyle(workbook, row.createCell(11)).setCellValue(data.get("MicronicTubeBarcode").toString());
                 } else {
-                    setDataCellStyle(workbook, row.createCell(9)).setCellValue("");
+                    setDataCellStyle(workbook, row.createCell(11)).setCellValue("");
                 }
             }
-
             rowId++;
         }
         autoSizeColumns(sheet, headerValues);
