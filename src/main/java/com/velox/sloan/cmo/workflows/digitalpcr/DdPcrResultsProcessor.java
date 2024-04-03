@@ -92,8 +92,8 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
     }
 
     @Override
-    public Double calculateTotalDnaDetected(Double concentrationMutation, Double ConcentrationWildType) {
-        return (concentrationMutation + ConcentrationWildType) * 0.066;
+    public Double calculateTotalDnaDetected(Double concentrationGene, Double concentrationRef) {
+        return (concentrationGene + concentrationRef) * 0.066;
     }
 
     @Override
