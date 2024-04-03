@@ -71,7 +71,6 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap);
                 List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap);
                 logInfo("Flattened data");
-                logInfo(channel1Channe2CombinedData.toString());
                 Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData);
                 logInfo(groupedData.toString());
                 List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1", user);
@@ -302,14 +301,14 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
             String target = key.split("/")[1];
             analyzedData.put("Assay", target);
             analyzedData.put("OtherSampleId", sampleName);
-            analyzedData.put("ConcentrationMutation", getAverage(groupedData.get(key), "ConcentrationMutation"));
-            analyzedData.put("ConcentrationWildType", getAverage(groupedData.get(key), "ConcentrationWildType"));
+            analyzedData.put("concentrationGene", getAverage(groupedData.get(key), "ConcentrationMutation"));
+            analyzedData.put("concentrationRef", getAverage(groupedData.get(key), "ConcentrationWildType"));
             analyzedData.put("Channel1PosChannel2Pos", getSum(groupedData.get(key), "Channel1PosChannel2Pos"));
             analyzedData.put("Channel1PosChannel2Neg", getSum(groupedData.get(key), "Channel1PosChannel2Neg"));
             analyzedData.put("Channel1NegChannel2Pos", getSum(groupedData.get(key), "Channel1NegChannel2Pos"));
             Integer dropletCountMutation = (Integer) analyzedData.get("Channel1PosChannel2Pos") + (Integer) analyzedData.get("Channel1PosChannel2Neg");
             Integer dropletCountWildType = (Integer) analyzedData.get("Channel1PosChannel2Pos") + (Integer) analyzedData.get("Channel1NegChannel2Pos");
-            Double totalDnaDetected = calculateTotalDnaDetected((Double) analyzedData.get("ConcentrationMutation"), (Double) analyzedData.get("ConcentrationWildType"));
+            Double totalDnaDetected = calculateTotalDnaDetected((Double) analyzedData.get("concentrationGene"), (Double) analyzedData.get("concentrationRef"));
             analyzedData.put("DropletCountMutation", dropletCountMutation);
             analyzedData.put("DropletCountWildType", dropletCountWildType);
             analyzedData.put("TotalDnaDetected", totalDnaDetected);
