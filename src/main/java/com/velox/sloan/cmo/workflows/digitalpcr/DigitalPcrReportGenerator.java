@@ -168,8 +168,8 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
                 reportFieldValues.put("MicronicTubeBarcode", getMicronicTubeIdFromParentSample(record));
                 reportFieldValues.put("FractionalAbundance", record.getValue("FractionalAbundance", user));
                 reportFieldValues.put("CNV", record.getValue("CNV", user));
-                reportFieldValues.put("ConcentrationMu", record.getValue("ConcentrationMu", user));
-                reportFieldValues.put("ConcentrationRef", record.getValue("ConcentrationRef", user));
+                reportFieldValues.put("ConcentrationMutation", record.getValue("ConcentrationMutation", user));
+                reportFieldValues.put("ConcentrationWildType", record.getValue("ConcentrationWildType", user));
                 reportFieldValueMaps.add(reportFieldValues);
             } catch (RemoteException e) {
                 logError(String.format("RemoteException -> Error setting field values for report:\n%s", ExceptionUtils.getStackTrace(e)));
@@ -302,8 +302,8 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
             setDataCellStyle(workbook, row.createCell(1)).setCellValue(data.get("OtherSampleId").toString());
             setDataCellStyle(workbook, row.createCell(2)).setCellValue(data.get("SampleId").toString());
             setDataCellStyle(workbook, row.createCell(3)).setCellValue(Double.parseDouble(data.get("TotalInput").toString()));
-            setDataCellStyle(workbook, row.createCell(4)).setCellValue(Integer.parseInt(data.get("ConcentrationMu").toString()));
-            setDataCellStyle(workbook, row.createCell(5)).setCellValue(Integer.parseInt(data.get("ConcentrationRef").toString()));
+            setDataCellStyle(workbook, row.createCell(4)).setCellValue(Integer.parseInt(data.get("ConcentrationMutation").toString()));
+            setDataCellStyle(workbook, row.createCell(5)).setCellValue(Integer.parseInt(data.get("ConcentrationWildType").toString()));
             setDataCellStyle(workbook, row.createCell(7)).setCellValue(Integer.parseInt(data.get("DropletCountTest").toString()));
             setDataCellStyle(workbook, row.createCell(8)).setCellValue(Integer.parseInt(data.get("DropletCountRef").toString()));
 
