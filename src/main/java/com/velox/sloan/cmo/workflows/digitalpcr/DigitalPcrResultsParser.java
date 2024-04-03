@@ -254,12 +254,12 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
     /**
      * Calculate Ration between two values.
      *
-     * @param dropletCountMutation
-     * @param dropletCountWildType
-     * @return ration of dropletCountMutation/dropletCountWildType.
+     * @param concentrationGene
+     * @param concentrationRef
+     * @return ration of concentrationGene/concentrationRef.
      */
-    private Double getRatio(Double dropletCountMutation, Double dropletCountWildType) {
-        return resultsProcessor.calculateRatio(dropletCountMutation, dropletCountWildType);
+    private Double getRatio(Double concentrationGene, Double concentrationRef) {
+        return resultsProcessor.calculateRatio(concentrationGene, concentrationRef);
     }
 
     /**
@@ -313,7 +313,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
             analyzedData.put("DropletCountMutation", dropletCountMutation);
             analyzedData.put("DropletCountWildType", dropletCountWildType);
             analyzedData.put("TotalDnaDetected", totalDnaDetected);
-            Double ratio = getRatio(Double.valueOf(analyzedData.get("DropletCountMutation").toString()), Double.valueOf(analyzedData.get("DropletCountWildType").toString()));
+            Double ratio = getRatio(Double.valueOf(analyzedData.get("concentrationGene").toString()), Double.valueOf(analyzedData.get("concentrationRef").toString()));
             analyzedData.put("Ratio", ratio);
             analyzedData.put("AcceptedDroplets", getSum(groupedData.get(key), "AcceptedDroplets"));
             if (target.equalsIgnoreCase(HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME)) {
