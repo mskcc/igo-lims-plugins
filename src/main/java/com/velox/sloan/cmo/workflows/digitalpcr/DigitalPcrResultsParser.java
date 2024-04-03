@@ -23,14 +23,18 @@ import java.util.*;
  */
 public class DigitalPcrResultsParser extends DefaultGenericPlugin {
 
+    public int qxResultType = 0;
     private final String HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME = "Mouse_Human_CNV_PTGER2";
 //    private final List<String> expectedRawResultsHeaders = Arrays.asList("Well", "Sample description 1", "Sample description 2",
 //            "Target", "Conc(copies/µL)", "pg/µL",
 //            "Status","Status Reason", "Experiment", "SampleType", "TargetType", "Supermix", "DyeName(s)", "Copies/20µLWell", "Accepted Droplets", "Positives", "Negatives", "Copies/uL linked molecules", "CNV", "ReferenceCopies", "UnknownCopies", "Threshold1",
 //            "ReferenceUsed", "Ratio", "Fractional Abundance", "ExperimentComments", "MergedWells", "TiltCorrected", "Ch1+Ch2+", "Ch1+Ch2-", "Ch1-Ch2+", "Ch1-Ch2-", "Ch3+Ch4+", "Ch3+Ch4-", "Ch3-Ch4+", "Ch3-Ch4-",
 //            "Ch5+Ch6+", "Ch5+Ch6-", "Ch5-Ch6+", "Ch5-Ch6-");
+private final List<String> expectedQx200RawResultsHeaders = Arrays.asList("Well", "ExptType", "Experiment", "Sample", "TargetType", "Target",
+        "Status", "Concentration", "Supermix", "CopiesPer20uLWell", "TotalConfMax", "TotalConfMin", "PoissonConfMax", "PoissonConfMin",
+        "Positives", "Negatives", "Ch1+Ch2+", "Ch1+Ch2-", "Ch1-Ch2+", "Ch1-Ch2-", "Linkage", "AcceptedDroplets");
 
-    private final List<String> expectedRawResultsHeaders = Arrays.asList("Well","Sample description 1","Sample description 2",
+    private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well","Sample description 1","Sample description 2",
             "Sample description 3","Sample description 4","Target","Conc(copies/µL)","pg/µL","Status","Status Reason","Experiment",
             "SampleType","TargetType","Supermix","DyeName(s)","Copies/20µLWell","TotalConfMax","TotalConfMin","PoissonConfMax",
             "PoissonConfMin","Accepted Droplets","Positives","Negatives","Copies/uL linked molecules","CNV","TotalCNVMax",
@@ -79,6 +83,8 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 dataRecordManager.deleteDataRecords(protocolRecords, null, false, user);
                 logInfo(String.format("DDPCR results file re-uploaded -> Deleted %s records attached to task created by previous DDPCR results upload", activeTask.getInputDataTypeName()));
             }
+            String[] QXResultSheetType = {"QX200", "QX600"};
+            qxResultType = clientCallback.showOptionDialog("QX Manager Type", "Which QX result type have you uploaded?", QXResultSheetType, 0);
             //read data from file and create new ddpcr assay results.
             for (String file : filesWithDigitalPcrRawData) {
                 List<String> fileData = igoUtils.readDataFromCsvFile(clientCallback.readBytes(file));
@@ -135,10 +141,19 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 return false;
             }
             logInfo("file data = " + Arrays.asList(fileData.get(0).split(",")));
-            if (!igoUtils.csvFileContainsRequiredHeaders(fileData, expectedRawResultsHeaders)) {
-                clientCallback.displayError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
-                logError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
-                return false;
+            if (qxResultType == 0) {
+                if (!igoUtils.csvFileContainsRequiredHeaders(fileData, expectedQx200RawResultsHeaders)) {
+                    clientCallback.displayError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
+                    logError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
+                    return false;
+                }
+            }
+            else {
+                if (!igoUtils.csvFileContainsRequiredHeaders(fileData, expectedQx600RawResultsHeaders)) {
+                    clientCallback.displayError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
+                    logError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
+                    return false;
+                }
             }
             if (!igoUtils.csvFileHasData(fileData)) {
                 clientCallback.displayError(String.format("Uploaded file '%s' has does not contain data. Please check the file", name));
@@ -151,20 +166,20 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
 
 
 
-    /**
-     * Remove duplicate headers when data from multiple files is combined
-     *
-     * @param data
-     */
-    private void removeDuplicateHeaderFromCombinedData(List<String> data) {
-        if (Arrays.asList(data.get(0).split(",")).containsAll(expectedRawResultsHeaders)) {
-            for (int i = 1; i < data.size(); i++) {
-                if (Arrays.asList(data.get(i).split(",")).containsAll(expectedRawResultsHeaders)) {
-                    data.remove(i);
-                }
-            }
-        }
-    }
+//    /**
+//     * Remove duplicate headers when data from multiple files is combined
+//     *
+//     * @param data
+//     */
+//    private void removeDuplicateHeaderFromCombinedData(List<String> data) {
+//        if (Arrays.asList(data.get(0).split(",")).containsAll(expectedRawResultsHeaders)) {
+//            for (int i = 1; i < data.size(); i++) {
+//                if (Arrays.asList(data.get(i).split(",")).containsAll(expectedRawResultsHeaders)) {
+//                    data.remove(i);
+//                }
+//            }
+//        }
+//    }
 
     /**
      * Get the data related to channel1 in the raw data under "TargetType" column in ddPCR results.
