@@ -25,12 +25,13 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
 
     public DdPcrMultiChannelRecordGenerator() {
         setTaskEntry(true);
-        setOrder(PluginOrder.FIRST.getOrder());
+        setOrder(PluginOrder.LAST.getOrder());
     }
     @Override
     public boolean shouldRun() throws RemoteException {
-        return activeTask.getTask().getTaskOptions().containsKey("CREATE NEW SIX CHANNELS RECORDS") &&
-                !activeTask.getTask().getTaskOptions().containsKey("_DUPLICATE RECORDS CREATED");
+        return this.activeTask.getTask().getTaskOptions().containsKey("CREATE NEW SIX CHANNELS RECORDS") &&
+                !this.activeTask.getTask().getTaskOptions().containsKey("DUPLICATE RECORDS CREATED") /*&&
+                activeTask.getStatus() != activeTask.COMPLETE*/;
     }
 
     @Override
@@ -38,10 +39,11 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
         try {
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
             List<DataRecord> attachedDdpcrSixChannels = activeTask.getAttachedDataRecords("DdPcrProtocol1SixChannels", user);
-
             Map<String, Object> dataFieldValueMap = new HashMap<>();
             List<DataRecord> ddPcrSixChannelRecords = new ArrayList<>();
 
+            this.activeTask.getTask().getTaskOptions().put("DUPLICATE RECORDS CREATED", "");
+            logInfo("Added the duplicated task option to this step!");
 
             for (DataRecord sixChannelRec : attachedDdpcrSixChannels) {
                 dataFieldValueMap.put("Aliq1StartingVolume", sixChannelRec.getValue("Aliq1StartingVolume", user));
@@ -125,8 +127,6 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                 }
             }
             activeTask.addAttachedDataRecords(ddPcrSixChannelRecords);
-            this.activeTask.getTask().getTaskOptions().put("_DUPLICATE RECORDS CREATED", "");
-            logInfo("Added the duplicated task option to this step!");
         } catch (NotFound | IoError | InvalidValue e) {
             throw new RuntimeException(e);
         }

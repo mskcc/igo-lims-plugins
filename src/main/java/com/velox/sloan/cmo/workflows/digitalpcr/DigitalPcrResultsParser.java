@@ -24,20 +24,25 @@ import java.util.*;
 public class DigitalPcrResultsParser extends DefaultGenericPlugin {
 
     private final String HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME = "Mouse_Human_CNV_PTGER2";
-    private final List<String> expectedRawResultsHeaders = Arrays.asList("Well", "Sample description 1", "Sample description 2",
-            "Sample description 3", "Sample description 4", "Target", "Conc(copies/µL)", "pg/µL",
-            "Status","Status Reason", "Experiment", "SampleType", "TargetType", "Supermix", "DyeName(s)", "Copies/20µLWell", "PoissonConfMax",
-            "TotalConfMin", "PoissonConfMin", "AcceptedDroplets", "Positives", "Negatives", "Copies/uL linked molecules", "CNV", "TotalCNVMax",
-            "TotalCNVMin", "PoissonCNVMax", "PoissonCNVMin", "ReferenceCopies", "UnknownCopies", "Threshold1", "Threshold2",
-            "Threshold3", "ThresholdSigmaAbove", "ThresholdSigmaBelow", "ReferenceUsed", "Ratio", "TotalRatioMax", "TotalRatioMin",
-            "PoissonRatioMax", "PoissonRatioMin", "Fractional Abundance", "TotalFractionalAbundanceMax", "TotalFractionalAbundanceMin",
-            "PoissonFractionalAbundanceMax", "PoissonFractionalAbundanceMin", "MeanAmplitudeOfPositives", "MeanAmplitudeOfNegatives",
-            "MeanAmplitudeTotal", "ExperimentComments", "MergedWells", "TotalConfidenceMax68", "TotalConfidenceMin68", "PoissonConfidenceMax68",
-            "PoissonConfidenceMin68", "TotalCNVMax68", "TotalCNVMin68", "PoissonCNVMax68", "PoissonCNVMin68", "TotalRatioMax68", "TotalRatioMin68",
-            "PoissonRatioMax68", "PoissonRatioMin68", "TotalFractionalAbundanceMax68", "TotalFractionalAbundanceMin68", "PoissonFractionalAbundanceMax68",
-            "PoissonFractionalAbundanceMin68", "TiltCorrected", "Ch1+Ch2+", "Ch1+Ch2-", "Ch1-Ch2+", "Ch1-Ch2-", "Ch3+Ch4+", "Ch3+Ch4-", "Ch3-Ch4+", "Ch3-Ch4-",
-            "Ch5+Ch6+", "Ch5+Ch6-", "Ch5-Ch6+", "Ch5-Ch6-");
+//    private final List<String> expectedRawResultsHeaders = Arrays.asList("Well", "Sample description 1", "Sample description 2",
+//            "Target", "Conc(copies/µL)", "pg/µL",
+//            "Status","Status Reason", "Experiment", "SampleType", "TargetType", "Supermix", "DyeName(s)", "Copies/20µLWell", "Accepted Droplets", "Positives", "Negatives", "Copies/uL linked molecules", "CNV", "ReferenceCopies", "UnknownCopies", "Threshold1",
+//            "ReferenceUsed", "Ratio", "Fractional Abundance", "ExperimentComments", "MergedWells", "TiltCorrected", "Ch1+Ch2+", "Ch1+Ch2-", "Ch1-Ch2+", "Ch1-Ch2-", "Ch3+Ch4+", "Ch3+Ch4-", "Ch3-Ch4+", "Ch3-Ch4-",
+//            "Ch5+Ch6+", "Ch5+Ch6-", "Ch5-Ch6+", "Ch5-Ch6-");
 
+    private final List<String> expectedRawResultsHeaders = Arrays.asList("Well","Sample description 1","Sample description 2",
+            "Sample description 3","Sample description 4","Target","Conc(copies/µL)","pg/µL","Status","Status Reason","Experiment",
+            "SampleType","TargetType","Supermix","DyeName(s)","Copies/20µLWell","TotalConfMax","TotalConfMin","PoissonConfMax",
+            "PoissonConfMin","Accepted Droplets","Positives","Negatives","Copies/uL linked molecules","CNV","TotalCNVMax",
+            "TotalCNVMin","PoissonCNVMax","PoissonCNVMin","ReferenceCopies","UnknownCopies","Threshold1","Threshold2","Threshold3",
+            "ThresholdSigmaAbove","ThresholdSigmaBelow","ReferenceUsed","Ratio","TotalRatioMax","TotalRatioMin","PoissonRatioMax",
+            "PoissonRatioMin","Fractional Abundance","TotalFractionalAbundanceMax","TotalFractionalAbundanceMin",
+            "PoissonFractionalAbundanceMax","PoissonFractionalAbundanceMin","MeanAmplitudeOfPositives","MeanAmplitudeOfNegatives",
+            "MeanAmplitudeTotal","ExperimentComments","MergedWells","TotalConfidenceMax68","TotalConfidenceMin68",
+            "PoissonConfidenceMax68","PoissonConfidenceMin68","TotalCNVMax68","TotalCNVMin68","PoissonCNVMax68","PoissonCNVMin68",
+            "TotalRatioMax68","TotalRatioMin68","PoissonRatioMax68","PoissonRatioMin68","TotalFractionalAbundanceMax68",
+            "TotalFractionalAbundanceMin68","PoissonFractionalAbundanceMax68","PoissonFractionalAbundanceMin68","TiltCorrected",
+            "Ch1+Ch2+","Ch1+Ch2-","Ch1-Ch2+","Ch1-Ch2-","Ch3+Ch4+","Ch3+Ch4-","Ch3-Ch4+","Ch3-Ch4-","Ch5+Ch6+","Ch5+Ch6-","Ch5-Ch6+","Ch5-Ch6-");
     IgoLimsPluginUtils igoUtils = new IgoLimsPluginUtils();
     DdPcrResultsProcessor resultsProcessor = new DdPcrResultsProcessor();
 
@@ -129,6 +134,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 logError(String.format("Uploaded file '%s' is not a '.csv' file", name));
                 return false;
             }
+            logInfo("file data = " + Arrays.asList(fileData.get(0).split(",")));
             if (!igoUtils.csvFileContainsRequiredHeaders(fileData, expectedRawResultsHeaders)) {
                 clientCallback.displayError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
                 logError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
