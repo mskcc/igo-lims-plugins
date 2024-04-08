@@ -26,7 +26,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
     private final String HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME = "Mouse_Human_CNV_PTGER2";
     private final List<String> expectedRawResultsHeaders = Arrays.asList("Well", "ExptType", "Experiment", "Sample", "TargetType", "Target",
             "Status", "Concentration", "Supermix", "CopiesPer20uLWell", "TotalConfMax", "TotalConfMin", "PoissonConfMax", "PoissonConfMin",
-            "Positives", "Negatives", "Ch1+Ch2+", "Ch1+Ch2-", "Ch1-Ch2+", "Ch1-Ch2-", "Linkage", "AcceptedDroplets");
+            "Positives", "Negatives", "Ch1+Ch2+", "Ch1+Ch2-", "Ch1-Ch2+", "Ch1-Ch2-", "Linkage", "AcceptedDroplets", "CNV", "FractionalAbundance");
     IgoLimsPluginUtils igoUtils = new IgoLimsPluginUtils();
     DdPcrResultsProcessor resultsProcessor = new DdPcrResultsProcessor();
 
