@@ -44,7 +44,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
     private List<String> gexReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Gene (Copies)", "Concentration Ref (Copies)", "Ratio ([Gene]/[Ref])", "Droplet Count Gene", "Droplet Count Ref", "Accepted Droplets");
     private List<String> cnvReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Gene (Copies)", "Concentration Ref (Copies)", "CNV", "Droplet Count Gene", "Droplet Count Ref", "Accepted Droplets");
     private List<String> redReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration MU (Copies)", "Concentration WT (Copies)", "Fractional abundance", "Droplet Count MU", "Droplet Count WT", "Accepted Droplets");
-    private List<String> PDXReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Human (Copies)", "Concentration Mouse (Copies)", "Ratio ([Human]/[Mouse])", "Droplet Count Human", "Droplet Count Mouse", "Accepted Droplets", "Human %");
+    private List<String> pdxReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Human (Copies)", "Concentration Mouse (Copies)", "Ratio ([Human]/[Mouse])", "Droplet Count Human", "Droplet Count Mouse", "Accepted Droplets", "Human %");
     private List<String> methylatedReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Methylated (Copies)", "Concentration Unmethylated (Copies)", "Ratio ([Methylated]/[Unmethylated])", "Droplet Count Methylated", "Droplet Count Unmethylated", "Accepted Droplets");
     private List<String> labMedicineReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Gene (Copies)", "Concentration Ref (Copies)", "Ratio ([Gene]/[Ref])", "Droplet Count Gene", "Droplet Count Ref", "Total Detected (ng)", "Accepted Droplets", "Micronic Tube Barcode");
     public DigitalPcrReportGenerator() {
@@ -214,8 +214,8 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
                 return gexReportHeaders;
             case "red":
                 return redReportHeaders;
-            case "PDX":
-                return PDXReportHeaders;
+            case "pdx":
+                return pdxReportHeaders;
             case "lab medicine":
                 return labMedicineReportHeaders;
             case "methylated":
@@ -302,8 +302,8 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
             setDataCellStyle(workbook, row.createCell(1)).setCellValue(data.get("OtherSampleId").toString());
             setDataCellStyle(workbook, row.createCell(2)).setCellValue(data.get("SampleId").toString());
             setDataCellStyle(workbook, row.createCell(3)).setCellValue(Double.parseDouble(data.get("TotalInput").toString()));
-            setDataCellStyle(workbook, row.createCell(4)).setCellValue(Integer.parseInt(data.get("ConcentrationMutation").toString()));
-            setDataCellStyle(workbook, row.createCell(5)).setCellValue(Integer.parseInt(data.get("ConcentrationWildType").toString()));
+            setDataCellStyle(workbook, row.createCell(4)).setCellValue(Double.parseDouble(data.get("ConcentrationMutation").toString()));
+            setDataCellStyle(workbook, row.createCell(5)).setCellValue(Double.parseDouble(data.get("ConcentrationWildType").toString()));
             setDataCellStyle(workbook, row.createCell(7)).setCellValue(Integer.parseInt(data.get("DropletCountTest").toString()));
             setDataCellStyle(workbook, row.createCell(8)).setCellValue(Integer.parseInt(data.get("DropletCountRef").toString()));
 
