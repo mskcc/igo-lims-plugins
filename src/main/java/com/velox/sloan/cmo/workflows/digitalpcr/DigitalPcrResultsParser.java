@@ -69,6 +69,9 @@ private final List<String> expectedQx200RawResultsHeaders = Arrays.asList("Well"
                 return new PluginResult(false);
             }
             List<String> dataInFiles = igoUtils.readDataFromFiles(filesWithDigitalPcrRawData, clientCallback);
+            String[] QXResultSheetType = {"QX200", "QX600"};
+            qxResultType = clientCallback.showOptionDialog("QX Manager Type", "Which QX result type have you uploaded?", QXResultSheetType, 0);
+
             if (!isValidFile(filesWithDigitalPcrRawData, dataInFiles)) {
                 return new PluginResult(false);
             }
@@ -83,8 +86,6 @@ private final List<String> expectedQx200RawResultsHeaders = Arrays.asList("Well"
                 dataRecordManager.deleteDataRecords(protocolRecords, null, false, user);
                 logInfo(String.format("DDPCR results file re-uploaded -> Deleted %s records attached to task created by previous DDPCR results upload", activeTask.getInputDataTypeName()));
             }
-            String[] QXResultSheetType = {"QX200", "QX600"};
-            qxResultType = clientCallback.showOptionDialog("QX Manager Type", "Which QX result type have you uploaded?", QXResultSheetType, 0);
             //read data from file and create new ddpcr assay results.
             for (String file : filesWithDigitalPcrRawData) {
                 List<String> fileData = igoUtils.readDataFromCsvFile(clientCallback.readBytes(file));
@@ -345,7 +346,7 @@ private final List<String> expectedQx200RawResultsHeaders = Arrays.asList("Well"
             analyzedData.put("DropletCountMutation", dropletCountMutation);
             analyzedData.put("DropletCountWildType", dropletCountWildType);
             analyzedData.put("TotalDnaDetected", totalDnaDetected);
-            Double ratio = getRatio(Double.valueOf(analyzedData.get("concentrationGene").toString()), Double.valueOf(analyzedData.get("concentrationRef").toString()));
+            Double ratio = getRatio(Double.valueOf(analyzedData.get("ConcentrationMutation").toString()), Double.valueOf(analyzedData.get("ConcentrationWildType").toString()));
             analyzedData.put("Ratio", ratio);
             analyzedData.put("AcceptedDroplets", getSum(groupedData.get(key), "AcceptedDroplets"));
             if (target.equalsIgnoreCase(HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME)) {
