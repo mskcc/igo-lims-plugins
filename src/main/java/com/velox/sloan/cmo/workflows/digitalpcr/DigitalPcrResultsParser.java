@@ -4,6 +4,7 @@ import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.InvalidValue;
 import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
+import com.velox.api.plugin.PluginLogger;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapio.commons.exemplar.plugin.PluginOrder;
@@ -32,21 +33,32 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
 //            "Ch5+Ch6+", "Ch5+Ch6-", "Ch5-Ch6+", "Ch5-Ch6-");
 private final List<String> expectedQx200RawResultsHeaders = Arrays.asList("Well", "ExptType", "Experiment", "Sample", "TargetType", "Target",
         "Status", "Concentration", "Supermix", "CopiesPer20uLWell", "TotalConfMax", "TotalConfMin", "PoissonConfMax", "PoissonConfMin",
-        "Positives", "Negatives", "Ch1+Ch2+", "Ch1+Ch2-", "Ch1-Ch2+", "Ch1-Ch2-", "Linkage", "AcceptedDroplets");
+        "Positives", "Negatives", "Ch1+Ch2+", "Ch1+Ch2-", "Ch1-Ch2+", "Ch1-Ch2-", "Linkage", "AcceptedDroplets", "CNV", "FractionalAbundance");
 
-    private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well","Sample description 1","Sample description 2",
-            "Sample description 3","Sample description 4","Target","Conc(copies/µL)","pg/µL","Status","Status Reason","Experiment",
-            "SampleType","TargetType","Supermix","DyeName(s)","Copies/20µLWell","TotalConfMax","TotalConfMin","PoissonConfMax",
-            "PoissonConfMin","Accepted Droplets","Positives","Negatives","Copies/uL linked molecules","CNV","TotalCNVMax",
-            "TotalCNVMin","PoissonCNVMax","PoissonCNVMin","ReferenceCopies","UnknownCopies","Threshold1","Threshold2","Threshold3",
-            "ThresholdSigmaAbove","ThresholdSigmaBelow","ReferenceUsed","Ratio","TotalRatioMax","TotalRatioMin","PoissonRatioMax",
-            "PoissonRatioMin","Fractional Abundance","TotalFractionalAbundanceMax","TotalFractionalAbundanceMin",
-            "PoissonFractionalAbundanceMax","PoissonFractionalAbundanceMin","MeanAmplitudeOfPositives","MeanAmplitudeOfNegatives",
-            "MeanAmplitudeTotal","ExperimentComments","MergedWells","TotalConfidenceMax68","TotalConfidenceMin68",
-            "PoissonConfidenceMax68","PoissonConfidenceMin68","TotalCNVMax68","TotalCNVMin68","PoissonCNVMax68","PoissonCNVMin68",
-            "TotalRatioMax68","TotalRatioMin68","PoissonRatioMax68","PoissonRatioMin68","TotalFractionalAbundanceMax68",
-            "TotalFractionalAbundanceMin68","PoissonFractionalAbundanceMax68","PoissonFractionalAbundanceMin68","TiltCorrected",
-            "Ch1+Ch2+","Ch1+Ch2-","Ch1-Ch2+","Ch1-Ch2-","Ch3+Ch4+","Ch3+Ch4-","Ch3-Ch4+","Ch3-Ch4-","Ch5+Ch6+","Ch5+Ch6-","Ch5-Ch6+","Ch5-Ch6-");
+//    private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well","Sample description 1","Sample description 2",
+//            "Sample description 3","Sample description 4","Target","Conc(copies/µL)","pg/µL","Status","Status Reason","Experiment",
+//            "SampleType","TargetType","Supermix","DyeName(s)","Copies/20µLWell","TotalConfMax","TotalConfMin","PoissonConfMax",
+//            "PoissonConfMin","Accepted Droplets","Positives","Negatives","Copies/uL linked molecules","CNV","TotalCNVMax",
+//            "TotalCNVMin","PoissonCNVMax","PoissonCNVMin","ReferenceCopies","UnknownCopies","Threshold1","Threshold2","Threshold3",
+//            "ThresholdSigmaAbove","ThresholdSigmaBelow","ReferenceUsed","Ratio","TotalRatioMax","TotalRatioMin","PoissonRatioMax",
+//            "PoissonRatioMin","Fractional Abundance","TotalFractionalAbundanceMax","TotalFractionalAbundanceMin",
+//            "PoissonFractionalAbundanceMax","PoissonFractionalAbundanceMin","MeanAmplitudeOfPositives","MeanAmplitudeOfNegatives",
+//            "MeanAmplitudeTotal","ExperimentComments","MergedWells","TotalConfidenceMax68","TotalConfidenceMin68",
+//            "PoissonConfidenceMax68","PoissonConfidenceMin68","TotalCNVMax68","TotalCNVMin68","PoissonCNVMax68","PoissonCNVMin68",
+//            "TotalRatioMax68","TotalRatioMin68","PoissonRatioMax68","PoissonRatioMin68","TotalFractionalAbundanceMax68",
+//            "TotalFractionalAbundanceMin68","PoissonFractionalAbundanceMax68","PoissonFractionalAbundanceMin68","TiltCorrected",
+//            "Ch1+Ch2+","Ch1+Ch2-","Ch1-Ch2+","Ch1-Ch2-","Ch3+Ch4+","Ch3+Ch4-","Ch3-Ch4+","Ch3-Ch4-","Ch5+Ch6+","Ch5+Ch6-","Ch5-Ch6+","Ch5-Ch6-");
+private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well","Sample description 1","Status","Experiment", "SampleType","TargetType","Supermix","DyeName(s)",
+        "TotalConfMax","TotalConfMin","PoissonConfMax", "PoissonConfMin","Positives","Negatives","CNV","TotalCNVMax",
+        "TotalCNVMin","PoissonCNVMax","PoissonCNVMin","ReferenceCopies","UnknownCopies","Threshold1","Threshold2","Threshold3",
+        "ThresholdSigmaAbove","ThresholdSigmaBelow","ReferenceUsed","Ratio","TotalRatioMax","TotalRatioMin","PoissonRatioMax",
+        "PoissonRatioMin","TotalFractionalAbundanceMax","TotalFractionalAbundanceMin", "PoissonFractionalAbundanceMax",
+        "PoissonFractionalAbundanceMin","MeanAmplitudeOfPositives","MeanAmplitudeOfNegatives", "MeanAmplitudeTotal",
+        "ExperimentComments","MergedWells","TotalConfidenceMax68","TotalConfidenceMin68", "PoissonConfidenceMax68",
+        "PoissonConfidenceMin68","TotalCNVMax68","TotalCNVMin68","PoissonCNVMax68","PoissonCNVMin68", "TotalRatioMax68",
+        "TotalRatioMin68","PoissonRatioMax68","PoissonRatioMin68","TotalFractionalAbundanceMax68", "TotalFractionalAbundanceMin68",
+        "PoissonFractionalAbundanceMax68","PoissonFractionalAbundanceMin68","TiltCorrected", "Ch1+Ch2+","Ch1+Ch2-","Ch1-Ch2+",
+        "Ch1-Ch2-","Ch3+Ch4+","Ch3+Ch4-","Ch3-Ch4+","Ch3-Ch4-","Ch5+Ch6+","Ch5+Ch6-","Ch5-Ch6+","Ch5-Ch6-");
     IgoLimsPluginUtils igoUtils = new IgoLimsPluginUtils();
     DdPcrResultsProcessor resultsProcessor = new DdPcrResultsProcessor();
 
@@ -143,14 +155,14 @@ private final List<String> expectedQx200RawResultsHeaders = Arrays.asList("Well"
             }
             logInfo("file data = " + Arrays.asList(fileData.get(0).split(",")));
             if (qxResultType == 0) {
-                if (!igoUtils.csvFileContainsRequiredHeaders(fileData, expectedQx200RawResultsHeaders)) {
+                if (!igoUtils.csvFileContainsRequiredHeaders(fileData, expectedQx200RawResultsHeaders, pluginLogger)) {
                     clientCallback.displayError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
                     logError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
                     return false;
                 }
             }
             else {
-                if (!igoUtils.csvFileContainsRequiredHeaders(fileData, expectedQx600RawResultsHeaders)) {
+                if (!igoUtils.csvFileContainsRequiredHeaders(fileData, expectedQx600RawResultsHeaders, pluginLogger)) {
                     clientCallback.displayError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
                     logError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
                     return false;
@@ -335,14 +347,14 @@ private final List<String> expectedQx200RawResultsHeaders = Arrays.asList("Well"
             String target = key.split("/")[1];
             analyzedData.put("Assay", target);
             analyzedData.put("OtherSampleId", sampleName);
-            analyzedData.put("concentrationGene", getAverage(groupedData.get(key), "ConcentrationMutation")); // Mu, Gene, Methyl, Human
-            analyzedData.put("concentrationRef", getAverage(groupedData.get(key), "ConcentrationWildType")); // WT, Ref, Unmethyl, Mouse
+            analyzedData.put("ConcentrationMutation", getAverage(groupedData.get(key), "ConcentrationMutation")); // Mu, Gene, Methyl, Human
+            analyzedData.put("ConcentrationWildType", getAverage(groupedData.get(key), "ConcentrationWildType")); // WT, Ref, Unmethyl, Mouse
             analyzedData.put("Channel1PosChannel2Pos", getSum(groupedData.get(key), "Channel1PosChannel2Pos"));
             analyzedData.put("Channel1PosChannel2Neg", getSum(groupedData.get(key), "Channel1PosChannel2Neg"));
             analyzedData.put("Channel1NegChannel2Pos", getSum(groupedData.get(key), "Channel1NegChannel2Pos"));
             Integer dropletCountMutation = (Integer) analyzedData.get("Channel1PosChannel2Pos") + (Integer) analyzedData.get("Channel1PosChannel2Neg");
             Integer dropletCountWildType = (Integer) analyzedData.get("Channel1PosChannel2Pos") + (Integer) analyzedData.get("Channel1NegChannel2Pos");
-            Double totalDnaDetected = calculateTotalDnaDetected((Double) analyzedData.get("concentrationGene"), (Double) analyzedData.get("concentrationRef"));
+            Double totalDnaDetected = calculateTotalDnaDetected((Double) analyzedData.get("ConcentrationMutation"), (Double) analyzedData.get("ConcentrationWildType"));
             analyzedData.put("DropletCountMutation", dropletCountMutation);
             analyzedData.put("DropletCountWildType", dropletCountWildType);
             analyzedData.put("TotalDnaDetected", totalDnaDetected);

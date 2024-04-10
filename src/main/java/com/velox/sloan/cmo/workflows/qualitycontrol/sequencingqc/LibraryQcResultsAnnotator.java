@@ -191,7 +191,7 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
     public boolean isValidTapestationData(List<String> fileData, String file) throws ServerException, RemoteException {
         try {
             logInfo(String.format("Header line from file %s %s", fileData.get(0), file));
-            if (fileData.isEmpty() || !utils.csvFileContainsRequiredHeaders(fileData, EXPECTED_TAPESTATION_HEADER_VALS)) {
+            if (fileData.isEmpty() || !utils.csvFileContainsRequiredHeaders(fileData, EXPECTED_TAPESTATION_HEADER_VALS, pluginLogger)) {
                 String errMsg = String.format("Uploaded file %s is missing valid header values. Expected header values are %s or \n%s.", file, EXPECTED_TAPESTATION_HEADER_VALS, EXPECTED_BIOA_HEADER_VALS);
                 clientCallback.displayError(errMsg);
                 logError(errMsg);
