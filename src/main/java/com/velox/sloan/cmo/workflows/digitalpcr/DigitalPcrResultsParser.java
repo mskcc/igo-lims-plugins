@@ -303,8 +303,8 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
             String target = key.split("/")[1];
             analyzedData.put("Assay", target);
             analyzedData.put("OtherSampleId", sampleName);
-            analyzedData.put("CNV", groupedData.get("CNV"));
-            analyzedData.put("FractionalAbundance", groupedData.get("FractionalAbundance"));
+            analyzedData.put("CNV", groupedData.get(key).get(0).get("CNV"));
+            analyzedData.put("FractionalAbundance", groupedData.get(key).get(0).get("FractionalAbundance"));
             analyzedData.put("ConcentrationMutation", getAverage(groupedData.get(key), "ConcentrationMutation"));
             analyzedData.put("ConcentrationWildType", getAverage(groupedData.get(key), "ConcentrationWildType"));
             analyzedData.put("Channel1PosChannel2Pos", getSum(groupedData.get(key), "Channel1PosChannel2Pos"));

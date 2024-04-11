@@ -49,8 +49,18 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                     sampleValues.put("Channel1PosChannel2Neg", Integer.parseInt(s1.get(headerValueMap.get("Ch1+Ch2-"))));
                     sampleValues.put("Channel1NegChannel2Pos", Integer.parseInt(s1.get(headerValueMap.get("Ch1-Ch2+"))));
                     sampleValues.put("AcceptedDroplets", Integer.parseInt(s1.get(headerValueMap.get("AcceptedDroplets"))));
-                    sampleValues.put("CNV", Double.parseDouble(s1.get(headerValueMap.get("CNV"))));
-                    sampleValues.put("FractionalAbundance", Double.parseDouble(s1.get(headerValueMap.get("FractionalAbundance"))));
+                    if (s1.get(headerValueMap.get("CNV")) != null && !s1.get(headerValueMap.get("CNV")).isEmpty() && !s1.get(headerValueMap.get("CNV")).isBlank()) {
+                        sampleValues.put("CNV", Double.parseDouble(s1.get(headerValueMap.get("CNV"))));
+                    }
+                    else {
+                        sampleValues.put("CNV", 0.0);
+                    }
+                    if (s1.get(headerValueMap.get("FractionalAbundance")) != null && !s1.get(headerValueMap.get("FractionalAbundance")).isEmpty() && !s1.get(headerValueMap.get("FractionalAbundance")).isBlank()) {
+                        sampleValues.put("FractionalAbundance", Double.parseDouble(s1.get(headerValueMap.get("FractionalAbundance"))));
+                    }
+                    else {
+                        sampleValues.put("FractionalAbundance", 0.0);
+                    }
                     flatData.add(sampleValues);
                 }
             }
