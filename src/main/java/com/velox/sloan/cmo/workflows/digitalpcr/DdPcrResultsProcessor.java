@@ -1,6 +1,7 @@
 package com.velox.sloan.cmo.workflows.digitalpcr;
 
 import java.util.*;
+import java.util.function.DoubleUnaryOperator;
 
 public class DdPcrResultsProcessor implements DdPcrResultsReader {
 
@@ -48,6 +49,8 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                     sampleValues.put("Channel1PosChannel2Neg", Integer.parseInt(s1.get(headerValueMap.get("Ch1+Ch2-"))));
                     sampleValues.put("Channel1NegChannel2Pos", Integer.parseInt(s1.get(headerValueMap.get("Ch1-Ch2+"))));
                     sampleValues.put("AcceptedDroplets", Integer.parseInt(s1.get(headerValueMap.get("AcceptedDroplets"))));
+                    sampleValues.put("CNV", Double.parseDouble(s1.get(headerValueMap.get("CNV"))));
+                    sampleValues.put("FractionalAbundance", Double.parseDouble(s1.get(headerValueMap.get("FractionalAbundance"))));
                     flatData.add(sampleValues);
                 }
             }
