@@ -67,9 +67,6 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
             for (String file : filesWithDigitalPcrRawData) {
                 List<String> fileData = igoUtils.readDataFromCsvFile(clientCallback.readBytes(file));
                 Map<String, Integer> headerValueMap = igoUtils.getCsvHeaderValueMap(fileData);
-                for (Map.Entry<String, Integer> entry : headerValueMap.entrySet()) {
-                    logInfo("Header Value Map: " + entry.getKey() + " -> " + entry.getValue());
-                }
                 List<List<String>> channel1Data = getChannel1Data(fileData, headerValueMap);
                 List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap);
                 List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap);

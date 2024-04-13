@@ -33,13 +33,6 @@ import java.util.*;
  * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
 public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
-//    private List<String> ddPCRReportTypes = Arrays.asList("GEX", "RED", "CNV", "LAB MEDICINE", "METHYLATED");
-//    private List<String> gexReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet # gene", "Droplet # Ref", "Ratio ([GOI]/[Ref])", "Accepted Droplets", "Micronic Tube Barcode");
-//    private List<String> cnvReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count Mu", "Droplet Count WT", "Ratio ([Mu]/[WT])", "Accepted Droplets", "Micronic Tube Barcode");
-//    private List<String> redReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count Mu", "Droplet Count WT", "Ratio ([Mu]/[WT])", "Accepted Droplets", "Micronic Tube Barcode", "Human %");
-//    private List<String> methylatedReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count MethyFam", "Droplet Count MethyHex", "Ratio ([MethyFam]/[MethyHex])", "Accepted Droplets");
-//    private List<String> labMedicineReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Droplet Count# gene", "Droplet Count# Ref", "Total Detected (ng)", "Ratio ([Gene]/[Ref])", "Accepted Droplets", "Micronic Tube Barcode");
-
     private List<String> ddPCRReportTypes = Arrays.asList("GEX", "RED", "CNV", "LAB MEDICINE", "METHYLATED", "PDX");
     private List<String> gexReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Gene (Copies)", "Concentration Ref (Copies)", "Ratio ([Gene]/[Ref])", "Droplet Count Gene", "Droplet Count Ref", "Accepted Droplets");
     private List<String> cnvReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Gene (Copies)", "Concentration Ref (Copies)", "CNV", "Droplet Count Gene", "Droplet Count Ref", "Accepted Droplets");
