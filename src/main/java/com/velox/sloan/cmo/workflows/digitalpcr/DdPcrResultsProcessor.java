@@ -29,37 +29,59 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
     }
 
     @Override
-    public List<Map<String, Object>> concatenateChannel1AndChannel2Data(List<List<String>> channel1Data, List<List<String>> channel2Data, Map<String, Integer> headerValueMap) {
+    public List<Map<String, Object>> concatenateChannel1AndChannel2Data(List<List<String>> channel1Data, List<List<String>> channel2Data, Map<String, Integer> headerValueMap, boolean isQX200) {
         List<Map<String, Object>> flatData = new ArrayList<>();
         for (List<String> s1 : channel1Data) {
             String s1Well = s1.get(headerValueMap.get("Well"));
-            String s1SampleId = s1.get(headerValueMap.get("Sample description 2"));
+            String s1SampleId = "";
+            String s2SampleId = "";
+            if (isQX200) {
+                s1SampleId = s1.get(headerValueMap.get("Sample description 2"));
+            } else { // QX600
+                s1SampleId = s1.get(headerValueMap.get("Sample"));
+            }
             for (List<String> s2 : channel2Data) {
                 String s2Well = s2.get(headerValueMap.get("Well"));
-                String s2SampleId = s2.get(headerValueMap.get("Sample description 2"));
+                if (isQX200) {
+                    s2SampleId = s2.get(headerValueMap.get("Sample"));
+                } else { // QX600
+                    s2SampleId = s2.get(headerValueMap.get("Sample description 2"));
+                }
                 if (s2Well.equalsIgnoreCase(s1Well) && s2SampleId.equalsIgnoreCase(s1SampleId)) {
                     Map<String, Object> sampleValues = new HashMap<>();
                     sampleValues.put("Well", s1.get(headerValueMap.get("Well")));
-                    sampleValues.put("Sample", s1.get(headerValueMap.get("Sample description 2"))); // Sample description 2
+                    if (isQX200) {
+                        sampleValues.put("Sample", s1.get(headerValueMap.get("Sample")));
+                        sampleValues.put("ConcentrationMutation", Double.parseDouble(s1.get(headerValueMap.get("Concentration"))));
+                        sampleValues.put("ConcentrationWildType", Double.parseDouble(s2.get(headerValueMap.get("Concentration"))));
+                        sampleValues.put("AcceptedDroplets", Integer.parseInt(s1.get(headerValueMap.get("AcceptedDroplets"))));
+                        if (s1.get(headerValueMap.get("FractionalAbundance")) != null && !s1.get(headerValueMap.get("FractionalAbundance")).isEmpty() && !s1.get(headerValueMap.get("FractionalAbundance")).isBlank()) {
+                            sampleValues.put("FractionalAbundance", Double.parseDouble(s1.get(headerValueMap.get("FractionalAbundance"))));
+                        }
+                        else {
+                            sampleValues.put("FractionalAbundance", 0.0);
+                        }
+                    } else { // QX600
+                        sampleValues.put("Sample", s1.get(headerValueMap.get("Sample description 2")));
+                        sampleValues.put("ConcentrationMutation", Double.parseDouble(s1.get(headerValueMap.get("Conc(copies/µL)"))));
+                        sampleValues.put("ConcentrationWildType", Double.parseDouble(s2.get(headerValueMap.get("Conc(copies/µL)"))));
+                        sampleValues.put("AcceptedDroplets", Integer.parseInt(s1.get(headerValueMap.get("Accepted Droplets"))));
+                        if (s1.get(headerValueMap.get("Fractional Abundance")) != null && !s1.get(headerValueMap.get("Fractional Abundance")).isEmpty() && !s1.get(headerValueMap.get("Fractional Abundance")).isBlank()) {
+                            sampleValues.put("FractionalAbundance", Double.parseDouble(s1.get(headerValueMap.get("Fractional Abundance"))));
+                        }
+                        else {
+                            sampleValues.put("FractionalAbundance", 0.0);
+                        }
+                    }
                     sampleValues.put("Target", s1.get(headerValueMap.get("Target")));
-                    sampleValues.put("ConcentrationMutation", Double.parseDouble(s1.get(headerValueMap.get("Conc(copies/µL)")))); //Conc(copies/µL)
-                    sampleValues.put("ConcentrationWildType", Double.parseDouble(s2.get(headerValueMap.get("Conc(copies/µL)")))); //Conc(copies/µL)
                     sampleValues.put("Channel1PosChannel2Pos", Integer.parseInt(s1.get(headerValueMap.get("Ch1+Ch2+"))));
                     sampleValues.put("Channel1PosChannel2Neg", Integer.parseInt(s1.get(headerValueMap.get("Ch1+Ch2-"))));
                     sampleValues.put("Channel1NegChannel2Pos", Integer.parseInt(s1.get(headerValueMap.get("Ch1-Ch2+"))));
-                    sampleValues.put("AcceptedDroplets", Integer.parseInt(s1.get(headerValueMap.get("Accepted Droplets"))));
-
                     if (s1.get(headerValueMap.get("CNV")) != null && !s1.get(headerValueMap.get("CNV")).isEmpty() && !s1.get(headerValueMap.get("CNV")).isBlank()) {
                         sampleValues.put("CNV", Double.parseDouble(s1.get(headerValueMap.get("CNV"))));
                     }
                     else {
                         sampleValues.put("CNV", 0.0);
-                    }
-                    if (s1.get(headerValueMap.get("FractionalAbundance")) != null && !s1.get(headerValueMap.get("FractionalAbundance")).isEmpty() && !s1.get(headerValueMap.get("FractionalAbundance")).isBlank()) {
-                        sampleValues.put("FractionalAbundance", Double.parseDouble(s1.get(headerValueMap.get("FractionalAbundance"))));
-                    }
-                    else {
-                        sampleValues.put("FractionalAbundance", 0.0);
                     }
                     flatData.add(sampleValues);
                 }
