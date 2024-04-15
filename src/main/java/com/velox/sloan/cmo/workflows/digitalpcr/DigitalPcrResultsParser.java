@@ -26,7 +26,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
     private final String HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME = "Mouse_Human_CNV_PTGER2";
     private final List<String> expectedRawResultsHeaders = Arrays.asList("Well", "ExptType", "Experiment", "Sample", "TargetType", "Target",
             "Status", "Concentration", "Supermix", "CopiesPer20uLWell", "TotalConfMax", "TotalConfMin", "PoissonConfMax", "PoissonConfMin",
-            "Positives", "Negatives", "Ch1+Ch2+", "Ch1+Ch2-", "Ch1-Ch2+", "Ch1-Ch2-", "Linkage", "AcceptedDroplets");
+            "Positives", "Negatives", "Ch1+Ch2+", "Ch1+Ch2-", "Ch1-Ch2+", "Ch1-Ch2-", "Linkage", "AcceptedDroplets", "CNV", "FractionalAbundance");
     IgoLimsPluginUtils igoUtils = new IgoLimsPluginUtils();
     DdPcrResultsProcessor resultsProcessor = new DdPcrResultsProcessor();
 
@@ -71,7 +71,6 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap);
                 List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap);
                 logInfo("Flattened data");
-                logInfo(channel1Channe2CombinedData.toString());
                 Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData);
                 logInfo(groupedData.toString());
                 List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1", user);
@@ -250,27 +249,26 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
         }
         return 0.0;
     }
-
     /**
      * Calculate Ration between two values.
      *
-     * @param dropletCountMutation
-     * @param dropletCountWildType
-     * @return ration of dropletCountMutation/dropletCountWildType.
+     * @param concentrationGene
+     * @param concentrationRef
+     * @return ration of concentrationGene/concentrationRef.
      */
-    private Double getRatio(Double dropletCountMutation, Double dropletCountWildType) {
-        return resultsProcessor.calculateRatio(dropletCountMutation, dropletCountWildType);
+    private Double getRatio(Double concentrationGene, Double concentrationRef) {
+        return resultsProcessor.calculateRatio(concentrationGene, concentrationRef);
     }
 
     /**
      * Calculate total DNA detected in the ddPCR experiment.
      *
-     * @param concentrationMutation
-     * @param concentrationWildType
+     * @param concentrationGene
+     * @param concentrationRef
      * @return total DNA amount detected in the ddPCR experiment results.
      */
-    private Double calculateTotalDnaDetected(Double concentrationMutation, Double concentrationWildType) {
-        return resultsProcessor.calculateTotalDnaDetected(concentrationMutation, concentrationWildType);
+    private Double calculateTotalDnaDetected(Double concentrationGene, Double concentrationRef) {
+        return resultsProcessor.calculateTotalDnaDetected(concentrationGene, concentrationRef);
     }
 
     /**
@@ -302,6 +300,8 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
             String target = key.split("/")[1];
             analyzedData.put("Assay", target);
             analyzedData.put("OtherSampleId", sampleName);
+            analyzedData.put("CNV", groupedData.get(key).get(0).get("CNV"));
+            analyzedData.put("FractionalAbundance", groupedData.get(key).get(0).get("FractionalAbundance"));
             analyzedData.put("ConcentrationMutation", getAverage(groupedData.get(key), "ConcentrationMutation"));
             analyzedData.put("ConcentrationWildType", getAverage(groupedData.get(key), "ConcentrationWildType"));
             analyzedData.put("Channel1PosChannel2Pos", getSum(groupedData.get(key), "Channel1PosChannel2Pos"));
@@ -313,7 +313,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
             analyzedData.put("DropletCountMutation", dropletCountMutation);
             analyzedData.put("DropletCountWildType", dropletCountWildType);
             analyzedData.put("TotalDnaDetected", totalDnaDetected);
-            Double ratio = getRatio(Double.valueOf(analyzedData.get("DropletCountMutation").toString()), Double.valueOf(analyzedData.get("DropletCountWildType").toString()));
+            Double ratio = getRatio(Double.valueOf(analyzedData.get("ConcentrationMutation").toString()), Double.valueOf(analyzedData.get("ConcentrationWildType").toString()));
             analyzedData.put("Ratio", ratio);
             analyzedData.put("AcceptedDroplets", getSum(groupedData.get(key), "AcceptedDroplets"));
             if (target.equalsIgnoreCase(HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME)) {
