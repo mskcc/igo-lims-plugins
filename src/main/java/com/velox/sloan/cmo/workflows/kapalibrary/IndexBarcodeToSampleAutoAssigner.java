@@ -420,10 +420,10 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
             if (autoHelper.isOddValue(rowValue) && autoHelper.isOddValue(colValue)) {
                 quad1.add(protocolRecord);
             }
-            if (!autoHelper.isOddValue(rowValue) && autoHelper.isOddValue(colValue)) {
+            if (autoHelper.isOddValue(rowValue) && !autoHelper.isOddValue(colValue)) {
                 quad2.add(protocolRecord);
             }
-            if (autoHelper.isOddValue(rowValue) && !autoHelper.isOddValue(colValue)) {
+            if (!autoHelper.isOddValue(rowValue) && autoHelper.isOddValue(colValue)) {
                 quad3.add(protocolRecord);
             }
             if (!autoHelper.isOddValue(rowValue) && !autoHelper.isOddValue(colValue)) {

@@ -59,6 +59,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
         "TotalRatioMin68","PoissonRatioMax68","PoissonRatioMin68","TotalFractionalAbundanceMax68", "TotalFractionalAbundanceMin68",
         "PoissonFractionalAbundanceMax68","PoissonFractionalAbundanceMin68","TiltCorrected", "Ch1+Ch2+","Ch1+Ch2-","Ch1-Ch2+",
         "Ch1-Ch2-","Ch3+Ch4+","Ch3+Ch4-","Ch3-Ch4+","Ch3-Ch4-","Ch5+Ch6+","Ch5+Ch6-","Ch5-Ch6+","Ch5-Ch6-");
+
     IgoLimsPluginUtils igoUtils = new IgoLimsPluginUtils();
     DdPcrResultsProcessor resultsProcessor = new DdPcrResultsProcessor();
 
@@ -106,7 +107,6 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                 List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap);
                 List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap);
                 logInfo("Flattened data");
-                logInfo(channel1Channe2CombinedData.toString());
                 Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData);
                 logInfo(groupedData.toString());
                 List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1SixChannels", user); // DdPcrProtocol1SixChannels
@@ -295,7 +295,6 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
         }
         return 0.0;
     }
-
     /**
      * Calculate Ration between two values.
      *
@@ -347,6 +346,8 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
             String target = key.split("/")[1];
             analyzedData.put("Assay", target);
             analyzedData.put("OtherSampleId", sampleName);
+            analyzedData.put("CNV", groupedData.get(key).get(0).get("CNV"));
+            analyzedData.put("FractionalAbundance", groupedData.get(key).get(0).get("FractionalAbundance"));
             analyzedData.put("ConcentrationMutation", getAverage(groupedData.get(key), "ConcentrationMutation")); // Mu, Gene, Methyl, Human
             analyzedData.put("ConcentrationWildType", getAverage(groupedData.get(key), "ConcentrationWildType")); // WT, Ref, Unmethyl, Mouse
             analyzedData.put("Channel1PosChannel2Pos", getSum(groupedData.get(key), "Channel1PosChannel2Pos"));
