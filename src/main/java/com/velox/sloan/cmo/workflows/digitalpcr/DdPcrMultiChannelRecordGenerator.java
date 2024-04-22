@@ -25,7 +25,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
 
     public DdPcrMultiChannelRecordGenerator() {
         setTaskEntry(true);
-        setOrder(PluginOrder.LAST.getOrder());
+        setOrder(PluginOrder.FIRST.getOrder());
     }
     @Override
     public boolean shouldRun() throws RemoteException {
