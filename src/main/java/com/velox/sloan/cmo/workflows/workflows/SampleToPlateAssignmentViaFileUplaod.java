@@ -110,7 +110,7 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
             clientCallback.displayError(String.format("The uploaded file %s is not a valid .csv file", filePath));
             return false;
         }
-        if (!util.csvFileContainsRequiredHeaders(fileData, requiredHeaderVals)) {
+        if (!util.csvFileContainsRequiredHeaders(fileData, requiredHeaderVals, pluginLogger)) {
             clientCallback.displayError(String.format("File is missing some of required Header values \n%s", util.convertListToString(requiredHeaderVals)));
             return false;
         }

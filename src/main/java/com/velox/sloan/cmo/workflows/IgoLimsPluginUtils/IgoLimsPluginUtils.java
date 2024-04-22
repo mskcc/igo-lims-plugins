@@ -27,6 +27,7 @@ import org.apache.poi.ss.usermodel.*;
 import java.io.*;
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -150,8 +151,16 @@ public class IgoLimsPluginUtils {
      * @param expectedHeaderValues
      * @return true/false
      */
-    public boolean csvFileContainsRequiredHeaders(List<String> fileData, List<String> expectedHeaderValues) {
-        return Arrays.asList(fileData.get(0).split(",")).containsAll(expectedHeaderValues);
+    public boolean csvFileContainsRequiredHeaders(List<String> fileData, List<String> expectedHeaderValues, PluginLogger logger) {
+        //return Arrays.asList(fileData.get(0).split(",")).containsAll(expectedHeaderValues);
+        String[] splitData = fileData.get(0).split(",");
+        List<String> trimmedData = new ArrayList<>();
+        for (String data : splitData) {
+            trimmedData.add(data.trim());
+        }
+        logger.logInfo("Trimmed data: " + trimmedData);
+        logger.logInfo("Expected header values: " + expectedHeaderValues);
+        return trimmedData.containsAll(expectedHeaderValues);
     }
 
     /**

@@ -4,6 +4,7 @@ import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.InvalidValue;
 import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
+import com.velox.api.plugin.PluginLogger;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapio.commons.exemplar.plugin.PluginOrder;
@@ -23,10 +24,38 @@ import java.util.*;
  */
 public class DigitalPcrResultsParser extends DefaultGenericPlugin {
 
+    public int qxResultType = 0;
     private final String HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME = "Mouse_Human_CNV_PTGER2";
-    private final List<String> expectedRawResultsHeaders = Arrays.asList("Well", "ExptType", "Experiment", "Sample", "TargetType", "Target",
-            "Status", "Concentration", "Supermix", "CopiesPer20uLWell", "TotalConfMax", "TotalConfMin", "PoissonConfMax", "PoissonConfMin",
-            "Positives", "Negatives", "Ch1+Ch2+", "Ch1+Ch2-", "Ch1-Ch2+", "Ch1-Ch2-", "Linkage", "AcceptedDroplets", "CNV", "FractionalAbundance");
+private final List<String> expectedQx200RawResultsHeaders = Arrays.asList("Well", "ExptType", "Experiment", "Sample", "TargetType", "Target",
+        "Status", "Concentration", "Supermix", "CopiesPer20uLWell", "TotalConfMax", "TotalConfMin", "PoissonConfMax", "PoissonConfMin",
+        "Positives", "Negatives", "Ch1+Ch2+", "Ch1+Ch2-", "Ch1-Ch2+", "Ch1-Ch2-", "Linkage", "AcceptedDroplets", "CNV", "FractionalAbundance");
+
+//    private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well","Sample description 1","Sample description 2",
+//            "Sample description 3","Sample description 4","Target","Conc(copies/µL)","pg/µL","Status","Status Reason","Experiment",
+//            "SampleType","TargetType","Supermix","DyeName(s)","Copies/20µLWell","TotalConfMax","TotalConfMin","PoissonConfMax",
+//            "PoissonConfMin","Accepted Droplets","Positives","Negatives","Copies/uL linked molecules","CNV","TotalCNVMax",
+//            "TotalCNVMin","PoissonCNVMax","PoissonCNVMin","ReferenceCopies","UnknownCopies","Threshold1","Threshold2","Threshold3",
+//            "ThresholdSigmaAbove","ThresholdSigmaBelow","ReferenceUsed","Ratio","TotalRatioMax","TotalRatioMin","PoissonRatioMax",
+//            "PoissonRatioMin","Fractional Abundance","TotalFractionalAbundanceMax","TotalFractionalAbundanceMin",
+//            "PoissonFractionalAbundanceMax","PoissonFractionalAbundanceMin","MeanAmplitudeOfPositives","MeanAmplitudeOfNegatives",
+//            "MeanAmplitudeTotal","ExperimentComments","MergedWells","TotalConfidenceMax68","TotalConfidenceMin68",
+//            "PoissonConfidenceMax68","PoissonConfidenceMin68","TotalCNVMax68","TotalCNVMin68","PoissonCNVMax68","PoissonCNVMin68",
+//            "TotalRatioMax68","TotalRatioMin68","PoissonRatioMax68","PoissonRatioMin68","TotalFractionalAbundanceMax68",
+//            "TotalFractionalAbundanceMin68","PoissonFractionalAbundanceMax68","PoissonFractionalAbundanceMin68","TiltCorrected",
+//            "Ch1+Ch2+","Ch1+Ch2-","Ch1-Ch2+","Ch1-Ch2-","Ch3+Ch4+","Ch3+Ch4-","Ch3-Ch4+","Ch3-Ch4-","Ch5+Ch6+","Ch5+Ch6-","Ch5-Ch6+","Ch5-Ch6-");
+private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well","Sample description 1", "Sample description 2",
+        "Status","Experiment", "SampleType","TargetType","Supermix","DyeName(s)", "TotalConfMax","TotalConfMin","PoissonConfMax",
+        "PoissonConfMin","Positives","Negatives","CNV","TotalCNVMax", "TotalCNVMin","PoissonCNVMax","PoissonCNVMin","ReferenceCopies",
+        "UnknownCopies","Threshold1","Threshold2","Threshold3", "ThresholdSigmaAbove","ThresholdSigmaBelow","ReferenceUsed",
+        "Ratio","TotalRatioMax","TotalRatioMin","PoissonRatioMax", "PoissonRatioMin", "Fractional Abundance", "TotalFractionalAbundanceMax",
+        "TotalFractionalAbundanceMin", "PoissonFractionalAbundanceMax", "PoissonFractionalAbundanceMin","MeanAmplitudeOfPositives",
+        "MeanAmplitudeOfNegatives", "MeanAmplitudeTotal", "ExperimentComments","MergedWells","TotalConfidenceMax68",
+        "TotalConfidenceMin68", "PoissonConfidenceMax68", "PoissonConfidenceMin68","TotalCNVMax68","TotalCNVMin68",
+        "PoissonCNVMax68","PoissonCNVMin68", "TotalRatioMax68", "TotalRatioMin68","PoissonRatioMax68","PoissonRatioMin68",
+        "TotalFractionalAbundanceMax68", "TotalFractionalAbundanceMin68", "PoissonFractionalAbundanceMax68",
+        "PoissonFractionalAbundanceMin68","TiltCorrected", "Ch1+Ch2+","Ch1+Ch2-","Ch1-Ch2+", "Ch1-Ch2-","Ch3+Ch4+","Ch3+Ch4-",
+        "Ch3-Ch4+","Ch3-Ch4-","Ch5+Ch6+","Ch5+Ch6-","Ch5-Ch6+","Ch5-Ch6-");
+
     IgoLimsPluginUtils igoUtils = new IgoLimsPluginUtils();
     DdPcrResultsProcessor resultsProcessor = new DdPcrResultsProcessor();
 
@@ -49,6 +78,13 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
             List<String> dataInFiles = igoUtils.readDataFromFiles(filesWithDigitalPcrRawData, clientCallback);
+            String[] QXResultSheetType = {"QX200", "QX600"};
+            qxResultType = clientCallback.showOptionDialog("QX Manager Type", "Which QX result type have you uploaded?", QXResultSheetType, 0);
+            logInfo("qxResultType = " + qxResultType);
+            boolean isQX200 = true;
+            if (qxResultType == 1) {
+                isQX200 = false;
+            }
             if (!isValidFile(filesWithDigitalPcrRawData, dataInFiles)) {
                 return new PluginResult(false);
             }
@@ -69,14 +105,14 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 Map<String, Integer> headerValueMap = igoUtils.getCsvHeaderValueMap(fileData);
                 List<List<String>> channel1Data = getChannel1Data(fileData, headerValueMap);
                 List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap);
-                List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap);
+                List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200);
                 logInfo("Flattened data");
                 Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData);
                 logInfo(groupedData.toString());
-                List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1", user);
+                List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1SixChannels", user); // DdPcrProtocol1SixChannels
                 if (attachedProtocolRecords.isEmpty()) {
-                    clientCallback.displayError("No attached 'DdPcrProtocol1' records found attached to this task.");
-                    logError("No attached 'DdPcrProtocol1' records found attached to this task.");
+                    clientCallback.displayError("No attached 'DdPcrProtocol1SixChannels' records found attached to this task."); // DdPcrProtocol1SixChannels
+                    logError("No attached 'DdPcrProtocol1SixChannels' records found attached to this task."); // DdPcrProtocol1SixChannels
                     return new PluginResult(false);
                 }
                 List<Map<String, Object>> analyzedData = runDataAnalysisForAssays(groupedData, attachedProtocolRecords);
@@ -117,10 +153,20 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 logError(String.format("Uploaded file '%s' is not a '.csv' file", name));
                 return false;
             }
-            if (!igoUtils.csvFileContainsRequiredHeaders(fileData, expectedRawResultsHeaders)) {
-                clientCallback.displayError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
-                logError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
-                return false;
+            logInfo("file data = " + Arrays.asList(fileData.get(0).split(",")));
+            if (qxResultType == 0) {
+                if (!igoUtils.csvFileContainsRequiredHeaders(fileData, expectedQx200RawResultsHeaders, pluginLogger)) {
+                    clientCallback.displayError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
+                    logError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
+                    return false;
+                }
+            }
+            else {
+                if (!igoUtils.csvFileContainsRequiredHeaders(fileData, expectedQx600RawResultsHeaders, pluginLogger)) {
+                    clientCallback.displayError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
+                    logError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
+                    return false;
+                }
             }
             if (!igoUtils.csvFileHasData(fileData)) {
                 clientCallback.displayError(String.format("Uploaded file '%s' has does not contain data. Please check the file", name));
@@ -133,20 +179,20 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
 
 
 
-    /**
-     * Remove duplicate headers when data from multiple files is combined
-     *
-     * @param data
-     */
-    private void removeDuplicateHeaderFromCombinedData(List<String> data) {
-        if (Arrays.asList(data.get(0).split(",")).containsAll(expectedRawResultsHeaders)) {
-            for (int i = 1; i < data.size(); i++) {
-                if (Arrays.asList(data.get(i).split(",")).containsAll(expectedRawResultsHeaders)) {
-                    data.remove(i);
-                }
-            }
-        }
-    }
+//    /**
+//     * Remove duplicate headers when data from multiple files is combined
+//     *
+//     * @param data
+//     */
+//    private void removeDuplicateHeaderFromCombinedData(List<String> data) {
+//        if (Arrays.asList(data.get(0).split(",")).containsAll(expectedRawResultsHeaders)) {
+//            for (int i = 1; i < data.size(); i++) {
+//                if (Arrays.asList(data.get(i).split(",")).containsAll(expectedRawResultsHeaders)) {
+//                    data.remove(i);
+//                }
+//            }
+//        }
+//    }
 
     /**
      * Get the data related to channel1 in the raw data under "TargetType" column in ddPCR results.
@@ -176,8 +222,8 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      * @param headerValueMap
      * @return Channel1 and Channel2 combined data.
      */
-    private List<Map<String, Object>> flattenChannel1AndChannel2Data(List<List<String>> channel1Data, List<List<String>> channel2Data, Map<String, Integer> headerValueMap) {
-        return resultsProcessor.concatenateChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap);
+    private List<Map<String, Object>> flattenChannel1AndChannel2Data(List<List<String>> channel1Data, List<List<String>> channel2Data, Map<String, Integer> headerValueMap, boolean isQX200) {
+        return resultsProcessor.concatenateChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200);
     }
 
     /**
@@ -302,8 +348,8 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
             analyzedData.put("OtherSampleId", sampleName);
             analyzedData.put("CNV", groupedData.get(key).get(0).get("CNV"));
             analyzedData.put("FractionalAbundance", groupedData.get(key).get(0).get("FractionalAbundance"));
-            analyzedData.put("ConcentrationMutation", getAverage(groupedData.get(key), "ConcentrationMutation"));
-            analyzedData.put("ConcentrationWildType", getAverage(groupedData.get(key), "ConcentrationWildType"));
+            analyzedData.put("ConcentrationMutation", getAverage(groupedData.get(key), "ConcentrationMutation")); // Mu, Gene, Methyl, Human
+            analyzedData.put("ConcentrationWildType", getAverage(groupedData.get(key), "ConcentrationWildType")); // WT, Ref, Unmethyl, Mouse
             analyzedData.put("Channel1PosChannel2Pos", getSum(groupedData.get(key), "Channel1PosChannel2Pos"));
             analyzedData.put("Channel1PosChannel2Neg", getSum(groupedData.get(key), "Channel1PosChannel2Neg"));
             analyzedData.put("Channel1NegChannel2Pos", getSum(groupedData.get(key), "Channel1NegChannel2Pos"));
