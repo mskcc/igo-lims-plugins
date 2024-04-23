@@ -33,10 +33,12 @@ import java.util.*;
  * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
 public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
-    private List<String> ddPCRReportTypes = Arrays.asList("GEX", "RED", "CNV", "LAB MEDICINE", "METHYLATED", "PDX");
+    private List<String> ddPCRReportTypes = Arrays.asList("GEX", "RED", "CNV", "MUT", "LAB MEDICINE", "PDX", "METHYLATED");
     private List<String> gexReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Gene (Copies)", "Concentration Ref (Copies)", "Ratio ([Gene]/[Ref])", "Droplet Count Gene", "Droplet Count Ref", "Accepted Droplets");
     private List<String> cnvReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Gene (Copies)", "Concentration Ref (Copies)", "CNV", "Droplet Count Gene", "Droplet Count Ref", "Accepted Droplets");
-    private List<String> redReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration MU (Copies)", "Concentration WT (Copies)", "Fractional abundance", "Droplet Count MU", "Droplet Count WT", "Accepted Droplets");
+    private List<String> redReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration MU (Copies)", "Concentration WT (Copies)", "Ratio ([Gene]/[Ref])", "Droplet Count MU", "Droplet Count WT", "Accepted Droplets");
+    private List<String> mutReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration MU (Copies)", "Concentration WT (Copies)", "Fractional abundance", "Droplet Count MU", "Droplet Count WT", "Accepted Droplets");
+
     private List<String> pdxReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Human (Copies)", "Concentration Mouse (Copies)", "Ratio ([Human]/[Mouse])", "Droplet Count Human", "Droplet Count Mouse", "Accepted Droplets", "Human %");
     private List<String> methylatedReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Methylated (Copies)", "Concentration Unmethylated (Copies)", "Ratio ([Methylated]/[Unmethylated])", "Droplet Count Methylated", "Droplet Count Unmethylated", "Accepted Droplets");
     private List<String> labMedicineReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Concentration Gene (Copies)", "Concentration Ref (Copies)", "Ratio ([Gene]/[Ref])", "Droplet Count Gene", "Droplet Count Ref", "Total Detected (ng)", "Accepted Droplets", "Micronic Tube Barcode");
@@ -207,6 +209,8 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
                 return gexReportHeaders;
             case "red":
                 return redReportHeaders;
+            case "mut":
+                return mutReportHeaders;
             case "pdx":
                 return pdxReportHeaders;
             case "lab medicine":
@@ -304,11 +308,11 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
                 setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("CNV").toString()));
                 setDataCellStyle(workbook, row.createCell(9)).setCellValue(Integer.parseInt(data.get("AcceptedDroplets").toString()));
             }
-            else if (reportType.equals("RED")) {
+            else if (reportType.equals("MUT")) {
                 setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("FractionalAbundance").toString()));
                 setDataCellStyle(workbook, row.createCell(9)).setCellValue(Integer.parseInt(data.get("AcceptedDroplets").toString()));
             }
-            else if (reportType.equals("GEX") || reportType.equals("METHYLATED")) {
+            else if (reportType.equals("GEX") || reportType.equals("METHYLATED") || reportType.equals("RED")) {
                 setDataCellStyle(workbook, row.createCell(6)).setCellValue(Double.parseDouble(data.get("Ratio").toString()));
                 setDataCellStyle(workbook, row.createCell(9)).setCellValue(Integer.parseInt(data.get("AcceptedDroplets").toString()));
             }

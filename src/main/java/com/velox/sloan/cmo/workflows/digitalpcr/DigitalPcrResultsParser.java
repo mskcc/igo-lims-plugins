@@ -298,12 +298,22 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
             Map<String, Object> analyzedData = new HashMap<>();
             String sampleName = key.split("/")[0];
             String target = key.split("/")[1];
+            String whereClause = "OtherSampleId = '" + sampleName + "'";
+            int reactionCount = 1;
+            try {
+                if (dataRecordManager.queryDataRecords("DdPcrProtocol2", whereClause, user).size() > 0) {
+                    reactionCount = dataRecordManager.queryDataRecords("DdPcrProtocol2", whereClause, user).get(0).getIntegerVal("NumberOfReplicates", user);
+                }
+                logInfo("reactionCount = " + reactionCount);
+            } catch (NotFound | RemoteException | IoError | ServerException e) {
+                throw new RuntimeException(e);
+            }
             analyzedData.put("Assay", target);
             analyzedData.put("OtherSampleId", sampleName);
             analyzedData.put("CNV", groupedData.get(key).get(0).get("CNV"));
             analyzedData.put("FractionalAbundance", groupedData.get(key).get(0).get("FractionalAbundance"));
-            analyzedData.put("ConcentrationMutation", getAverage(groupedData.get(key), "ConcentrationMutation"));
-            analyzedData.put("ConcentrationWildType", getAverage(groupedData.get(key), "ConcentrationWildType"));
+            analyzedData.put("ConcentrationMutation", getAverage(groupedData.get(key), "ConcentrationMutation") * reactionCount * 20);
+            analyzedData.put("ConcentrationWildType", getAverage(groupedData.get(key), "ConcentrationWildType") * reactionCount * 20);
             analyzedData.put("Channel1PosChannel2Pos", getSum(groupedData.get(key), "Channel1PosChannel2Pos"));
             analyzedData.put("Channel1PosChannel2Neg", getSum(groupedData.get(key), "Channel1PosChannel2Neg"));
             analyzedData.put("Channel1NegChannel2Pos", getSum(groupedData.get(key), "Channel1NegChannel2Pos"));
