@@ -25,13 +25,13 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
 
     public DdPcrMultiChannelRecordGenerator() {
         setTaskEntry(true);
-        setOrder(PluginOrder.FIRST.getOrder());
+        setOrder(PluginOrder.MIDDLE.getOrder());
     }
     @Override
     public boolean shouldRun() throws RemoteException {
-        return this.activeTask.getTask().getTaskOptions().containsKey("CREATE NEW SIX CHANNELS RECORDS") &&
-                !this.activeTask.getTask().getTaskOptions().containsKey("DUPLICATE RECORDS CREATED") /*&&
-                activeTask.getStatus() != activeTask.COMPLETE*/;
+        return !activeTask.getTask().getTaskOptions().containsKey("DUPLICATE RECORDS CREATED") &&
+                activeTask.getTask().getTaskOptions().containsKey("CREATE NEW SIX CHANNELS RECORDS") &&
+                activeTask.getTask().getTaskName().equalsIgnoreCase("Assign Assay and Generate Sample Sheet for Reader");
     }
 
     @Override
@@ -42,7 +42,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
             Map<String, Object> dataFieldValueMap = new HashMap<>();
             List<DataRecord> ddPcrSixChannelRecords = new ArrayList<>();
 
-            this.activeTask.getTask().getTaskOptions().put("DUPLICATE RECORDS CREATED", "");
+            activeTask.getTask().getTaskOptions().put("DUPLICATE RECORDS CREATED", "");
             logInfo("Added the duplicated task option to this step!");
 
             for (DataRecord sixChannelRec : attachedDdpcrSixChannels) {
