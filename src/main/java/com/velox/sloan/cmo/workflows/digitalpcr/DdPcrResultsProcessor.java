@@ -35,9 +35,9 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
             String s1Well = s1.get(headerValueMap.get("Well"));
             String s1SampleId = "";
             String s2SampleId = "";
-            if (isQX200) {
+            if (!isQX200) {
                 s1SampleId = s1.get(headerValueMap.get("Sample description 2"));
-            } else { // QX600
+            } else { // QX200
                 s1SampleId = s1.get(headerValueMap.get("Sample"));
             }
             for (List<String> s2 : channel2Data) {
