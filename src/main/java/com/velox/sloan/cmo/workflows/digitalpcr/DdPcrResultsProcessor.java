@@ -1,6 +1,7 @@
 package com.velox.sloan.cmo.workflows.digitalpcr;
 
 import java.util.*;
+import com.velox.api.plugin.PluginLogger;
 import java.util.function.DoubleUnaryOperator;
 
 public class DdPcrResultsProcessor implements DdPcrResultsReader {
@@ -29,7 +30,7 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
     }
 
     @Override
-    public List<Map<String, Object>> concatenateChannel1AndChannel2Data(List<List<String>> channel1Data, List<List<String>> channel2Data, Map<String, Integer> headerValueMap, boolean isQX200) {
+    public List<Map<String, Object>> concatenateChannel1AndChannel2Data(List<List<String>> channel1Data, List<List<String>> channel2Data, Map<String, Integer> headerValueMap, boolean isQX200, PluginLogger logger) {
         List<Map<String, Object>> flatData = new ArrayList<>();
         for (List<String> s1 : channel1Data) {
             String s1Well = s1.get(headerValueMap.get("Well"));
@@ -37,6 +38,7 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
             String s2SampleId = "";
             if (!isQX200) {
                 s1SampleId = s1.get(headerValueMap.get("Sample description 2"));
+                logger.logInfo("QX600: sample name" + s1SampleId);
             } else { // QX200
                 s1SampleId = s1.get(headerValueMap.get("Sample"));
             }
@@ -62,9 +64,16 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                             sampleValues.put("FractionalAbundance", 0.0);
                         }
                     } else { // QX600
+                        logger.logInfo("Conc(copies/uL)" + headerValueMap.get("Conc(copies/uL)"));
+                        logger.logInfo("s1 size = " + s1.size());
+                        logger.logInfo("header value map of conc(Copies/ul) = " + headerValueMap.get("Conc(copies/uL)"));
                         sampleValues.put("Sample", s1.get(headerValueMap.get("Sample description 2")));
-                        sampleValues.put("ConcentrationMutation", Double.parseDouble(s1.get(headerValueMap.get("Conc(copies/µL)"))));
-                        sampleValues.put("ConcentrationWildType", Double.parseDouble(s2.get(headerValueMap.get("Conc(copies/µL)"))));
+                        if (s1.get(headerValueMap.get("Conc(copies/uL)")) != null && !s1.get(headerValueMap.get("Conc(copies/uL)")).isEmpty() && !s1.get(headerValueMap.get("Conc(copies/uL)")).isBlank()) {
+                            sampleValues.put("ConcentrationMutation", Double.parseDouble(s1.get(headerValueMap.get("Conc(copies/uL)"))));
+                        }
+                        if (s2.get(headerValueMap.get("Conc(copies/uL)")) != null && !s2.get(headerValueMap.get("Conc(copies/uL)")).isEmpty() && !s2.get(headerValueMap.get("Conc(copies/uL)")).isBlank()) {
+                            sampleValues.put("ConcentrationWildType", Double.parseDouble(s2.get(headerValueMap.get("Conc(copies/uL)"))));
+                        }
                         sampleValues.put("AcceptedDroplets", Integer.parseInt(s1.get(headerValueMap.get("Accepted Droplets"))));
                         if (s1.get(headerValueMap.get("Fractional Abundance")) != null && !s1.get(headerValueMap.get("Fractional Abundance")).isEmpty() && !s1.get(headerValueMap.get("Fractional Abundance")).isBlank()) {
                             sampleValues.put("FractionalAbundance", Double.parseDouble(s1.get(headerValueMap.get("Fractional Abundance"))));
@@ -74,6 +83,7 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                         }
                     }
                     sampleValues.put("Target", s1.get(headerValueMap.get("Target")));
+                    logger.logInfo("s1.get(headerValueMap.get(\"Ch1+Ch2+\")) = " + s1.get(headerValueMap.get("Ch1+Ch2+")));
                     sampleValues.put("Channel1PosChannel2Pos", Integer.parseInt(s1.get(headerValueMap.get("Ch1+Ch2+"))));
                     sampleValues.put("Channel1PosChannel2Neg", Integer.parseInt(s1.get(headerValueMap.get("Ch1+Ch2-"))));
                     sampleValues.put("Channel1NegChannel2Pos", Integer.parseInt(s1.get(headerValueMap.get("Ch1-Ch2+"))));

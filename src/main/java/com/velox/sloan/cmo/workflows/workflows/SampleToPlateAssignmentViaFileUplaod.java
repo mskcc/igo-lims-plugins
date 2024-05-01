@@ -56,7 +56,7 @@ public class SampleToPlateAssignmentViaFileUplaod extends DefaultGenericPlugin {
             }
             byte [] fileBytes = clientCallback.readBytes(poolingFileName);
             List<String> fileData = util.readDataFromCsvFile(fileBytes);
-            Map<String, Integer> headerColumnLocationMap = util.getCsvHeaderValueMap(fileData);
+            Map<String, Integer> headerColumnLocationMap = util.getCsvHeaderValueMap(fileData, pluginLogger);
             if (!isValidCsvFile(poolingFileName, fileData, requiredHeaderValues)) {
                 return new PluginResult(false);
             }

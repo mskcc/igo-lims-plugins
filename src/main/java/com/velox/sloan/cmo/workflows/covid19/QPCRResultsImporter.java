@@ -93,7 +93,7 @@ public class QPCRResultsImporter extends DefaultGenericPlugin {
             List<String> qpcrValueRows = getQpcrResults(entireFile, csvFilePath);
 
             //parse QPCR data for each row separated by sample name.
-            Map<String, List<Map<String, Object>>> parsedData = helper.parseQpcrData(qpcrValueRows);
+            Map<String, List<Map<String, Object>>> parsedData = helper.parseQpcrData(qpcrValueRows, pluginLogger);
 
             //analyze parsed data.
             List<Map<String, Object>> analyzedData = helper.analyzeParsedQpcrData(parsedData);

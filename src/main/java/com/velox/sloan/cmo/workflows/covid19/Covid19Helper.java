@@ -1,5 +1,6 @@
 package com.velox.sloan.cmo.workflows.covid19;
 
+import com.velox.api.plugin.PluginLogger;
 import com.velox.api.util.ServerException;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -34,8 +35,8 @@ class Covid19Helper {
      * @param qpcrDataRows
      * @return
      */
-    Map<String, List<Map<String, Object>>> parseQpcrData(List<String> qpcrDataRows) {
-        Map<String, Integer> headerValuesMap = utils.getCsvHeaderValueMap(qpcrDataRows);
+    Map<String, List<Map<String, Object>>> parseQpcrData(List<String> qpcrDataRows, PluginLogger logger) {
+        Map<String, Integer> headerValuesMap = utils.getCsvHeaderValueMap(qpcrDataRows, logger);
         Map<String, List<Map<String, Object>>> parsedData = new HashMap<>();
         for (int i = 1; i < qpcrDataRows.size(); i++) {
             List<String> rowValues = Arrays.asList(qpcrDataRows.get(i).split(","));

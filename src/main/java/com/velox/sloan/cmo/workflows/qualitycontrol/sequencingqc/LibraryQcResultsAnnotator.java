@@ -153,7 +153,7 @@ public class LibraryQcResultsAnnotator extends DefaultGenericPlugin {
     private List<SampleQcResult> getTapeStationData(List<String> fileData, String fileName, List<DataRecord> attachedSamples) throws ServerException, RemoteException {
         List<SampleQcResult> qcResults = new ArrayList<>();
         try {
-            Map<String, Integer> headerValueMap = utils.getCsvHeaderValueMap(fileData);
+            Map<String, Integer> headerValueMap = utils.getCsvHeaderValueMap(fileData, pluginLogger);
             TapeStationResultParser parser = new TapeStationResultParser(fileData, fileName, headerValueMap, clientCallback, pluginLogger, user);
             qcResults = parser.parseData(attachedSamples);
         } catch (Exception e) {

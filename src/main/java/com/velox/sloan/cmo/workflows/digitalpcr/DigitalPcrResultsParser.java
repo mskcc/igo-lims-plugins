@@ -43,7 +43,7 @@ private final List<String> expectedQx200RawResultsHeaders = Arrays.asList("Well"
 //            "TotalRatioMax68","TotalRatioMin68","PoissonRatioMax68","PoissonRatioMin68","TotalFractionalAbundanceMax68",
 //            "TotalFractionalAbundanceMin68","PoissonFractionalAbundanceMax68","PoissonFractionalAbundanceMin68","TiltCorrected",
 //            "Ch1+Ch2+","Ch1+Ch2-","Ch1-Ch2+","Ch1-Ch2-","Ch3+Ch4+","Ch3+Ch4-","Ch3-Ch4+","Ch3-Ch4-","Ch5+Ch6+","Ch5+Ch6-","Ch5-Ch6+","Ch5-Ch6-");
-private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well","Sample description 1", "Sample description 2",
+private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well", "Sample description 1", "Sample description 2",
         "Status","Experiment", "SampleType","TargetType","Supermix","DyeName(s)", "TotalConfMax","TotalConfMin","PoissonConfMax",
         "PoissonConfMin","Positives","Negatives","CNV","TotalCNVMax", "TotalCNVMin","PoissonCNVMax","PoissonCNVMin","ReferenceCopies",
         "UnknownCopies","Threshold1","Threshold2","Threshold3", "ThresholdSigmaAbove","ThresholdSigmaBelow","ReferenceUsed",
@@ -53,7 +53,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
         "TotalConfidenceMin68", "PoissonConfidenceMax68", "PoissonConfidenceMin68","TotalCNVMax68","TotalCNVMin68",
         "PoissonCNVMax68","PoissonCNVMin68", "TotalRatioMax68", "TotalRatioMin68","PoissonRatioMax68","PoissonRatioMin68",
         "TotalFractionalAbundanceMax68", "TotalFractionalAbundanceMin68", "PoissonFractionalAbundanceMax68",
-        "PoissonFractionalAbundanceMin68","TiltCorrected", "Ch1+Ch2+","Ch1+Ch2-","Ch1-Ch2+", "Ch1-Ch2-","Ch3+Ch4+","Ch3+Ch4-",
+        "PoissonFractionalAbundanceMin68", "TiltCorrected", "Ch1+Ch2+","Ch1+Ch2-","Ch1-Ch2+", "Ch1-Ch2-","Ch3+Ch4+","Ch3+Ch4-",
         "Ch3-Ch4+","Ch3-Ch4-","Ch5+Ch6+","Ch5+Ch6-","Ch5-Ch6+","Ch5-Ch6-");
 
     IgoLimsPluginUtils igoUtils = new IgoLimsPluginUtils();
@@ -102,10 +102,10 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
             //read data from file and create new ddpcr assay results.
             for (String file : filesWithDigitalPcrRawData) {
                 List<String> fileData = igoUtils.readDataFromCsvFile(clientCallback.readBytes(file));
-                Map<String, Integer> headerValueMap = igoUtils.getCsvHeaderValueMap(fileData);
+                Map<String, Integer> headerValueMap = igoUtils.getCsvHeaderValueMap(fileData, pluginLogger);
                 List<List<String>> channel1Data = getChannel1Data(fileData, headerValueMap);
                 List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap);
-                List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200);
+                List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200, pluginLogger);
                 logInfo("Flattened data");
                 Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData);
                 logInfo(groupedData.toString());
@@ -222,8 +222,8 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
      * @param headerValueMap
      * @return Channel1 and Channel2 combined data.
      */
-    private List<Map<String, Object>> flattenChannel1AndChannel2Data(List<List<String>> channel1Data, List<List<String>> channel2Data, Map<String, Integer> headerValueMap, boolean isQX200) {
-        return resultsProcessor.concatenateChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200);
+    private List<Map<String, Object>> flattenChannel1AndChannel2Data(List<List<String>> channel1Data, List<List<String>> channel2Data, Map<String, Integer> headerValueMap, boolean isQX200, PluginLogger logger) {
+        return resultsProcessor.concatenateChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200, logger);
     }
 
     /**
@@ -360,6 +360,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
             analyzedData.put("FractionalAbundance", groupedData.get(key).get(0).get("FractionalAbundance"));
             analyzedData.put("ConcentrationMutation", getAverage(groupedData.get(key), "ConcentrationMutation") * reactionCount * 20); // Mu, Gene, Methyl, Human
             analyzedData.put("ConcentrationWildType", getAverage(groupedData.get(key), "ConcentrationWildType") * reactionCount * 20); // WT, Ref, Unmethyl, Mouse
+            logInfo("Grouped data key is: " + key);
             analyzedData.put("Channel1PosChannel2Pos", getSum(groupedData.get(key), "Channel1PosChannel2Pos"));
             analyzedData.put("Channel1PosChannel2Neg", getSum(groupedData.get(key), "Channel1PosChannel2Neg"));
             analyzedData.put("Channel1NegChannel2Pos", getSum(groupedData.get(key), "Channel1NegChannel2Pos"));

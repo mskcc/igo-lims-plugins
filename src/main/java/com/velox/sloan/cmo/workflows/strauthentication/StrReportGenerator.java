@@ -100,7 +100,7 @@ public class StrReportGenerator extends DefaultGenericPlugin {
             if (!fileHasData(fileData, uploadedFile)) {
                 return new PluginResult(false);
             }
-            Map<String, Integer> headerValueMap = utils.getCsvHeaderValueMap(fileData);
+            Map<String, Integer> headerValueMap = utils.getCsvHeaderValueMap(fileData, pluginLogger);
             List<DataRecord> attachedSamples = activeTask.getAttachedDataRecords("Sample", user);
             //set prerequisites for report generation
             species = getSpecies(fileData, headerValueMap);
