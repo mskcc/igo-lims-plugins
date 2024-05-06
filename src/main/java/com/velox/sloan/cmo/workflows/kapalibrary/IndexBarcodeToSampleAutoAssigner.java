@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
  */
 public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
 
-    private final List<String> RECIPES_TO_USE_SPECIAL_ADAPTERS = Arrays.asList("CRISPRSeq", "AmpliconSeq", "SingleCellCNV");
+    private final List<String> RECIPES_TO_USE_SPECIAL_ADAPTERS = Arrays.asList("DNA_CRISPR", "DNA_Amplicon", "DNA_SingleCellCNV", "User_SingleCellCNV");
     private boolean isTCRseq = false;
     private IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
     private AutoIndexAssignmentHelper autoHelper;
@@ -57,7 +57,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                 uniquePlates.add(listOfParentPlates.get(listOfParentPlates.size() - 1));
             }
 
-            if (activeTask.getTask().getTaskOptions().get("AUTOASSIGN INDEX BARCODES").toLowerCase().contains("tcrseq")) {
+            if (activeTask.getTask().getTaskOptions().get("AUTOASSIGN INDEX BARCODES").toLowerCase().contains("tcr")) {
                 isTCRseq = true;
                 attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IgoTcrSeqIndexBarcode", user);
             } else {

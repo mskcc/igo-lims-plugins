@@ -22,7 +22,7 @@ import java.util.*;
  * @author sharmaa1
  */
 public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
-    private final List<String> RECIPES_TO_USE_SPECIAL_ADAPTERS = Arrays.asList("CRISPRSeq", "AmpliconSeq", "SingleCellCNV");
+    private final List<String> RECIPES_TO_USE_SPECIAL_ADAPTERS = Arrays.asList("DNA_CRISPR", "DNA_Amplicon", "DNA_SingleCellCNV", "User_SingleCellCNV");
     private final String INDEX_ASSIGNMENT_CONFIG_DATATYPE = "AutoIndexAssignmentConfig";
     AutoIndexAssignmentHelper autohelper;
     private boolean isTCRseq = false;
@@ -43,7 +43,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
             List<DataRecord> attachedSamplesList = activeTask.getAttachedDataRecords("Sample", user);
             List<DataRecord> attachedIndexBarcodeRecords = new LinkedList<>();
             String recipe = attachedSamplesList.get(0).getStringVal("Recipe", user);
-            if(activeWorkflow.getWorkflow().getFullName().toLowerCase().contains("tcrseq") && recipe.toLowerCase().contains("tcrseq")) {
+            if(activeWorkflow.getWorkflow().getFullName().toLowerCase().contains("tcrseq") && recipe.toLowerCase().contains("tcr")) {
                 isTCRseq = true;
                 attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IgoTcrSeqIndexBarcode", user);
             }
