@@ -216,7 +216,6 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                     indexBarcodeRec.setDataField("IndexBarcodeConcentration", actualTargetAdapterConc, user);
 
                     if (isTCRseq) {
-                        logInfo("It's a TCRseq request!");
                         if ((indexConfig.getStringVal("IndexId", user).toLowerCase().startsWith("h") &&
                                 species.trim().toLowerCase().equals("mouse")) || (indexConfig.getStringVal("IndexId", user)
                                 .toLowerCase().startsWith("m") && species.trim().toLowerCase().equals("human"))) {
