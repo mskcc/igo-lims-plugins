@@ -53,7 +53,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
         "TotalConfidenceMin68", "PoissonConfidenceMax68", "PoissonConfidenceMin68","TotalCNVMax68","TotalCNVMin68",
         "PoissonCNVMax68","PoissonCNVMin68", "TotalRatioMax68", "TotalRatioMin68","PoissonRatioMax68","PoissonRatioMin68",
         "TotalFractionalAbundanceMax68", "TotalFractionalAbundanceMin68", "PoissonFractionalAbundanceMax68",
-        "PoissonFractionalAbundanceMin68", "TiltCorrected", "Ch1+Ch2+","Ch1+Ch2-","Ch1-Ch2+", "Ch1-Ch2-","Ch3+Ch4+","Ch3+Ch4-",
+        "PoissonFractionalAbundanceMin68", "Ch1+Ch2+","Ch1+Ch2-","Ch1-Ch2+", "Ch1-Ch2-","Ch3+Ch4+","Ch3+Ch4-",
         "Ch3-Ch4+","Ch3-Ch4-","Ch5+Ch6+","Ch5+Ch6-","Ch5-Ch6+","Ch5-Ch6-");
 
     IgoLimsPluginUtils igoUtils = new IgoLimsPluginUtils();
@@ -103,12 +103,13 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
             for (String file : filesWithDigitalPcrRawData) {
                 List<String> fileData = igoUtils.readDataFromCsvFile(clientCallback.readBytes(file));
                 Map<String, Integer> headerValueMap = igoUtils.getCsvHeaderValueMap(fileData, pluginLogger);
-                List<List<String>> channel1Data = getChannel1Data(fileData, headerValueMap);
-                List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap);
+                List<List<String>> channel1Data = getChannel1Data(fileData, headerValueMap, isQX200);
+                List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap, isQX200);
                 List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200, pluginLogger);
                 logInfo("Flattened data");
                 Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData);
                 logInfo(groupedData.toString());
+                logInfo("grouped data size = " + groupedData.size());
                 List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1SixChannels", user); // DdPcrProtocol1SixChannels
                 if (attachedProtocolRecords.isEmpty()) {
                     clientCallback.displayError("No attached 'DdPcrProtocol1SixChannels' records found attached to this task."); // DdPcrProtocol1SixChannels
@@ -201,8 +202,8 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
      * @param headerValueMap
      * @return data related to channel1 in the raw data under "TargetType" column in ddPCR results.
      */
-    private List<List<String>> getChannel1Data(List<String> fileData, Map<String, Integer> headerValueMap) {
-        return resultsProcessor.readChannel1Data(fileData, headerValueMap);
+    private List<List<String>> getChannel1Data(List<String> fileData, Map<String, Integer> headerValueMap, boolean isQX200) {
+        return resultsProcessor.readChannel1Data(fileData, headerValueMap, isQX200);
     }
 
     /**
@@ -210,8 +211,8 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
      * @param headerValueMap
      * @return data related to channel2 in the raw data under "TargetType" column in ddPCR results.
      */
-    private List<List<String>> getChannel2Data(List<String> fileData, Map<String, Integer> headerValueMap) {
-        return resultsProcessor.readChannel2Data(fileData, headerValueMap);
+    private List<List<String>> getChannel2Data(List<String> fileData, Map<String, Integer> headerValueMap, boolean isQX200) {
+        return resultsProcessor.readChannel2Data(fileData, headerValueMap, isQX200);
     }
 
     /**

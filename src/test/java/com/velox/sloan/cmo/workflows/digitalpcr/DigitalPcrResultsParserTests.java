@@ -35,8 +35,8 @@ public class DigitalPcrResultsParserTests {
         try {
             dataFromFile = commonMethods.readDataFromCsvFile(byteData);
             headerValuesMap = commonMethods.getCsvHeaderValueMap(dataFromFile);
-            channel1Data = resultsProcessor.readChannel1Data(dataFromFile, headerValuesMap);
-            channel2Data = resultsProcessor.readChannel2Data(dataFromFile, headerValuesMap);
+            channel1Data = resultsProcessor.readChannel1Data(dataFromFile, headerValuesMap, true);
+            channel2Data = resultsProcessor.readChannel2Data(dataFromFile, headerValuesMap, true);
             flatData = resultsProcessor.concatenateChannel1AndChannel2Data(channel1Data, channel2Data, headerValuesMap, true);
             groupedData = resultsProcessor.aggregateResultsBySampleAndAssay(flatData);
 

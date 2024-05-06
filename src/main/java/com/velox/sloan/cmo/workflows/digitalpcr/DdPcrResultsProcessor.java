@@ -6,24 +6,36 @@ import java.util.function.DoubleUnaryOperator;
 
 public class DdPcrResultsProcessor implements DdPcrResultsReader {
     @Override
-    public List<List<String>> readChannel1Data(List<String> fileData, Map<String, Integer> headerValueMap) {
+    public List<List<String>> readChannel1Data(List<String> fileData, Map<String, Integer> headerValueMap, boolean isQX200) {
         List<List<String>> channel1RawData = new ArrayList<>();
         for (String row : fileData) {
             List<String> valuesInRow = Arrays.asList(row.split(","));
-            if (valuesInRow.get(headerValueMap.get("TargetType")).contains("Unknown")) {
-                channel1RawData.add(valuesInRow);
+            if (isQX200) {
+                if (valuesInRow.get(headerValueMap.get("TargetType")).contains("Unknown")) {
+                    channel1RawData.add(valuesInRow);
+                }            }
+            else { //QX600
+                if (valuesInRow.get(headerValueMap.get("DyeName(s)")).contains("FAM")) {
+                    channel1RawData.add(valuesInRow);
+                }
             }
         }
         return channel1RawData;
     }
 
     @Override
-    public List<List<String>> readChannel2Data(List<String> fileData, Map<String, Integer> headerValueMap) {
+    public List<List<String>> readChannel2Data(List<String> fileData, Map<String, Integer> headerValueMap, boolean isQX200) {
         List<List<String>> channel2RawData = new ArrayList<>();
         for (String row : fileData) {
             List<String> valuesInRow = Arrays.asList(row.split(","));
-            if (valuesInRow.get(headerValueMap.get("TargetType")).contains("Reference")) {
-                channel2RawData.add(valuesInRow);
+            if (isQX200) {
+                if (valuesInRow.get(headerValueMap.get("TargetType")).contains("Ref")) {
+                    channel2RawData.add(valuesInRow);
+                }            }
+            else { //QX600
+                if (valuesInRow.get(headerValueMap.get("DyeName(s)")).contains("HEX")) {
+                    channel2RawData.add(valuesInRow);
+                }
             }
         }
         return channel2RawData;
@@ -36,6 +48,7 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
             String s1Well = s1.get(headerValueMap.get("Well"));
             String s1SampleId = "";
             String s2SampleId = "";
+            logger.logInfo("s1 MergedWells = " + s1.get(headerValueMap.get("MergedWells")));
             if (!isQX200) {
                 s1SampleId = s1.get(headerValueMap.get("Sample description 2"));
                 logger.logInfo("QX600: sample name" + s1SampleId);
