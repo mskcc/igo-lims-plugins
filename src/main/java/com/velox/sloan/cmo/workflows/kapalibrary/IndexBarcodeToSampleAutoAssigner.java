@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
  */
 public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
 
-    private final List<String> RECIPES_TO_USE_SPECIAL_ADAPTERS = Arrays.asList("DNA_CRISPR", "DNA_Amplicon", "DNA_SingleCellCNV", "User_SingleCellCNV");
+    private final List<String> RECIPES_TO_USE_SPECIAL_ADAPTERS = Arrays.asList("DNA_CRISPR", "DNA_Amplicon", "DNA_SingleCellCNV");
     private boolean isTCRseq = false;
     private IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
     private AutoIndexAssignmentHelper autoHelper;
