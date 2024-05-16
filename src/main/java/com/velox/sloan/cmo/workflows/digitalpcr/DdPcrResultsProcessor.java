@@ -80,12 +80,13 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                         logger.logInfo("Conc(copies/µL): " + headerValueMap.get("Conc(copies/µL)"));
                         logger.logInfo("s1 size = " + s1.size());
                         logger.logInfo("header value map of Conc(Copies/µl) = " + headerValueMap.get("Conc(copies/µL)"));
-                        sampleValues.put("Sample: ", s1.get(headerValueMap.get("Sample description 2")));
-                        if (s1.get(headerValueMap.get("Conc(copies/µL)")) != null && !s1.get(headerValueMap.get("Conc(copies/µL)")).isEmpty() && !s1.get(headerValueMap.get("Conc(copies/µL)")).isBlank()) {
-                            sampleValues.put("ConcentrationMutation", Double.parseDouble(s1.get(headerValueMap.get("Conc(copies/µL)"))));
+                        sampleValues.put("Sample", s1.get(headerValueMap.get("Sample description 2")));
+                        int index = headerValueMap.get("Conc(copies/µL)");
+                        if (s1.get(index) != null && !s1.get(index).isEmpty() && !s1.get(index).isBlank()) {
+                            sampleValues.put("ConcentrationMutation", Double.parseDouble(s1.get(index)));
                         }
-                        if (s2.get(headerValueMap.get("Conc(copies/µL)")) != null && !s2.get(headerValueMap.get("Conc(copies/µL)")).isEmpty() && !s2.get(headerValueMap.get("Conc(copies/µL)")).isBlank()) {
-                            sampleValues.put("ConcentrationWildType", Double.parseDouble(s2.get(headerValueMap.get("Conc(copies/µL)"))));
+                        if (s2.get(index) != null && !s2.get(index).isEmpty() && !s2.get(index).isBlank()) {
+                            sampleValues.put("ConcentrationWildType", Double.parseDouble(s2.get(index)));
                         }
                         sampleValues.put("AcceptedDroplets", Integer.parseInt(s1.get(headerValueMap.get("Accepted Droplets"))));
                         if (s1.get(headerValueMap.get("Fractional Abundance")) != null && !s1.get(headerValueMap.get("Fractional Abundance")).isEmpty() && !s1.get(headerValueMap.get("Fractional Abundance")).isBlank()) {

@@ -25,7 +25,7 @@ import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.logging.Logger;
@@ -66,9 +66,10 @@ public class IgoLimsPluginUtils {
      * @throws IOException
      */
     public List<String> readDataFromCsvFile(byte[] fileContent) throws IOException {
+        Charset charset = Charset.forName("ISO-8859-1"); // Adjust the charset according to your file's encoding
         List<String> rowDataValues = new ArrayList<>();
         InputStream dataStream = new ByteArrayInputStream(fileContent);
-        try (BufferedReader fileReader = new BufferedReader(new InputStreamReader(dataStream, StandardCharsets.UTF_8))) {
+        try (BufferedReader fileReader = new BufferedReader(new InputStreamReader(dataStream,charset))) {
             String temp;
             while ((temp = fileReader.readLine()) != null) { //to check that there are no empty lines at end of file
                 String rowData;
@@ -218,8 +219,11 @@ public class IgoLimsPluginUtils {
         Map<String, Integer> headerValues = new HashMap<>();
         for (String value : headerRow) {
             logger.logInfo("header row: " + value.trim());
-            logger.logInfo("header row value: " + headerRow.indexOf(value));
-            headerValues.put(value.trim(), headerRow.indexOf(value));
+//            if (value.contains("µ")) {
+//                value = value.split("µ")[0];
+//            }
+            logger.logInfo("header row value: " + headerRow.indexOf(value.trim()));
+            headerValues.put(value.trim(), headerRow.indexOf(value.trim()));
         }
         return headerValues;
     }
