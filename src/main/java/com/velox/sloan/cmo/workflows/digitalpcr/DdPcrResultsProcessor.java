@@ -77,15 +77,15 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                             sampleValues.put("FractionalAbundance", 0.0);
                         }
                     } else { // QX600
-                        logger.logInfo("Conc(copies/uL)" + headerValueMap.get("Conc(copies/uL)"));
+                        logger.logInfo("Conc(copies/µL): " + headerValueMap.get("Conc(copies/µL)"));
                         logger.logInfo("s1 size = " + s1.size());
-                        logger.logInfo("header value map of conc(Copies/ul) = " + headerValueMap.get("Conc(copies/uL)"));
-                        sampleValues.put("Sample", s1.get(headerValueMap.get("Sample description 2")));
-                        if (s1.get(headerValueMap.get("Conc(copies/uL)")) != null && !s1.get(headerValueMap.get("Conc(copies/uL)")).isEmpty() && !s1.get(headerValueMap.get("Conc(copies/uL)")).isBlank()) {
-                            sampleValues.put("ConcentrationMutation", Double.parseDouble(s1.get(headerValueMap.get("Conc(copies/uL)"))));
+                        logger.logInfo("header value map of Conc(Copies/µl) = " + headerValueMap.get("Conc(copies/µL)"));
+                        sampleValues.put("Sample: ", s1.get(headerValueMap.get("Sample description 2")));
+                        if (s1.get(headerValueMap.get("Conc(copies/µL)")) != null && !s1.get(headerValueMap.get("Conc(copies/µL)")).isEmpty() && !s1.get(headerValueMap.get("Conc(copies/µL)")).isBlank()) {
+                            sampleValues.put("ConcentrationMutation", Double.parseDouble(s1.get(headerValueMap.get("Conc(copies/µL)"))));
                         }
-                        if (s2.get(headerValueMap.get("Conc(copies/uL)")) != null && !s2.get(headerValueMap.get("Conc(copies/uL)")).isEmpty() && !s2.get(headerValueMap.get("Conc(copies/uL)")).isBlank()) {
-                            sampleValues.put("ConcentrationWildType", Double.parseDouble(s2.get(headerValueMap.get("Conc(copies/uL)"))));
+                        if (s2.get(headerValueMap.get("Conc(copies/µL)")) != null && !s2.get(headerValueMap.get("Conc(copies/µL)")).isEmpty() && !s2.get(headerValueMap.get("Conc(copies/µL)")).isBlank()) {
+                            sampleValues.put("ConcentrationWildType", Double.parseDouble(s2.get(headerValueMap.get("Conc(copies/µL)"))));
                         }
                         sampleValues.put("AcceptedDroplets", Integer.parseInt(s1.get(headerValueMap.get("Accepted Droplets"))));
                         if (s1.get(headerValueMap.get("Fractional Abundance")) != null && !s1.get(headerValueMap.get("Fractional Abundance")).isEmpty() && !s1.get(headerValueMap.get("Fractional Abundance")).isBlank()) {

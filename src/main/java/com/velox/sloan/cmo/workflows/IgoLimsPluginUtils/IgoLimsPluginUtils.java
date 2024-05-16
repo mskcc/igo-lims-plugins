@@ -68,7 +68,7 @@ public class IgoLimsPluginUtils {
     public List<String> readDataFromCsvFile(byte[] fileContent) throws IOException {
         List<String> rowDataValues = new ArrayList<>();
         InputStream dataStream = new ByteArrayInputStream(fileContent);
-        try (BufferedReader fileReader = new BufferedReader(new InputStreamReader(dataStream))) {
+        try (BufferedReader fileReader = new BufferedReader(new InputStreamReader(dataStream, StandardCharsets.UTF_8))) {
             String temp;
             while ((temp = fileReader.readLine()) != null) { //to check that there are no empty lines at end of file
                 String rowData;
