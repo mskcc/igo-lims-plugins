@@ -390,10 +390,10 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         Double newVolume = previousVol - adapterVolumeUsed;
         indexAssignmentConfig.setDataField("AdapterVolume", newVolume, user);
 
-        if (newVolume <= 10) {
+        if (newVolume <= 20) {
             indexAssignmentConfig.setDataField("IsDepelted", true, user);
             indexAssignmentConfig.setDataField("IsActive", false, user);
-            clientCallback.displayWarning(String.format("The Volume for adapter '%s'on Adapter Plate with ID '%s' is below 10ul.\nThis adapter will be marked as depleted and will be ignored for future assignments.",
+            clientCallback.displayWarning(String.format("The Volume for adapter '%s'on Adapter Plate with ID '%s' is below 20ul.\nThis adapter will be marked as depleted and will be ignored for future assignments.",
                     indexAssignmentConfig.getStringVal("IndexId", user), indexAssignmentConfig.getStringVal("AdapterPlateId", user)));
         }
     }
@@ -501,12 +501,12 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
      */
     private void checkIndexAssignmentsForDepletedAdapters(List<DataRecord> indexAssignmentConfigs) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
         for (DataRecord rec : indexAssignmentConfigs) {
-            if (rec.getDoubleVal("AdapterVolume", user) < 10.00 && !rec.getBooleanVal("IsDepelted", user) && rec.getBooleanVal("IsActive", user)) {
+            if (rec.getDoubleVal("AdapterVolume", user) < 20.00 && !rec.getBooleanVal("IsDepelted", user) && rec.getBooleanVal("IsActive", user)) {
                 String wellId = rec.getStringVal("WellId", user);
                 String column = wellId.substring(1);
                 String indexPlateId = rec.getStringVal("AdapterPlateId", user);
                 int setId = rec.getIntegerVal("SetId", user);
-                clientCallback.displayWarning(String.format("Index ID '%s' on Adapter Plate '%s' has volume less than 10ul. Entire column will be marked Inactive and depleted.",
+                clientCallback.displayWarning(String.format("Index ID '%s' on Adapter Plate '%s' has volume less than 20ul. Entire column will be marked Inactive and depleted.",
                         rec.getStringVal("IndexId", user), indexPlateId));
                 logInfo(String.format("Index ID '%s' on Adapter Plate '%s' has volume less than 10ul.Entire column will be marked Inactive and depleted.",
                         rec.getStringVal("IndexId", user), rec.getStringVal("AdapterPlateId", user)));
