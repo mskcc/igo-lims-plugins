@@ -21,8 +21,7 @@ import java.util.*;
  * @author Ajay Sharma, Anna Patruno, Fahimeh Mirhaj
  */
 public class ValidateSampleFieldsPlugin extends DefaultGenericPlugin {
-    private final List<String> SAMPLE_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS = Arrays.asList("OtherSampleId", "UserSampleID", "Preservation",
-            "TumorOrNormal", "PatientId", "CmoPatientId");
+    private final List<String> SAMPLE_FIELDS_TO_CHECK_FOR_SPECIAL_CHARACTERS = Arrays.asList("OtherSampleId", "UserSampleID", "TumorOrNormal", "PatientId", "CmoPatientId");
     private String error = null;
 
     public IgoLimsPluginUtils utils = new IgoLimsPluginUtils();
