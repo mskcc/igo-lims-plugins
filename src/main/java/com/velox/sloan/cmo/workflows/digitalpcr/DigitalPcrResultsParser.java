@@ -15,6 +15,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import java.io.IOException;
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * This plugin is designed to import ddPCR results into LIMS. The Raw data from csv file is parsed,
@@ -25,6 +26,10 @@ import java.util.*;
 public class DigitalPcrResultsParser extends DefaultGenericPlugin {
 
     public int qxResultType = 0;
+
+    private final static String IGO_ID_WITHOUT_ALPHABETS_PATTERN = "^[0-9]+_[0-9]+.*$";  // sample id without alphabets
+    private final static String IGO_ID_WITH_ALPHABETS_PATTERN = "^[0-9]+_[A-Z]+_[0-9]+.*$";  // sample id without alphabets
+
     private final String HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME = "Mouse_Human_CNV_PTGER2";
 private final List<String> expectedQx200RawResultsHeaders = Arrays.asList("Well", "ExptType", "Experiment", "Sample", "TargetType", "Target",
         "Status", "Concentration", "Supermix", "CopiesPer20uLWell", "TotalConfMax", "TotalConfMin", "PoissonConfMax", "PoissonConfMin",
@@ -110,15 +115,22 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                 Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData);
                 logInfo(groupedData.toString());
                 logInfo("grouped data size = " + groupedData.size());
-                List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1SixChannels", user); // DdPcrProtocol1SixChannels
-                if (attachedProtocolRecords.isEmpty()) {
-                    clientCallback.displayError("No attached 'DdPcrProtocol1SixChannels' records found attached to this task."); // DdPcrProtocol1SixChannels
-                    logError("No attached 'DdPcrProtocol1SixChannels' records found attached to this task."); // DdPcrProtocol1SixChannels
+                List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1SixChannels", user);
+                List<DataRecord> attachedProtocolRecordsQX200 = activeTask.getAttachedDataRecords("DdPcrProtocol1", user);
+                if (attachedProtocolRecords.isEmpty() && attachedProtocolRecordsQX200.isEmpty()) {
+                    clientCallback.displayError("No attached 'DdPcrProtocol1SixChannels' or 'DdPcrProtocol1' records found attached to this task.");
+                    logError("No attached 'DdPcrProtocol1SixChannels'/'DdPcrProtocol1' records found attached to this task.");
                     return new PluginResult(false);
                 }
-                List<Map<String, Object>> analyzedData = runDataAnalysisForAssays(groupedData, attachedProtocolRecords);
+                List<Map<String, Object>> analyzedData = new LinkedList<>();
+                if (!attachedProtocolRecords.isEmpty()) {
+                    analyzedData = runDataAnalysisForAssays(groupedData, attachedProtocolRecords);
+                }
+                else {
+                    analyzedData = runDataAnalysisForAssays(groupedData, attachedProtocolRecordsQX200);
+                }
                 List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
-                if (attachedProtocolRecords.isEmpty()) {
+                if (attachedSampleRecords.isEmpty()) {
                     clientCallback.displayError("No attached 'Sample' records found attached to this task.");
                     logError("No attached 'Sample' records found attached to this task.");
                     return new PluginResult(false);
@@ -341,45 +353,57 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
     private List<Map<String, Object>> runDataAnalysisForAssays(Map<String, List<Map<String, Object>>> groupedData, List<DataRecord> protocolRecords){
         logInfo("Analyzing ddPCR Results.");
         List<Map<String, Object>> analyzedDataValues = new ArrayList<>();
-        for (String key : groupedData.keySet()) {
-            Map<String, Object> analyzedData = new HashMap<>();
-            String sampleName = key.split("/")[0];
-            String target = key.split("/")[1];
-            String whereClause = "OtherSampleId = '" + sampleName + "'";
-            int reactionCount = 1;
-            try {
-                if (dataRecordManager.queryDataRecords("DdPcrProtocol2", whereClause, user).size() > 0) {
-                    reactionCount = dataRecordManager.queryDataRecords("DdPcrProtocol2", whereClause, user).get(0).getIntegerVal("NumberOfReplicates", user);
+        // from protocol records read igo id
+        List<String> igoIds = new LinkedList<>();
+        try {
+            for (DataRecord ddpcrprtcl1 : protocolRecords) {
+                igoIds.add(getBaseSampleId(ddpcrprtcl1.getStringVal("SampleId", user)));
+            }
+            for (String key : groupedData.keySet()) {
+                Map<String, Object> analyzedData = new HashMap<>();
+                String sampleName = key.split("/")[0];
+                String target = key.split("/")[1];
+                String whereClause = "OtherSampleId = '" + sampleName + "'";
+                int reactionCount = 1;
+                List<DataRecord> ddpcrprtcl2Recs = dataRecordManager.queryDataRecords("DdPcrProtocol2", whereClause, user);
+                if (ddpcrprtcl2Recs.size() > 0) {
+                    for (DataRecord prtcl2Rec : ddpcrprtcl2Recs) {
+                        for (String igoId : igoIds) {
+                            if (prtcl2Rec.getStringVal("SampleId", user).equals(igoId)) {
+                                reactionCount = prtcl2Rec.getIntegerVal("NumberOfReplicates", user);
+                            }
+                        }
+                    }
                 }
                 logInfo("reactionCount = " + reactionCount);
-            } catch (NotFound | RemoteException | IoError | ServerException e) {
-                throw new RuntimeException(e);
+                analyzedData.put("Assay", target);
+                analyzedData.put("OtherSampleId", sampleName);
+                analyzedData.put("CNV", groupedData.get(key).get(0).get("CNV"));
+                analyzedData.put("FractionalAbundance", groupedData.get(key).get(0).get("FractionalAbundance"));
+                analyzedData.put("ConcentrationMutation", getAverage(groupedData.get(key), "ConcentrationMutation") * reactionCount * 20); // Mu, Gene, Methyl, Human
+                analyzedData.put("ConcentrationWildType", getAverage(groupedData.get(key), "ConcentrationWildType") * reactionCount * 20); // WT, Ref, Unmethyl, Mouse
+                logInfo("Grouped data key is: " + key);
+                analyzedData.put("Channel1PosChannel2Pos", getSum(groupedData.get(key), "Channel1PosChannel2Pos"));
+                analyzedData.put("Channel1PosChannel2Neg", getSum(groupedData.get(key), "Channel1PosChannel2Neg"));
+                analyzedData.put("Channel1NegChannel2Pos", getSum(groupedData.get(key), "Channel1NegChannel2Pos"));
+                Integer dropletCountMutation = (Integer) analyzedData.get("Channel1PosChannel2Pos") + (Integer) analyzedData.get("Channel1PosChannel2Neg");
+                Integer dropletCountWildType = (Integer) analyzedData.get("Channel1PosChannel2Pos") + (Integer) analyzedData.get("Channel1NegChannel2Pos");
+                Double totalDnaDetected = calculateTotalDnaDetected((Double) analyzedData.get("ConcentrationMutation") / (reactionCount * 20), (Double) analyzedData.get("ConcentrationWildType") / (reactionCount * 20));
+                analyzedData.put("DropletCountMutation", dropletCountMutation);
+                analyzedData.put("DropletCountWildType", dropletCountWildType);
+                analyzedData.put("TotalDnaDetected", totalDnaDetected);
+                Double ratio = getRatio(Double.valueOf(analyzedData.get("ConcentrationMutation").toString()), Double.valueOf(analyzedData.get("ConcentrationWildType").toString()));
+                analyzedData.put("Ratio", ratio);
+                analyzedData.put("AcceptedDroplets", getSum(groupedData.get(key), "AcceptedDroplets"));
+                if (target.equalsIgnoreCase(HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME)) {
+                    Double humanPercentage = calculateHumanPercentage(dropletCountMutation, dropletCountWildType);
+                    analyzedData.put("HumanPercentage", humanPercentage);
+                }
+                analyzedData.put("TotalInput", getTotalInputForSample(sampleName, target, protocolRecords));
+                analyzedDataValues.add(analyzedData);
             }
-            analyzedData.put("Assay", target);
-            analyzedData.put("OtherSampleId", sampleName);
-            analyzedData.put("CNV", groupedData.get(key).get(0).get("CNV"));
-            analyzedData.put("FractionalAbundance", groupedData.get(key).get(0).get("FractionalAbundance"));
-            analyzedData.put("ConcentrationMutation", getAverage(groupedData.get(key), "ConcentrationMutation") * reactionCount * 20); // Mu, Gene, Methyl, Human
-            analyzedData.put("ConcentrationWildType", getAverage(groupedData.get(key), "ConcentrationWildType") * reactionCount * 20); // WT, Ref, Unmethyl, Mouse
-            logInfo("Grouped data key is: " + key);
-            analyzedData.put("Channel1PosChannel2Pos", getSum(groupedData.get(key), "Channel1PosChannel2Pos"));
-            analyzedData.put("Channel1PosChannel2Neg", getSum(groupedData.get(key), "Channel1PosChannel2Neg"));
-            analyzedData.put("Channel1NegChannel2Pos", getSum(groupedData.get(key), "Channel1NegChannel2Pos"));
-            Integer dropletCountMutation = (Integer) analyzedData.get("Channel1PosChannel2Pos") + (Integer) analyzedData.get("Channel1PosChannel2Neg");
-            Integer dropletCountWildType = (Integer) analyzedData.get("Channel1PosChannel2Pos") + (Integer) analyzedData.get("Channel1NegChannel2Pos");
-            Double totalDnaDetected = calculateTotalDnaDetected((Double) analyzedData.get("ConcentrationMutation"), (Double) analyzedData.get("ConcentrationWildType"));
-            analyzedData.put("DropletCountMutation", dropletCountMutation);
-            analyzedData.put("DropletCountWildType", dropletCountWildType);
-            analyzedData.put("TotalDnaDetected", totalDnaDetected);
-            Double ratio = getRatio(Double.valueOf(analyzedData.get("ConcentrationMutation").toString()), Double.valueOf(analyzedData.get("ConcentrationWildType").toString()));
-            analyzedData.put("Ratio", ratio);
-            analyzedData.put("AcceptedDroplets", getSum(groupedData.get(key), "AcceptedDroplets"));
-            if (target.equalsIgnoreCase(HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME)) {
-                Double humanPercentage = calculateHumanPercentage(dropletCountMutation, dropletCountWildType);
-                analyzedData.put("HumanPercentage", humanPercentage);
-            }
-            analyzedData.put("TotalInput", getTotalInputForSample(sampleName, target, protocolRecords));
-            analyzedDataValues.add(analyzedData);
+        } catch (NotFound | RemoteException | IoError | ServerException e) {
+            throw new RuntimeException(e);
         }
         return analyzedDataValues;
     }
@@ -495,6 +519,27 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
         }
 
         activeTask.addAttachedDataRecords(recordsToAttachToTask);
+    }
+
+    /**
+     * Method to get base Sample ID when aliquot annotation is present.
+     * Example: for sample id 012345_1_1_2, base sample id is 012345_1
+     * Example2: for sample id 012345_B_1_1_2, base sample id is 012345_B_1
+     * @param sampleId
+     * @return
+     */
+    public static String getBaseSampleId(String sampleId){
+        Pattern alphabetPattern = Pattern.compile(IGO_ID_WITH_ALPHABETS_PATTERN);
+        Pattern withoutAlphabetPattern = Pattern.compile(IGO_ID_WITHOUT_ALPHABETS_PATTERN);
+        if (alphabetPattern.matcher(sampleId).matches()){
+            String[] sampleIdValues =  sampleId.split("_");
+            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,3));
+        }
+        if(withoutAlphabetPattern.matcher(sampleId).matches()){
+            String[] sampleIdValues =  sampleId.split("_");
+            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,2));
+        }
+        return sampleId;
     }
 }
 

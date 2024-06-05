@@ -22,7 +22,7 @@ import java.util.Map;
  * @author mirhajf
 * */
 public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
-
+    //public int qxVesrsion = 0;
     public DdPcrMultiChannelRecordGenerator() {
         setTaskEntry(true);
         setOrder(PluginOrder.MIDDLE.getOrder());
@@ -42,6 +42,16 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
             Map<String, Object> dataFieldValueMap = new HashMap<>();
             List<DataRecord> ddPcrSixChannelRecords = new ArrayList<>();
 
+//            String[] QXResultSheetType = {"QX200", "QX600"};
+//            qxVesrsion = clientCallback.showOptionDialog("QX Manager Type", "Which experiment are you running?", QXResultSheetType, 0);
+//            logInfo("qx version = " + qxVesrsion);
+//            boolean isQX200 = true;
+//            if (qxVesrsion == 1) {
+//                isQX200 = false;
+//            }
+//            if (isQX200) {
+//                return new PluginResult(true);
+//            }
             activeTask.getTask().getTaskOptions().put("DUPLICATE RECORDS CREATED", "");
             logInfo("Added the duplicated task option to this step!");
 
