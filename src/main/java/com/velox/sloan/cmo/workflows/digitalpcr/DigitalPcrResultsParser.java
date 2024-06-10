@@ -364,13 +364,16 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                 String sampleName = key.split("/")[0];
                 String target = key.split("/")[1];
                 String whereClause = "OtherSampleId = '" + sampleName + "'";
+                logInfo("whereClause: " + whereClause);
                 int reactionCount = 1;
                 List<DataRecord> ddpcrprtcl2Recs = dataRecordManager.queryDataRecords("DdPcrProtocol2", whereClause, user);
                 if (ddpcrprtcl2Recs.size() > 0) {
                     for (DataRecord prtcl2Rec : ddpcrprtcl2Recs) {
                         for (String igoId : igoIds) {
+                            logInfo("looking for " + igoId + " in ddpcr protocol 2 records!");
                             if (prtcl2Rec.getStringVal("SampleId", user).equals(igoId)) {
                                 reactionCount = prtcl2Rec.getIntegerVal("NumberOfReplicates", user);
+                                logInfo("Read reaction count from ddpcr protocol 2 type!");
                             }
                         }
                     }
@@ -533,11 +536,11 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
         Pattern withoutAlphabetPattern = Pattern.compile(IGO_ID_WITHOUT_ALPHABETS_PATTERN);
         if (alphabetPattern.matcher(sampleId).matches()){
             String[] sampleIdValues =  sampleId.split("_");
-            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,3));
+            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,4));
         }
         if(withoutAlphabetPattern.matcher(sampleId).matches()){
             String[] sampleIdValues =  sampleId.split("_");
-            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,2));
+            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,3));
         }
         return sampleId;
     }

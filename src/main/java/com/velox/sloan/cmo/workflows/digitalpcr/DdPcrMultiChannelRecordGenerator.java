@@ -31,7 +31,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
     public boolean shouldRun() throws RemoteException {
         return !activeTask.getTask().getTaskOptions().containsKey("DUPLICATE RECORDS CREATED") &&
                 activeTask.getTask().getTaskOptions().containsKey("CREATE NEW SIX CHANNELS RECORDS") &&
-                activeTask.getTask().getTaskName().equalsIgnoreCase("Assign Assay and Generate Sample Sheet for Reader");
+                activeTask.getTask().getTaskName().equalsIgnoreCase("Assign Assay and Generate Sample Sheet for Reader- QX600");
     }
 
     @Override
