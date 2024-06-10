@@ -70,6 +70,7 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                         sampleValues.put("ConcentrationMutation", Double.parseDouble(s1.get(headerValueMap.get("Concentration"))));
                         sampleValues.put("ConcentrationWildType", Double.parseDouble(s2.get(headerValueMap.get("Concentration"))));
                         sampleValues.put("AcceptedDroplets", Integer.parseInt(s1.get(headerValueMap.get("AcceptedDroplets"))));
+                        sampleValues.put("Target", s1.get(headerValueMap.get("Target")));
                         if (s1.get(headerValueMap.get("FractionalAbundance")) != null && !s1.get(headerValueMap.get("FractionalAbundance")).isEmpty() && !s1.get(headerValueMap.get("FractionalAbundance")).isBlank()) {
                             sampleValues.put("FractionalAbundance", Double.parseDouble(s1.get(headerValueMap.get("FractionalAbundance"))));
                         }
@@ -89,6 +90,8 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                             sampleValues.put("ConcentrationWildType", Double.parseDouble(s2.get(index)));
                         }
                         sampleValues.put("AcceptedDroplets", Integer.parseInt(s1.get(headerValueMap.get("Accepted Droplets"))));
+                        sampleValues.put("TargetGene", s1.get(headerValueMap.get("Target")));
+                        sampleValues.put("TargetRef", s2.get(headerValueMap.get("Target")));
                         if (s1.get(headerValueMap.get("Fractional Abundance")) != null && !s1.get(headerValueMap.get("Fractional Abundance")).isEmpty() && !s1.get(headerValueMap.get("Fractional Abundance")).isBlank()) {
                             sampleValues.put("FractionalAbundance", Double.parseDouble(s1.get(headerValueMap.get("Fractional Abundance"))));
                         }
@@ -96,7 +99,7 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                             sampleValues.put("FractionalAbundance", 0.0);
                         }
                     }
-                    sampleValues.put("Target", s1.get(headerValueMap.get("Target")));
+                    //sampleValues.put("Target", s1.get(headerValueMap.get("Target")));
                     logger.logInfo("s1.get(headerValueMap.get(\"Ch1+Ch2+\")) = " + s1.get(headerValueMap.get("Ch1+Ch2+")));
                     sampleValues.put("Channel1PosChannel2Pos", Integer.parseInt(s1.get(headerValueMap.get("Ch1+Ch2+"))));
                     sampleValues.put("Channel1PosChannel2Neg", Integer.parseInt(s1.get(headerValueMap.get("Ch1+Ch2-"))));
@@ -115,10 +118,24 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
     }
 
     @Override
-    public Map<String, List<Map<String, Object>>> aggregateResultsBySampleAndAssay(List<Map<String, Object>> flatData) {
+    public Map<String, List<Map<String, Object>>> aggregateResultsBySampleAndAssay(List<Map<String, Object>> flatData, boolean QX200) {
         Map<String, List<Map<String, Object>>> groupedData = new HashMap<>();
+        boolean toggle = true;
         for (Map<String, Object> data : flatData) {
-            String keyValue = data.get("Sample").toString() + "/" + data.get("Target").toString();
+            String keyValue = "";
+            if (QX200) {
+                keyValue = data.get("Sample").toString() + "/" + data.get("Target").toString();
+            }
+            else { //QX600
+                if (toggle) {
+                    keyValue = data.get("Sample").toString() + "/" + data.get("TargetGene").toString();
+                    toggle = false;
+                }
+                else {
+                    keyValue = data.get("Sample").toString() + "/" + data.get("TargetRef").toString();
+                    toggle = true;
+                }
+            }
             groupedData.putIfAbsent(keyValue, new ArrayList<>());
             groupedData.get(keyValue).add(data);
         }

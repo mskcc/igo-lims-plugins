@@ -112,7 +112,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                 List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap, isQX200);
                 List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200, pluginLogger);
                 logInfo("Flattened data");
-                Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData);
+                Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData, isQX200);
                 logInfo(groupedData.toString());
                 logInfo("grouped data size = " + groupedData.size());
                 List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1SixChannels", user);
@@ -124,10 +124,10 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                 }
                 List<Map<String, Object>> analyzedData = new LinkedList<>();
                 if (!attachedProtocolRecords.isEmpty()) {
-                    analyzedData = runDataAnalysisForAssays(groupedData, attachedProtocolRecords);
+                    analyzedData = runDataAnalysisForAssays(groupedData, attachedProtocolRecords, isQX200);
                 }
                 else {
-                    analyzedData = runDataAnalysisForAssays(groupedData, attachedProtocolRecordsQX200);
+                    analyzedData = runDataAnalysisForAssays(groupedData, attachedProtocolRecordsQX200, isQX200);
                 }
                 List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
                 if (attachedSampleRecords.isEmpty()) {
@@ -245,8 +245,8 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
      * @param flatData
      * @return data grouped by Sample and Target values.
      */
-    private Map<String, List<Map<String, Object>>> groupResultsBySampleAndAssay(List<Map<String, Object>> flatData) {
-        return resultsProcessor.aggregateResultsBySampleAndAssay(flatData);
+    private Map<String, List<Map<String, Object>>> groupResultsBySampleAndAssay(List<Map<String, Object>> flatData, boolean QX200) {
+        return resultsProcessor.aggregateResultsBySampleAndAssay(flatData, QX200);
     }
 
     /**
@@ -281,11 +281,18 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
      * @throws NotFound
      * @throws RemoteException
      */
-    private Double getTotalInputForSample(String sampleName, String assayName, List<DataRecord> protocolRecords) {
+    private Double getTotalInputForSample(String sampleName, String assayName, List<DataRecord> protocolRecords, boolean QX200) {
         for (DataRecord record : protocolRecords) {
             try {
                 Object sampleNameOnProtocol = record.getValue("OtherSampleId", user);
-                Object assayOnProtocol = record.getValue("Ch1Target", user);
+                Object assayOnProtocol = null;
+                if (QX200) {
+                    assayOnProtocol = record.getValue("Ch1Target", user);
+                }
+                else { //QX600
+                    assayOnProtocol = record.getValue("TargetName", user);
+                }
+
                 Object igoSampleIdOnProtocol = record.getStringVal("SampleId", user);
                 if (sampleNameOnProtocol != null && assayOnProtocol != null && sampleName.equalsIgnoreCase(sampleNameOnProtocol.toString())
                         && assayName.equalsIgnoreCase(assayOnProtocol.toString())) {
@@ -350,7 +357,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
      * @throws NotFound
      * @throws RemoteException
      */
-    private List<Map<String, Object>> runDataAnalysisForAssays(Map<String, List<Map<String, Object>>> groupedData, List<DataRecord> protocolRecords){
+    private List<Map<String, Object>> runDataAnalysisForAssays(Map<String, List<Map<String, Object>>> groupedData, List<DataRecord> protocolRecords, boolean QX200){
         logInfo("Analyzing ddPCR Results.");
         List<Map<String, Object>> analyzedDataValues = new ArrayList<>();
         // from protocol records read igo id
@@ -363,6 +370,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                 Map<String, Object> analyzedData = new HashMap<>();
                 String sampleName = key.split("/")[0];
                 String target = key.split("/")[1];
+
                 String whereClause = "OtherSampleId = '" + sampleName + "'";
                 logInfo("whereClause: " + whereClause);
                 int reactionCount = 1;
@@ -379,6 +387,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                     }
                 }
                 logInfo("reactionCount = " + reactionCount);
+                logInfo("target is = " + target);
                 analyzedData.put("Assay", target);
                 analyzedData.put("OtherSampleId", sampleName);
                 analyzedData.put("CNV", groupedData.get(key).get(0).get("CNV"));
@@ -402,7 +411,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                     Double humanPercentage = calculateHumanPercentage(dropletCountMutation, dropletCountWildType);
                     analyzedData.put("HumanPercentage", humanPercentage);
                 }
-                analyzedData.put("TotalInput", getTotalInputForSample(sampleName, target, protocolRecords));
+                analyzedData.put("TotalInput", getTotalInputForSample(sampleName, target, protocolRecords, QX200));
                 analyzedDataValues.add(analyzedData);
             }
         } catch (NotFound | RemoteException | IoError | ServerException e) {
