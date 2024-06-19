@@ -128,11 +128,11 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
             }
             else { //QX600
                 if (toggle) {
-                    keyValue = data.get("Sample").toString() + "/" + data.get("TargetGene").toString();
+                    keyValue = data.get("Sample").toString() + "/Gene:" + data.get("TargetGene").toString();
                     toggle = false;
                 }
                 else {
-                    keyValue = data.get("Sample").toString() + "/" + data.get("TargetRef").toString();
+                    keyValue = data.get("Sample").toString() + "/Ref:" + data.get("TargetRef").toString();
                     toggle = true;
                 }
             }

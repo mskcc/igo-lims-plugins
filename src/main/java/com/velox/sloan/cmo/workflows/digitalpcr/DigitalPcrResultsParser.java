@@ -348,6 +348,12 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
         return resultsProcessor.calculateHumanPercentage(dropletCountMutation, dropletCountWildType);
     }
 
+    public Comparator<Map<Object, Object>> mapComparator = new Comparator<Map<Object, Object>>() {
+        public int compare(Map<Object, Object> m1, Map<Object, Object> m2) {
+            return m1.get("sample").toString().compareTo(m2.get("sample").toString());
+        }
+    };
+
     /**
      * Calculate final result values from the raw data.
      *
@@ -366,11 +372,18 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
             for (DataRecord ddpcrprtcl1 : protocolRecords) {
                 igoIds.add(getBaseSampleId(ddpcrprtcl1.getStringVal("SampleId", user)));
             }
+
             for (String key : groupedData.keySet()) {
                 Map<String, Object> analyzedData = new HashMap<>();
                 String sampleName = key.split("/")[0];
                 String target = key.split("/")[1];
-
+                if (target.contains("Gene:")) {
+                    target = target.split("Gene:")[1];
+                }
+                else if (target.contains("Ref:")) {
+                    logInfo("Skipping target = " + target);
+                    continue;
+                }
                 String whereClause = "OtherSampleId = '" + sampleName + "'";
                 logInfo("whereClause: " + whereClause);
                 int reactionCount = 1;
@@ -387,11 +400,12 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                     }
                 }
                 logInfo("reactionCount = " + reactionCount);
-                logInfo("target is = " + target);
+
                 analyzedData.put("Assay", target);
                 analyzedData.put("OtherSampleId", sampleName);
                 analyzedData.put("CNV", groupedData.get(key).get(0).get("CNV"));
                 analyzedData.put("FractionalAbundance", groupedData.get(key).get(0).get("FractionalAbundance"));
+                //analyzedData.put("FractionalAbundance", getAverage(groupedData.get(key), "FractionalAbundance"));
                 analyzedData.put("ConcentrationMutation", getAverage(groupedData.get(key), "ConcentrationMutation") * reactionCount * 20); // Mu, Gene, Methyl, Human
                 analyzedData.put("ConcentrationWildType", getAverage(groupedData.get(key), "ConcentrationWildType") * reactionCount * 20); // WT, Ref, Unmethyl, Mouse
                 logInfo("Grouped data key is: " + key);
