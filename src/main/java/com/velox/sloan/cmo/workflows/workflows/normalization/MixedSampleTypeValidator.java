@@ -33,6 +33,11 @@ public class MixedSampleTypeValidator extends DefaultGenericPlugin {
 
     public PluginResult run() throws ServerException, RemoteException {
         try {
+            // This check is for making sure samples are in the correct process as normalization workflow is the first step of different processes
+            if (!clientCallback.showOkCancelDialog("Samples' assigned process validation", "You are launching samples assigned to different processes, would you like to move forward?")) {
+                logInfo("Samples are not assigned to the right process in LIMS");
+                return new PluginResult(false);
+            }
             List<DataRecord> samples = activeTask.getAttachedDataRecords("Sample", user);
             Set<String> sampleTypeValues = new HashSet<>();
             for (DataRecord samp : samples) {
