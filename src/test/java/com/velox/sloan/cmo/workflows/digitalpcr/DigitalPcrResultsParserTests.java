@@ -99,19 +99,19 @@ public class DigitalPcrResultsParserTests {
 
     @Test
     public void calculateSum_shouldReturnCorrectSum() {
-        Integer expectedReslultForD = 8;
-        Integer expectedReslultForE = 15;
-        Integer expectedReslultForF = 12;
+        Double expectedReslultForD = 8.0;
+        Double expectedReslultForE = 15.0;
+        Double expectedReslultForF = 12.0;
         List<Map<String, Object>> values = new ArrayList<>();
         Map<String, Object> map = new HashMap<>();
         Map<String, Object> map1 = new HashMap<>();
-        map.put("d", 3);
-        map.put("e", 4);
-        map.put("f", 5);
+        map.put("d", 3.0);
+        map.put("e", 4.0);
+        map.put("f", 5.0);
         values.add(map);
-        map1.put("d", 5);
-        map1.put("e", 11);
-        map1.put("f", 7);
+        map1.put("d", 5.0);
+        map1.put("e", 11.0);
+        map1.put("f", 7.0);
         values.add(map1);
         assertEquals(resultsProcessor.calculateSum(values, "d"), expectedReslultForD);
         assertEquals(resultsProcessor.calculateSum(values, "e"), expectedReslultForE);
