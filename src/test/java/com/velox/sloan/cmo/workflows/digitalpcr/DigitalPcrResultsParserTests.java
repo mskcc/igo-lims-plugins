@@ -147,24 +147,24 @@ public class DigitalPcrResultsParserTests {
 
     @Test
     public void calculateHumanPercentage_shouldReturnCorrectValue() {
-        Integer value1 = 10;
-        Integer value2 = 30;
+        Double value1 = 10.0;
+        Double value2 = 30.0;
         Double expectedPercentage = 25.0;
         assertEquals(resultsProcessor.calculateHumanPercentage(value1, value2), expectedPercentage);
     }
 
     @Test
     public void calculateHumanPercentage_shouldReturnZeroIfNumeratorIsZero() {
-        Integer numerator = 0;
-        Integer denominator = 4;
+        Double numerator = 0.0;
+        Double denominator = 4.0;
         Double expectedPercentage = 0.0;
         assertEquals(resultsProcessor.calculateHumanPercentage(numerator, denominator), expectedPercentage);
     }
 
     @Test
     public void calculateHumanPercentage_shouldReturnHundredIfDenominatorIsZero() {
-        Integer numerator = 4;
-        Integer denominator = 0;
+        Double numerator = 4.0;
+        Double denominator = 0.0;
         Double expectedPercentage = 100.0;
         assertEquals(resultsProcessor.calculateHumanPercentage(numerator, denominator), expectedPercentage);
     }

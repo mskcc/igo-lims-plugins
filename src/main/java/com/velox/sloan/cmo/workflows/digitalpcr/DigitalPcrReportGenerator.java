@@ -37,7 +37,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
     private List<String> gexReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Copies Gene", "Copies Ref", "Ratio ([Gene]/[Ref])", "Droplet Count Gene", "Droplet Count Ref", "Accepted Droplets");
     private List<String> cnvReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Copies Gene", "Copies Ref", "CNV", "Droplet Count Gene", "Droplet Count Ref", "Accepted Droplets");
     private List<String> redReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Copies Gene", "Copies Ref", "Ratio ([Gene]/[Ref])", "Droplet Count Gene", "Droplet Count Ref", "Accepted Droplets");
-    private List<String> mutReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Copies Mu", "Copies WT", "Fractional abundance", "Droplet Count MU", "Droplet Count WT", "Accepted Droplets");
+    private List<String> mutReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Copies Mu", "Copies WT", "Fractional abundance (%)", "Droplet Count MU", "Droplet Count WT", "Accepted Droplets");
 
     private List<String> pdxReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Copies Human", "Copies Mouse", "Ratio ([Human]/[Mouse])", "Droplet Count Human", "Droplet Count Mouse", "Accepted Droplets", "Human %");
     private List<String> methylatedReportHeaders = Arrays.asList("Assay", "Sample ID", "IGO ID", "Total Input (ng)", "Copies Methylated", "Copies Unmethylated", "Ratio ([Methylated]/[Unmethylated])", "Droplet Count Methylated", "Droplet Count Unmethylated", "Accepted Droplets");

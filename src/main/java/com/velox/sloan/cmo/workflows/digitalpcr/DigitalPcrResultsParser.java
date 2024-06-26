@@ -211,7 +211,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      * @param fieldName
      * @return sun of values under key identified by fieldName passed to the method.
      */
-    private Integer getSum(List<Map<String, Object>> sampleData, String fieldName) {
+    private Double getSum(List<Map<String, Object>> sampleData, String fieldName) {
         return resultsProcessor.calculateSum(sampleData, fieldName);
     }
 
@@ -281,7 +281,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      * @param dropletCountWildType
      * @return Percentage of Human sample in the sample used for ddPCR Assay.
      */
-    private Double calculateHumanPercentage(Integer dropletCountMutation, Integer dropletCountWildType) {
+    private Double calculateHumanPercentage(Double dropletCountMutation, Double dropletCountWildType) {
         return resultsProcessor.calculateHumanPercentage(dropletCountMutation, dropletCountWildType);
     }
 
@@ -325,17 +325,17 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 analyzedData.put("Assay", target);
                 analyzedData.put("OtherSampleId", sampleName);
                 analyzedData.put("CNV", groupedData.get(key).get(0).get("CNV"));
-                analyzedData.put("FractionalAbundance", groupedData.get(key).get(0).get("FractionalAbundance"));
-                analyzedData.put("ConcentrationMutation", getAverage(groupedData.get(key), "ConcentrationMutation") * reactionCount * 20);
-                analyzedData.put("ConcentrationWildType", getAverage(groupedData.get(key), "ConcentrationWildType") * reactionCount * 20);
+                analyzedData.put("FractionalAbundance", (Double) groupedData.get(key).get(0).get("FractionalAbundance") * 100.00);
+                analyzedData.put("ConcentrationMutation", getSum(groupedData.get(key), "ConcentrationMutation") * 20); //Copies Gene
+                analyzedData.put("ConcentrationWildType", getSum(groupedData.get(key), "ConcentrationWildType") * 20); // Copies Ref
                 analyzedData.put("Channel1PosChannel2Pos", getSum(groupedData.get(key), "Channel1PosChannel2Pos"));
                 analyzedData.put("Channel1PosChannel2Neg", getSum(groupedData.get(key), "Channel1PosChannel2Neg"));
                 analyzedData.put("Channel1NegChannel2Pos", getSum(groupedData.get(key), "Channel1NegChannel2Pos"));
-                Integer dropletCountMutation = (Integer) analyzedData.get("Channel1PosChannel2Pos") + (Integer) analyzedData.get("Channel1PosChannel2Neg");
-                Integer dropletCountWildType = (Integer) analyzedData.get("Channel1PosChannel2Pos") + (Integer) analyzedData.get("Channel1NegChannel2Pos");
-                Double totalDnaDetected = calculateTotalDnaDetected((Double) analyzedData.get("ConcentrationMutation") / (reactionCount * 20), (Double) analyzedData.get("ConcentrationWildType") / (reactionCount * 20));
-                logInfo("concenteration gene * 20 * reaction = " + (Double) analyzedData.get("ConcentrationMutation") / (reactionCount * 20));
-                logInfo("concentration ref * 20 * reaction = " + (Double) analyzedData.get("ConcentrationWildType") / (reactionCount * 20));
+                Double dropletCountMutation = (Double) analyzedData.get("Channel1PosChannel2Pos") + (Double) analyzedData.get("Channel1PosChannel2Neg");
+                Double dropletCountWildType = (Double) analyzedData.get("Channel1PosChannel2Pos") + (Double) analyzedData.get("Channel1NegChannel2Pos");
+                Double totalDnaDetected = calculateTotalDnaDetected((Double) analyzedData.get("ConcentrationMutation") / 20, (Double) analyzedData.get("ConcentrationWildType") / 20);
+                logInfo("concenteration gene = " + (Double) analyzedData.get("ConcentrationMutation") / 20);
+                logInfo("concentration ref = " + (Double) analyzedData.get("ConcentrationWildType") / 20);
                 analyzedData.put("DropletCountMutation", dropletCountMutation);
                 analyzedData.put("DropletCountWildType", dropletCountWildType);
                 analyzedData.put("TotalDnaDetected", totalDnaDetected);
@@ -480,11 +480,11 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
         Pattern withoutAlphabetPattern = Pattern.compile(IGO_ID_WITHOUT_ALPHABETS_PATTERN);
         if (alphabetPattern.matcher(sampleId).matches()){
             String[] sampleIdValues =  sampleId.split("_");
-            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,3));
+            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,4));
         }
         if(withoutAlphabetPattern.matcher(sampleId).matches()){
             String[] sampleIdValues =  sampleId.split("_");
-            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,2));
+            return String.join("_", Arrays.copyOfRange(sampleIdValues,0,3));
         }
         return sampleId;
     }
