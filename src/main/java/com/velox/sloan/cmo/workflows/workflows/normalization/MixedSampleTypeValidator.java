@@ -8,6 +8,7 @@ import com.velox.sapioutils.shared.enums.PluginOrder;
 import com.velox.sloan.cmo.recmodels.SampleModel;
 import org.apache.commons.lang3.StringUtils;
 
+import javax.xml.crypto.Data;
 import java.rmi.RemoteException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -34,12 +35,29 @@ public class MixedSampleTypeValidator extends DefaultGenericPlugin {
     public PluginResult run() throws ServerException, RemoteException {
         try {
             // This check is for making sure samples are in the correct process as normalization workflow is the first step of different processes
-            if (!clientCallback.showOkCancelDialog("Samples' assigned process validation", "You are launching samples assigned to different processes, would you like to move forward?")) {
-                logInfo("Samples are not assigned to the right process in LIMS");
-                return new PluginResult(false);
-            }
-            List<DataRecord> samples = activeTask.getAttachedDataRecords("Sample", user);
+
+
             Set<String> sampleTypeValues = new HashSet<>();
+            Set<String> assignedProcessValues = new HashSet<>();
+            List<DataRecord> samples = activeTask.getAttachedDataRecords("Sample", user);
+            for (DataRecord sample : samples) {
+                DataRecord assignedProcess = sample.getParentsOfType("AssignedProcess", user).get(0);
+                if (assignedProcess == null || StringUtils.isBlank(assignedProcess.getStringVal("ProcessName", user))) {
+                    clientCallback.displayError((String.format("Assigned process is blank for sample %s", sample.getStringVal("SampleId", user))));
+                }
+                else {
+                    assignedProcessValues.add(assignedProcess.getStringVal("ProcessName", user).toLowerCase());
+                }
+            }
+            if (assignedProcessValues.size() > 1) {
+                logInfo("Samples are assigned to different processes in the Normalization queue!");
+                if (!clientCallback.showOkCancelDialog("Samples' assigned process validation", "You are launching samples assigned to different processes, would you like to move forward?")) {
+                    return new PluginResult(false);
+                } else {
+                    logInfo(String.format("User %s elected to continue workflow %s regardless of mixed processes message.", activeWorkflow.getActiveWorkflowName(), user.getAccountName()));
+                    return new PluginResult(true);
+                }
+            }
             for (DataRecord samp : samples) {
                 Object sampleType = samp.getValue(SampleModel.EXEMPLAR_SAMPLE_TYPE, user);
                 if (sampleType == null || StringUtils.isBlank((String) sampleType)) {
