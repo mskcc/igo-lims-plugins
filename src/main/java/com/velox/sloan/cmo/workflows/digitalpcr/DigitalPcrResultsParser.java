@@ -324,8 +324,8 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 logInfo("reactionCount = " + reactionCount);
                 analyzedData.put("Assay", target);
                 analyzedData.put("OtherSampleId", sampleName);
-                analyzedData.put("CNV", groupedData.get(key).get(0).get("CNV"));
-                analyzedData.put("FractionalAbundance", (Double) groupedData.get(key).get(0).get("FractionalAbundance") * 100.00);
+                analyzedData.put("CNV", getAverage(groupedData.get(key), "CNV"));
+                analyzedData.put("FractionalAbundance", (Double) getAverage(groupedData.get(key), "FractionalAbundance") * 100.00);
                 analyzedData.put("ConcentrationMutation", getSum(groupedData.get(key), "ConcentrationMutation") * 20); //Copies Gene
                 analyzedData.put("ConcentrationWildType", getSum(groupedData.get(key), "ConcentrationWildType") * 20); // Copies Ref
                 analyzedData.put("Channel1PosChannel2Pos", getSum(groupedData.get(key), "Channel1PosChannel2Pos"));
