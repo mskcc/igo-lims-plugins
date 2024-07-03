@@ -333,7 +333,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 analyzedData.put("Channel1NegChannel2Pos", getSum(groupedData.get(key), "Channel1NegChannel2Pos"));
                 Double dropletCountMutation = (Double) analyzedData.get("Channel1PosChannel2Pos") + (Double) analyzedData.get("Channel1PosChannel2Neg");
                 Double dropletCountWildType = (Double) analyzedData.get("Channel1PosChannel2Pos") + (Double) analyzedData.get("Channel1NegChannel2Pos");
-                Double totalDnaDetected = calculateTotalDnaDetected((Double) analyzedData.get("ConcentrationMutation") / 20, (Double) analyzedData.get("ConcentrationWildType") / 20);
+                Double totalDnaDetected = calculateTotalDnaDetected(getAverage(groupedData.get(key), "ConcentrationMutation"), getAverage(groupedData.get(key),"ConcentrationWildType"));
                 logInfo("concenteration gene = " + (Double) analyzedData.get("ConcentrationMutation") / 20);
                 logInfo("concentration ref = " + (Double) analyzedData.get("ConcentrationWildType") / 20);
                 analyzedData.put("DropletCountMutation", dropletCountMutation);
