@@ -71,11 +71,13 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                         sampleValues.put("ConcentrationWildType", Double.parseDouble(s2.get(headerValueMap.get("Concentration"))));
                         sampleValues.put("AcceptedDroplets", Integer.parseInt(s1.get(headerValueMap.get("AcceptedDroplets"))));
                         sampleValues.put("Target", s1.get(headerValueMap.get("Target")));
-                        if (s1.get(headerValueMap.get("FractionalAbundance")) != null && !s1.get(headerValueMap.get("FractionalAbundance")).isEmpty() && !s1.get(headerValueMap.get("FractionalAbundance")).isBlank()) {
-                            sampleValues.put("FractionalAbundance", Double.parseDouble(s1.get(headerValueMap.get("FractionalAbundance"))));
+                        if (Double.parseDouble(s1.get(headerValueMap.get("Concentration"))) + Double.parseDouble(s2.get(headerValueMap.get("Concentration"))) == 0) {
+                            sampleValues.put("FractionalAbundance", 0.0);
                         }
                         else {
-                            sampleValues.put("FractionalAbundance", 0.0);
+                            Double fractionalAbundance = Double.parseDouble(s1.get(headerValueMap.get("Concentration"))) /
+                                    (Double.parseDouble(s1.get(headerValueMap.get("Concentration"))) + Double.parseDouble(s2.get(headerValueMap.get("Concentration"))));
+                            sampleValues.put("FractionalAbundance", fractionalAbundance);
                         }
                     } else { // QX600
                         logger.logInfo("Conc(copies/µL): " + headerValueMap.get("Conc(copies/µL)"));
@@ -92,11 +94,13 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                         sampleValues.put("AcceptedDroplets", Integer.parseInt(s1.get(headerValueMap.get("Accepted Droplets"))));
                         sampleValues.put("TargetGene", s1.get(headerValueMap.get("Target")));
                         sampleValues.put("TargetRef", s2.get(headerValueMap.get("Target")));
-                        if (s1.get(headerValueMap.get("Fractional Abundance")) != null && !s1.get(headerValueMap.get("Fractional Abundance")).isEmpty() && !s1.get(headerValueMap.get("Fractional Abundance")).isBlank()) {
-                            sampleValues.put("FractionalAbundance", Double.parseDouble(s1.get(headerValueMap.get("Fractional Abundance"))));
+                        if (Double.parseDouble(s1.get(headerValueMap.get("Concentration"))) + Double.parseDouble(s2.get(headerValueMap.get("Concentration"))) == 0) {
+                            sampleValues.put("FractionalAbundance", 0.0);
                         }
                         else {
-                            sampleValues.put("FractionalAbundance", 0.0);
+                            Double fractionalAbundance = Double.parseDouble(s1.get(headerValueMap.get("Concentration"))) /
+                                    (Double.parseDouble(s1.get(headerValueMap.get("Concentration"))) + Double.parseDouble(s2.get(headerValueMap.get("Concentration"))));
+                            sampleValues.put("FractionalAbundance", fractionalAbundance);
                         }
                     }
                     //sampleValues.put("Target", s1.get(headerValueMap.get("Target")));

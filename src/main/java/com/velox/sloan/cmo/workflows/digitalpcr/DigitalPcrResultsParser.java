@@ -403,18 +403,17 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
 
                 analyzedData.put("Assay", target);
                 analyzedData.put("OtherSampleId", sampleName);
-                analyzedData.put("CNV", groupedData.get(key).get(0).get("CNV"));
-                analyzedData.put("FractionalAbundance", groupedData.get(key).get(0).get("FractionalAbundance"));
-                //analyzedData.put("FractionalAbundance", getAverage(groupedData.get(key), "FractionalAbundance"));
-                analyzedData.put("ConcentrationMutation", getAverage(groupedData.get(key), "ConcentrationMutation") * reactionCount * 20); // Mu, Gene, Methyl, Human
-                analyzedData.put("ConcentrationWildType", getAverage(groupedData.get(key), "ConcentrationWildType") * reactionCount * 20); // WT, Ref, Unmethyl, Mouse
+                analyzedData.put("CNV", getAverage(groupedData.get(key), "CNV"));
+                analyzedData.put("FractionalAbundance", (Double) getAverage(groupedData.get(key), "FractionalAbundance") * 100.00);
+                analyzedData.put("ConcentrationMutation", getSum(groupedData.get(key), "ConcentrationMutation") * 20); //Copies Gene
+                analyzedData.put("ConcentrationWildType", getSum(groupedData.get(key), "ConcentrationWildType") * 20); // Copies Ref
                 logInfo("Grouped data key is: " + key);
                 analyzedData.put("Channel1PosChannel2Pos", getSum(groupedData.get(key), "Channel1PosChannel2Pos"));
                 analyzedData.put("Channel1PosChannel2Neg", getSum(groupedData.get(key), "Channel1PosChannel2Neg"));
                 analyzedData.put("Channel1NegChannel2Pos", getSum(groupedData.get(key), "Channel1NegChannel2Pos"));
                 Integer dropletCountMutation = (Integer) analyzedData.get("Channel1PosChannel2Pos") + (Integer) analyzedData.get("Channel1PosChannel2Neg");
                 Integer dropletCountWildType = (Integer) analyzedData.get("Channel1PosChannel2Pos") + (Integer) analyzedData.get("Channel1NegChannel2Pos");
-                Double totalDnaDetected = calculateTotalDnaDetected((Double) analyzedData.get("ConcentrationMutation") / (reactionCount * 20), (Double) analyzedData.get("ConcentrationWildType") / (reactionCount * 20));
+                Double totalDnaDetected = calculateTotalDnaDetected(getAverage(groupedData.get(key), "ConcentrationMutation"), getAverage(groupedData.get(key),"ConcentrationWildType"));
                 analyzedData.put("DropletCountMutation", dropletCountMutation);
                 analyzedData.put("DropletCountWildType", dropletCountWildType);
                 analyzedData.put("TotalDnaDetected", totalDnaDetected);
