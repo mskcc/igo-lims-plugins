@@ -24,6 +24,8 @@ import java.util.regex.Pattern;
  * @author sharmaa1@mskcc.org ~Ajay Sharma
  */
 public class DigitalPcrResultsParser extends DefaultGenericPlugin {
+    private final static String IGO_ID_WITHOUT_ALPHABETS_PATTERN = "^[0-9]+_[0-9]+.*$";  // sample id without alphabets
+    private final static String IGO_ID_WITH_ALPHABETS_PATTERN = "^[0-9]+_[A-Z]+_[0-9]+.*$";  // sample id without alphabets
 
     public int qxResultType = 0;
 
@@ -267,7 +269,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
      * @param fieldName
      * @return sun of values under key identified by fieldName passed to the method.
      */
-    private Integer getSum(List<Map<String, Object>> sampleData, String fieldName) {
+    private Double getSum(List<Map<String, Object>> sampleData, String fieldName) {
         return resultsProcessor.calculateSum(sampleData, fieldName);
     }
 
@@ -344,7 +346,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
      * @param dropletCountWildType
      * @return Percentage of Human sample in the sample used for ddPCR Assay.
      */
-    private Double calculateHumanPercentage(Integer dropletCountMutation, Integer dropletCountWildType) {
+    private Double calculateHumanPercentage(Double dropletCountMutation, Double dropletCountWildType) {
         return resultsProcessor.calculateHumanPercentage(dropletCountMutation, dropletCountWildType);
     }
 
@@ -372,7 +374,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
             for (DataRecord ddpcrprtcl1 : protocolRecords) {
                 igoIds.add(getBaseSampleId(ddpcrprtcl1.getStringVal("SampleId", user)));
             }
-
+            String commaSeparatedIgoIds = String.join(", ", igoIds);
             for (String key : groupedData.keySet()) {
                 Map<String, Object> analyzedData = new HashMap<>();
                 String sampleName = key.split("/")[0];
@@ -391,16 +393,13 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                 if (ddpcrprtcl2Recs.size() > 0) {
                     for (DataRecord prtcl2Rec : ddpcrprtcl2Recs) {
                         for (String igoId : igoIds) {
-                            logInfo("looking for " + igoId + " in ddpcr protocol 2 records!");
                             if (prtcl2Rec.getStringVal("SampleId", user).equals(igoId)) {
                                 reactionCount = prtcl2Rec.getIntegerVal("NumberOfReplicates", user);
-                                logInfo("Read reaction count from ddpcr protocol 2 type!");
                             }
                         }
                     }
                 }
                 logInfo("reactionCount = " + reactionCount);
-
                 analyzedData.put("Assay", target);
                 analyzedData.put("OtherSampleId", sampleName);
                 analyzedData.put("CNV", getAverage(groupedData.get(key), "CNV"));

@@ -22,7 +22,7 @@ import java.util.*;
  * @author sharmaa1
  */
 public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
-    private final List<String> RECIPES_TO_USE_SPECIAL_ADAPTERS = Arrays.asList("CRISPRSeq", "AmpliconSeq", "SingleCellCNV");
+    private final List<String> RECIPES_TO_USE_SPECIAL_ADAPTERS = Arrays.asList("DNA_CRISPR", "DNA_Amplicon", "DNA_SingleCellCNV", "User_SingleCellCNV");
     private final String INDEX_ASSIGNMENT_CONFIG_DATATYPE = "AutoIndexAssignmentConfig";
     AutoIndexAssignmentHelper autohelper;
     private boolean isTCRseq = false;
@@ -43,7 +43,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
             List<DataRecord> attachedSamplesList = activeTask.getAttachedDataRecords("Sample", user);
             List<DataRecord> attachedIndexBarcodeRecords = new LinkedList<>();
             String recipe = attachedSamplesList.get(0).getStringVal("Recipe", user);
-            if(activeWorkflow.getWorkflow().getFullName().toLowerCase().contains("tcrseq") && recipe.toLowerCase().contains("tcrseq")) {
+            if(activeWorkflow.getWorkflow().getFullName().toLowerCase().contains("tcrseq") && recipe.toLowerCase().contains("tcr")) {
                 isTCRseq = true;
                 attachedIndexBarcodeRecords = activeTask.getAttachedDataRecords("IgoTcrSeqIndexBarcode", user);
             }
@@ -216,7 +216,6 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                     indexBarcodeRec.setDataField("IndexBarcodeConcentration", actualTargetAdapterConc, user);
 
                     if (isTCRseq) {
-                        logInfo("It's a TCRseq request!");
                         if ((indexConfig.getStringVal("IndexId", user).toLowerCase().startsWith("h") &&
                                 species.trim().toLowerCase().equals("mouse")) || (indexConfig.getStringVal("IndexId", user)
                                 .toLowerCase().startsWith("m") && species.trim().toLowerCase().equals("human"))) {
@@ -259,10 +258,10 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
      */
     private void checkIndexAssignmentsForDepletedAdapters(List<DataRecord> indexAssignmentConfigs) throws NotFound, RemoteException, IoError, InvalidValue, ServerException {
         for (DataRecord rec : indexAssignmentConfigs) {
-            if (rec.getDoubleVal("AdapterVolume", user) < 10.00) {
+            if (rec.getDoubleVal("AdapterVolume", user) < 20.00) {
                 rec.setDataField("IsDepelted", true, user);
                 rec.setDataField("IsActive", false, user);
-                clientCallback.displayWarning(String.format("AutoIndexAssignmentConfig with Index ID '%s' on Adapter Plate '%s' has volume less than 10ul. It is now marked as Inactive and depleted.",
+                clientCallback.displayWarning(String.format("AutoIndexAssignmentConfig with Index ID '%s' on Adapter Plate '%s' has volume less than 20ul. It is now marked as Inactive and depleted.",
                         rec.getStringVal("IndexId", user), rec.getStringVal("AdapterPlateId", user)));
                 logInfo(String.format("AutoIndexAssignmentConfig with Index ID '%s' on Adapter Plate '%s' has volume less than 10ul. It is now marked as Inactive and depleted.",
                         rec.getStringVal("IndexId", user), rec.getStringVal("AdapterPlateId", user)));
@@ -286,10 +285,10 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
         double newVolume = previousVol - adapterVolumeUsed;
         indexAssignmentConfig.setDataField("AdapterVolume", newVolume, user);
 
-        if (newVolume <= 10) {
+        if (newVolume <= 20) {
             indexAssignmentConfig.setDataField("IsDepelted", true, user);
             indexAssignmentConfig.setDataField("IsActive", false, user);
-            clientCallback.displayWarning(String.format("The Volume for adapter '%s'on Adapter Plate with ID '%s' is below 10ul.\nThis adapter will be marked as depleted and will be ignored for future assignments.",
+            clientCallback.displayWarning(String.format("The Volume for adapter '%s'on Adapter Plate with ID '%s' is below 20ul.\nThis adapter will be marked as depleted and will be ignored for future assignments.",
                     indexAssignmentConfig.getStringVal("IndexId", user), indexAssignmentConfig.getStringVal("AdapterPlateId", user)));
         }
     }

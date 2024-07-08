@@ -99,19 +99,19 @@ public class DigitalPcrResultsParserTests {
 
     @Test
     public void calculateSum_shouldReturnCorrectSum() {
-        Integer expectedReslultForD = 8;
-        Integer expectedReslultForE = 15;
-        Integer expectedReslultForF = 12;
+        Double expectedReslultForD = 8.0;
+        Double expectedReslultForE = 15.0;
+        Double expectedReslultForF = 12.0;
         List<Map<String, Object>> values = new ArrayList<>();
         Map<String, Object> map = new HashMap<>();
         Map<String, Object> map1 = new HashMap<>();
-        map.put("d", 3);
-        map.put("e", 4);
-        map.put("f", 5);
+        map.put("d", 3.0);
+        map.put("e", 4.0);
+        map.put("f", 5.0);
         values.add(map);
-        map1.put("d", 5);
-        map1.put("e", 11);
-        map1.put("f", 7);
+        map1.put("d", 5.0);
+        map1.put("e", 11.0);
+        map1.put("f", 7.0);
         values.add(map1);
         assertEquals(resultsProcessor.calculateSum(values, "d"), expectedReslultForD);
         assertEquals(resultsProcessor.calculateSum(values, "e"), expectedReslultForE);
@@ -147,24 +147,24 @@ public class DigitalPcrResultsParserTests {
 
     @Test
     public void calculateHumanPercentage_shouldReturnCorrectValue() {
-        Integer value1 = 10;
-        Integer value2 = 30;
+        Double value1 = 10.0;
+        Double value2 = 30.0;
         Double expectedPercentage = 25.0;
         assertEquals(resultsProcessor.calculateHumanPercentage(value1, value2), expectedPercentage);
     }
 
     @Test
     public void calculateHumanPercentage_shouldReturnZeroIfNumeratorIsZero() {
-        Integer numerator = 0;
-        Integer denominator = 4;
+        Double numerator = 0.0;
+        Double denominator = 4.0;
         Double expectedPercentage = 0.0;
         assertEquals(resultsProcessor.calculateHumanPercentage(numerator, denominator), expectedPercentage);
     }
 
     @Test
     public void calculateHumanPercentage_shouldReturnHundredIfDenominatorIsZero() {
-        Integer numerator = 4;
-        Integer denominator = 0;
+        Double numerator = 4.0;
+        Double denominator = 0.0;
         Double expectedPercentage = 100.0;
         assertEquals(resultsProcessor.calculateHumanPercentage(numerator, denominator), expectedPercentage);
     }

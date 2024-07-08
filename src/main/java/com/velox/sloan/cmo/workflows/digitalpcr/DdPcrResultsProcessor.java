@@ -1,5 +1,6 @@
 package com.velox.sloan.cmo.workflows.digitalpcr;
 
+import java.math.BigDecimal;
 import java.util.*;
 import com.velox.api.plugin.PluginLogger;
 import java.util.function.DoubleUnaryOperator;
@@ -114,6 +115,15 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                     else {
                         sampleValues.put("CNV", 0.0);
                     }
+                    if (Double.parseDouble(s1.get(headerValueMap.get("Concentration"))) + Double.parseDouble(s2.get(headerValueMap.get("Concentration"))) == 0) {
+                        sampleValues.put("FractionalAbundance", 0.0);
+                    }
+                    else {
+                        Double fractionalAbundance = Double.parseDouble(s1.get(headerValueMap.get("Concentration"))) /
+                                (Double.parseDouble(s1.get(headerValueMap.get("Concentration"))) + Double.parseDouble(s2.get(headerValueMap.get("Concentration"))));
+                        sampleValues.put("FractionalAbundance", fractionalAbundance);
+                    }
+
                     flatData.add(sampleValues);
                 }
             }
@@ -156,10 +166,10 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
     }
 
     @Override
-    public Integer calculateSum(List<Map<String, Object>> sampleData, String fieldName) {
-        int sum = 0;
+    public Double calculateSum(List<Map<String, Object>> sampleData, String fieldName) {
+        double sum = 0.0;
         for (Map<String, Object> data : sampleData) {
-            sum += Integer.parseInt(data.get(fieldName).toString());
+            sum += Double.parseDouble(data.get(fieldName).toString());
         }
         return sum;
     }
@@ -178,7 +188,7 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
     }
 
     @Override
-    public Double calculateHumanPercentage(Integer dropletCountMutation, Integer dropletCountWildType) {
+    public Double calculateHumanPercentage(Double dropletCountMutation, Double dropletCountWildType) {
         if (dropletCountWildType <= 0.0 && dropletCountMutation <= 0.0) {
             return 0.0;
         }

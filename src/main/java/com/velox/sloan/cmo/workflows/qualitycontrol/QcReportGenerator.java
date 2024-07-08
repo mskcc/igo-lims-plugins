@@ -38,7 +38,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
     private final String BIOA_QC_FOR_AVERAGE_BP_SIZE = "Bioanalyzer DNA High Sens Region Table";
     private final List<String> DNA_SAMPLE_TYPES = Arrays.asList("cdna", "cfdna", "dna", "hmwdna");
     private final List<String> RNA_SAMPLE_TYPES = Arrays.asList("rna");
-    private final List<String> LIBRARY_SAMPLE_TYPES = Arrays.asList("dna library", "pooled library", "cdna library", "protein library");
+    private final List<String> LIBRARY_SAMPLE_TYPES = Arrays.asList("dna library", "cdna library", "dna/cdna library", "pooled library", "protein library");
     private final double NANOMOLAR_TO_FEMTOMOLAR_CONVERSION_FACTOR = 1000000.00;
 
     public QcReportGenerator() {

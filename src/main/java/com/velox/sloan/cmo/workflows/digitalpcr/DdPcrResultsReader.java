@@ -16,11 +16,11 @@ public interface DdPcrResultsReader {
 
     Double calculateAverage(List<Map<String, Object>> sampleData, String fieldName);
 
-    Integer calculateSum(List<Map<String, Object>> sampleData, String fieldName);
+    Double calculateSum(List<Map<String, Object>> sampleData, String fieldName);
 
     Double calculateRatio(Double dropletCountMutation, Double dropletCountWildType);
 
     Double calculateTotalDnaDetected(Double concentrationMutation, Double ConcentrationWildType);
 
-    Double calculateHumanPercentage(Integer dropletCountMutation, Integer dropletCountWildType);
+    Double calculateHumanPercentage(Double dropletCountMutation, Double dropletCountWildType);
 }
