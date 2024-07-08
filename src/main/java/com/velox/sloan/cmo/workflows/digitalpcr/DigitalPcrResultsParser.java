@@ -29,9 +29,6 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
 
     public int qxResultType = 0;
 
-    private final static String IGO_ID_WITHOUT_ALPHABETS_PATTERN = "^[0-9]+_[0-9]+.*$";  // sample id without alphabets
-    private final static String IGO_ID_WITH_ALPHABETS_PATTERN = "^[0-9]+_[A-Z]+_[0-9]+.*$";  // sample id without alphabets
-
     private final String HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME = "Mouse_Human_CNV_PTGER2";
 private final List<String> expectedQx200RawResultsHeaders = Arrays.asList("Well", "ExptType", "Experiment", "Sample", "TargetType", "Target",
         "Status", "Concentration", "Supermix", "CopiesPer20uLWell", "TotalConfMax", "TotalConfMin", "PoissonConfMax", "PoissonConfMin",
@@ -410,8 +407,8 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                 analyzedData.put("Channel1PosChannel2Pos", getSum(groupedData.get(key), "Channel1PosChannel2Pos"));
                 analyzedData.put("Channel1PosChannel2Neg", getSum(groupedData.get(key), "Channel1PosChannel2Neg"));
                 analyzedData.put("Channel1NegChannel2Pos", getSum(groupedData.get(key), "Channel1NegChannel2Pos"));
-                Integer dropletCountMutation = (Integer) analyzedData.get("Channel1PosChannel2Pos") + (Integer) analyzedData.get("Channel1PosChannel2Neg");
-                Integer dropletCountWildType = (Integer) analyzedData.get("Channel1PosChannel2Pos") + (Integer) analyzedData.get("Channel1NegChannel2Pos");
+                Double dropletCountMutation = (Double) analyzedData.get("Channel1PosChannel2Pos") + (Double) analyzedData.get("Channel1PosChannel2Neg");
+                Double dropletCountWildType = (Double) analyzedData.get("Channel1PosChannel2Pos") + (Double) analyzedData.get("Channel1NegChannel2Pos");
                 Double totalDnaDetected = calculateTotalDnaDetected(getAverage(groupedData.get(key), "ConcentrationMutation"), getAverage(groupedData.get(key),"ConcentrationWildType"));
                 analyzedData.put("DropletCountMutation", dropletCountMutation);
                 analyzedData.put("DropletCountWildType", dropletCountWildType);

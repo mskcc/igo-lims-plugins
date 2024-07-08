@@ -95,12 +95,12 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                         sampleValues.put("AcceptedDroplets", Integer.parseInt(s1.get(headerValueMap.get("Accepted Droplets"))));
                         sampleValues.put("TargetGene", s1.get(headerValueMap.get("Target")));
                         sampleValues.put("TargetRef", s2.get(headerValueMap.get("Target")));
-                        if (Double.parseDouble(s1.get(headerValueMap.get("Concentration"))) + Double.parseDouble(s2.get(headerValueMap.get("Concentration"))) == 0) {
+                        if (Double.parseDouble(s1.get(headerValueMap.get("Conc(copies/µL)"))) + Double.parseDouble(s2.get(headerValueMap.get("Conc(copies/µL)"))) == 0) {
                             sampleValues.put("FractionalAbundance", 0.0);
                         }
                         else {
-                            Double fractionalAbundance = Double.parseDouble(s1.get(headerValueMap.get("Concentration"))) /
-                                    (Double.parseDouble(s1.get(headerValueMap.get("Concentration"))) + Double.parseDouble(s2.get(headerValueMap.get("Concentration"))));
+                            Double fractionalAbundance = Double.parseDouble(s1.get(headerValueMap.get("Conc(copies/µL)"))) /
+                                    (Double.parseDouble(s1.get(headerValueMap.get("Conc(copies/µL)"))) + Double.parseDouble(s2.get(headerValueMap.get("Conc(copies/µL)"))));
                             sampleValues.put("FractionalAbundance", fractionalAbundance);
                         }
                     }
@@ -115,15 +115,6 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                     else {
                         sampleValues.put("CNV", 0.0);
                     }
-                    if (Double.parseDouble(s1.get(headerValueMap.get("Concentration"))) + Double.parseDouble(s2.get(headerValueMap.get("Concentration"))) == 0) {
-                        sampleValues.put("FractionalAbundance", 0.0);
-                    }
-                    else {
-                        Double fractionalAbundance = Double.parseDouble(s1.get(headerValueMap.get("Concentration"))) /
-                                (Double.parseDouble(s1.get(headerValueMap.get("Concentration"))) + Double.parseDouble(s2.get(headerValueMap.get("Concentration"))));
-                        sampleValues.put("FractionalAbundance", fractionalAbundance);
-                    }
-
                     flatData.add(sampleValues);
                 }
             }
@@ -136,6 +127,7 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
         Map<String, List<Map<String, Object>>> groupedData = new HashMap<>();
         boolean toggle = true;
         for (Map<String, Object> data : flatData) {
+            toggle = true;
             String keyValue = "";
             if (QX200) {
                 keyValue = data.get("Sample").toString() + "/" + data.get("Target").toString();
