@@ -82,7 +82,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                 dataFieldValueMap.put("Aliq1ControlType", sixChannelRec.getStringVal("Aliq1ControlType", user));
                 dataFieldValueMap.put("Aliq1IsNewControl", sixChannelRec.getBooleanVal("Aliq1IsNewControl", user));
 
-                //if (sixChannelRec.getBooleanVal("Aliq1IsNewControl", user) == Boolean.FALSE) {
+                if (sixChannelRec.getBooleanVal("Aliq1IsNewControl", user) == Boolean.FALSE) {
                     String[] targetReference = sixChannelRec.getStringVal("TargetName", user).split(",");
                     if (targetReference.length < 2) {
                         clientCallback.displayError("Please include target and reference targets separated by comma; like: target, reference");
@@ -93,7 +93,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                     //sixChannelRec.setDataField("SignalCh1", "FAM", user);
                     dataFieldValueMap.put("TargetName", reference);
                     //dataFieldValueMap.put("SignalCh2", "HEX");
-                //}
+                }
                 dataFieldValueMap.put("TargetType", "Unknown");
                 //dataFieldValueMap.put("ReferenceCopies", "2");
                 //sixChannelRec.setDataField("ReferenceCopies", "1", user);
