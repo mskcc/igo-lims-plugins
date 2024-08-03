@@ -31,6 +31,7 @@ import java.util.*;
  * The plugin will change the header names in the output file based on the report type values selected by the user.
  *
  * @author sharmaa1@mskcc.org ~Ajay Sharma
+ * @since
  */
 public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
     private List<String> ddPCRReportTypes = Arrays.asList("GEX", "RED", "CNV", "MUT", "LAB MEDICINE", "PDX", "METHYLATED");
@@ -293,6 +294,7 @@ public class DigitalPcrReportGenerator extends DefaultGenericPlugin {
             sheet.autoSizeColumn(cellId);
             cellId++;
         }
+
         for (Map<String, Object> data : dataValues) {
             row = sheet.createRow(rowId);
             setDataCellStyle(workbook, row.createCell(0)).setCellValue(data.get("Assay").toString());

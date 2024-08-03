@@ -64,7 +64,7 @@ public class Covid19SampleImporter extends DefaultGenericPlugin {
                         csvFilePath, utils.convertListToString(REQUIRED_FILE_HEADERS)));
                 return new PluginResult(false);
             }
-            Map<String, Integer> headerValuesMap = utils.getCsvHeaderValueMap(fileData);
+            Map<String, Integer> headerValuesMap = utils.getCsvHeaderValueMap(fileData, pluginLogger);
             List<Map<String,Object>> parsedSampleData = parseFileDataToSampleData(fileData, headerValuesMap);
             List<DataRecord> requests = dataRecordManager.queryDataRecords("Request", "RequestId = '" + COVID_REQUEST_ID + "'" , user);
 

@@ -167,7 +167,7 @@ public class DdPcrSampleToPlateAssigner extends DefaultGenericPlugin {
         logInfo("Tag values: " + dataTypeFieldNames.toString());
         String plateIdFieldName = dataTypeFieldNames.get(1).trim();
         String destinationWellFieldName = dataTypeFieldNames.get(2).trim();
-        String ddPcrAssayFieldName = dataTypeFieldNames.get(3).trim();
+        String ddPcrAssayFieldName = dataTypeFieldNames.get(3).trim(); // "TargetName"
         dataFieldValueMap.put("SampleId", row.getCell(headerValueMap.get("IGO ID")).getStringCellValue());
         dataFieldValueMap.put("OtherSampleId", row.getCell(headerValueMap.get("Sample Name")).getStringCellValue());
         if (row.getCell(headerValueMap.get("AltId")) != null)

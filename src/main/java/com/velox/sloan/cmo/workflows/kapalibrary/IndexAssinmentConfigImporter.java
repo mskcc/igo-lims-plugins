@@ -53,7 +53,7 @@ public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
 
-            Map<String, Integer> headerValueMap = utils.getCsvHeaderValueMap(fileDataRows);
+            Map<String, Integer> headerValueMap = utils.getCsvHeaderValueMap(fileDataRows, pluginLogger);
             List<Map<String, Object>> indexAssignmentConfigurations = parseIndexAssignmentConfigurations(fileDataRows, headerValueMap);
             List<String> uniqueAdapterPlateBarcodes = getUniueAdapterPlateBarcodes(fileDataRows, headerValueMap);
             List<DataRecord> indexAssignmentsInLims = dataRecordManager.queryDataRecords("IndexAssignment", null, user);
@@ -149,7 +149,7 @@ public class IndexAssinmentConfigImporter extends DefaultGenericPlugin {
      * @throws ServerException
      */
     private boolean allRowsHaveData(List<String> fileRowData, List<String> expectedHeader, String filePath) throws ServerException, RemoteException {
-        if (!utils.allRowsInCsvFileHasValidData(fileRowData, expectedHeader)) {
+        if (!utils.allRowsInCsvFileHasValidData(fileRowData, expectedHeader, pluginLogger)) {
             clientCallback.displayError(String.format("Some rows in File '%s' has missing data. Please make sure all rows has data for all columns", filePath));
             logError(String.format("Some rows in File '%s' has missing data. Please make sure all rows has data for all columns", filePath));
             return false;

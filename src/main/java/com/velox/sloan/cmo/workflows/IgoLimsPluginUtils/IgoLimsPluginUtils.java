@@ -25,8 +25,10 @@ import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -64,9 +66,10 @@ public class IgoLimsPluginUtils {
      * @throws IOException
      */
     public List<String> readDataFromCsvFile(byte[] fileContent) throws IOException {
+        Charset charset = Charset.forName("ISO-8859-1"); // Adjust the charset according to your file's encoding
         List<String> rowDataValues = new ArrayList<>();
         InputStream dataStream = new ByteArrayInputStream(fileContent);
-        try (BufferedReader fileReader = new BufferedReader(new InputStreamReader(dataStream))) {
+        try (BufferedReader fileReader = new BufferedReader(new InputStreamReader(dataStream,charset))) {
             String temp;
             while ((temp = fileReader.readLine()) != null) { //to check that there are no empty lines at end of file
                 String rowData;
@@ -150,8 +153,32 @@ public class IgoLimsPluginUtils {
      * @param expectedHeaderValues
      * @return true/false
      */
-    public boolean csvFileContainsRequiredHeaders(List<String> fileData, List<String> expectedHeaderValues) {
-        return Arrays.asList(fileData.get(0).split(",")).containsAll(expectedHeaderValues);
+    public boolean csvFileContainsRequiredHeaders(List<String> fileData, List<String> expectedHeaderValues, PluginLogger logger) {
+        //return Arrays.asList(fileData.get(0).split(",")).containsAll(expectedHeaderValues);
+        String[] splitData = fileData.get(0).split(",");
+        List<String> trimmedData = new ArrayList<>();
+        for (String data : splitData) {
+            trimmedData.add(data.trim());
+        }
+        logger.logInfo("Trimmed data: " + trimmedData);
+        logger.logInfo("Expected header values: " + expectedHeaderValues);
+        printMissing(expectedHeaderValues, trimmedData, logger);
+        return trimmedData.containsAll(expectedHeaderValues);
+    }
+
+    public static void printMissing(List<String> collection1, List<String> collection2, PluginLogger logger) {
+        List<String> missingElements = new ArrayList<>();
+        for (String element : collection1) {
+            if (!collection2.contains(element)) {
+                missingElements.add(element);
+            }
+        }
+
+        if (missingElements.isEmpty()) {
+            logger.logInfo("All elements from the first collection are present in the second collection.");
+        } else {
+            logger.logInfo("The following elements are missing in the second collection: " + missingElements);
+        }
     }
 
     /**
@@ -187,11 +214,16 @@ public class IgoLimsPluginUtils {
      * @param fileData
      * @return Map of Header value and Index position.
      */
-    public Map<String, Integer> getCsvHeaderValueMap(List<String> fileData) {
+    public Map<String, Integer> getCsvHeaderValueMap(List<String> fileData, PluginLogger logger) {
         List<String> headerRow = Arrays.asList(fileData.get(0).split(","));
         Map<String, Integer> headerValues = new HashMap<>();
         for (String value : headerRow) {
-            headerValues.put(value.trim(), headerRow.indexOf(value));
+            logger.logInfo("header row: " + value.trim());
+//            if (value.contains("µ")) {
+//                value = value.split("µ")[0];
+//            }
+            logger.logInfo("header row value: " + headerRow.indexOf(value.trim()));
+            headerValues.put(value.trim(), headerRow.indexOf(value.trim()));
         }
         return headerValues;
     }
@@ -223,8 +255,8 @@ public class IgoLimsPluginUtils {
      * @param requiredCsvFileColumnHeaders
      * @return true/false
      */
-    public boolean allRowsInCsvFileHasValidData(List<String> fileData, List<String> requiredCsvFileColumnHeaders) {
-        Map<String, Integer> headerValues = getCsvHeaderValueMap(fileData);
+    public boolean allRowsInCsvFileHasValidData(List<String> fileData, List<String> requiredCsvFileColumnHeaders, PluginLogger logger) {
+        Map<String, Integer> headerValues = getCsvHeaderValueMap(fileData, logger);
         int firstRowPositionAfterHeaderRow = 1;
         for (int i = firstRowPositionAfterHeaderRow; i <= fileData.size() - 1; i++) {
             if (!rowInCsvFileHasRequiredValues(fileData.get(i), requiredCsvFileColumnHeaders, headerValues)) {

@@ -35,9 +35,9 @@ public class DigitalPcrResultsParserTests {
         try {
             dataFromFile = commonMethods.readDataFromCsvFile(byteData);
             headerValuesMap = commonMethods.getCsvHeaderValueMap(dataFromFile);
-            channel1Data = resultsProcessor.readChannel1Data(dataFromFile, headerValuesMap);
-            channel2Data = resultsProcessor.readChannel2Data(dataFromFile, headerValuesMap);
-            flatData = resultsProcessor.concatenateChannel1AndChannel2Data(channel1Data, channel2Data, headerValuesMap);
+            channel1Data = resultsProcessor.readChannel1Data(dataFromFile, headerValuesMap, true);
+            channel2Data = resultsProcessor.readChannel2Data(dataFromFile, headerValuesMap, true);
+            flatData = resultsProcessor.concatenateChannel1AndChannel2Data(channel1Data, channel2Data, headerValuesMap, true);
             groupedData = resultsProcessor.aggregateResultsBySampleAndAssay(flatData);
 
         } catch (IOException e) {
@@ -67,7 +67,7 @@ public class DigitalPcrResultsParserTests {
 
     @Test
     public void concatenateChannel1AndChannel2Data_shouldReturn23Values() {
-        assertEquals(resultsProcessor.concatenateChannel1AndChannel2Data(channel1Data, channel2Data, headerValuesMap).size(), 23);
+        assertEquals(resultsProcessor.concatenateChannel1AndChannel2Data(channel1Data, channel2Data, headerValuesMap, true).size(), 23);
     }
 
     @Test

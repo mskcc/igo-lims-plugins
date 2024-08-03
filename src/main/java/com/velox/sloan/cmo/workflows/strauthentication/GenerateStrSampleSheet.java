@@ -75,12 +75,12 @@ public class GenerateStrSampleSheet extends DefaultGenericPlugin {
             List<List<String>> sampleSheetData = getStrSampleSheetData(attachedProtocolRecords, plateId);
             generateStrSampleSheet(sampleSheetData, plateId);
         } catch (IOException e) {
-            String errMsg = String.format("IOException -> Error occured while running STR Sample sheet generation plugin:\n%s", ExceptionUtils.getStackTrace(e));
+            String errMsg = String.format("IOException -> Error occurred while running STR Sample sheet generation plugin:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
         } catch (NotFound notFound) {
-            String errMsg = String.format("NotFound Exception -> Error occured while running STR Sample sheet generation plugin:\n%s", ExceptionUtils.getStackTrace(notFound));
+            String errMsg = String.format("NotFound Exception -> Error occurred while running STR Sample sheet generation plugin:\n%s", ExceptionUtils.getStackTrace(notFound));
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
@@ -98,7 +98,7 @@ public class GenerateStrSampleSheet extends DefaultGenericPlugin {
         try {
             dataFieldDefinitions = dataMgmtServer.getDataFieldDefManager(user).getDataFieldDefinitions(activeTask.getInputDataTypeName()).getDataFieldDefinitionList();
         } catch (RemoteException e) {
-            String errMsg = String.format("RemoteException -> Error occured while getting DataFieldDefinitions:\n%s", ExceptionUtils.getStackTrace(e));
+            String errMsg = String.format("RemoteException -> Error occurred while getting DataFieldDefinitions:\n%s", ExceptionUtils.getStackTrace(e));
             logError(errMsg);
         }
         assert dataFieldDefinitions != null;
@@ -143,7 +143,7 @@ public class GenerateStrSampleSheet extends DefaultGenericPlugin {
                 clientCallback.displayError(String.format("Missing tag '<!-- STR SAMPLESHEET SIZE STANDARD-->' on %s", activeTask.getInputDataTypeName()));
             }
         }catch (RemoteException e) {
-            String errMsg = String.format("RemoteException -> Error occured while getting Input DataType name:\n%s", ExceptionUtils.getStackTrace(e));
+            String errMsg = String.format("RemoteException -> Error occurred while getting Input DataType name:\n%s", ExceptionUtils.getStackTrace(e));
             logError(errMsg);
         }
     }
@@ -179,9 +179,9 @@ public class GenerateStrSampleSheet extends DefaultGenericPlugin {
                 row.add(rec.getStringVal(strRunModuleFieldName, user));
                 csvData.add(row);
             } catch (RemoteException e) {
-                logError(String.format("RemoteException -> Error occured while getting STR Samplesheet data for '%s' with recordid %d:\n%s", rec.getDataTypeName(), rec.getRecordId(), ExceptionUtils.getStackTrace(e)));
+                logError(String.format("RemoteException -> Error occurred while getting STR Samplesheet data for '%s' with recordid %d:\n%s", rec.getDataTypeName(), rec.getRecordId(), ExceptionUtils.getStackTrace(e)));
             } catch (NotFound notFound) {
-                logError(String.format("NotFound Exception -> Error occured while getting STR Samplesheet data for '%s' with recordid %d:\n%s", rec.getDataTypeName(), rec.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
+                logError(String.format("NotFound Exception -> Error occurred while getting STR Samplesheet data for '%s' with recordid %d:\n%s", rec.getDataTypeName(), rec.getRecordId(), ExceptionUtils.getStackTrace(notFound)));
             }
         }
         return csvData;
@@ -200,9 +200,9 @@ public class GenerateStrSampleSheet extends DefaultGenericPlugin {
             byte[] sampleSheetBytes = CsvHelper.writeCSV(csvData, null);
             clientCallback.writeBytes(sampleSheetBytes, fileName);
         } catch (ServerException e) {
-            logError(String.format("ServerException -> Error occured while generating STR Samplesheet:\n%s", ExceptionUtils.getStackTrace(e)));
+            logError(String.format("ServerException -> Error occurred while generating STR Samplesheet:\n%s", ExceptionUtils.getStackTrace(e)));
         } catch (IOException e) {
-            logError(String.format("IOException -> Error occured while generating STR Samplesheet:\n%s", ExceptionUtils.getStackTrace(e)));
+            logError(String.format("IOException -> Error occurred while generating STR Samplesheet:\n%s", ExceptionUtils.getStackTrace(e)));
         }
     }
 }

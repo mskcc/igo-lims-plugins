@@ -4,6 +4,7 @@ import com.velox.api.datarecord.DataRecord;
 import com.velox.api.datarecord.InvalidValue;
 import com.velox.api.datarecord.IoError;
 import com.velox.api.datarecord.NotFound;
+import com.velox.api.plugin.PluginLogger;
 import com.velox.api.plugin.PluginResult;
 import com.velox.api.util.ServerException;
 import com.velox.sapio.commons.exemplar.plugin.PluginOrder;
@@ -26,10 +27,39 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
     private final static String IGO_ID_WITHOUT_ALPHABETS_PATTERN = "^[0-9]+_[0-9]+.*$";  // sample id without alphabets
     private final static String IGO_ID_WITH_ALPHABETS_PATTERN = "^[0-9]+_[A-Z]+_[0-9]+.*$";  // sample id without alphabets
 
+    public int qxResultType = 0;
+
     private final String HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME = "Mouse_Human_CNV_PTGER2";
-    private final List<String> expectedRawResultsHeaders = Arrays.asList("Well", "ExptType", "Experiment", "Sample", "TargetType", "Target",
-            "Status", "Concentration", "Supermix", "CopiesPer20uLWell", "TotalConfMax", "TotalConfMin", "PoissonConfMax", "PoissonConfMin",
-            "Positives", "Negatives", "Ch1+Ch2+", "Ch1+Ch2-", "Ch1-Ch2+", "Ch1-Ch2-", "Linkage", "AcceptedDroplets", "CNV", "FractionalAbundance");
+private final List<String> expectedQx200RawResultsHeaders = Arrays.asList("Well", "ExptType", "Experiment", "Sample", "TargetType", "Target",
+        "Status", "Concentration", "Supermix", "CopiesPer20uLWell", "TotalConfMax", "TotalConfMin", "PoissonConfMax", "PoissonConfMin",
+        "Positives", "Negatives", "Ch1+Ch2+", "Ch1+Ch2-", "Ch1-Ch2+", "Ch1-Ch2-", "Linkage", "AcceptedDroplets", "CNV", "FractionalAbundance");
+
+//    private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well","Sample description 1","Sample description 2",
+//            "Sample description 3","Sample description 4","Target","Conc(copies/µL)","pg/µL","Status","Status Reason","Experiment",
+//            "SampleType","TargetType","Supermix","DyeName(s)","Copies/20µLWell","TotalConfMax","TotalConfMin","PoissonConfMax",
+//            "PoissonConfMin","Accepted Droplets","Positives","Negatives","Copies/uL linked molecules","CNV","TotalCNVMax",
+//            "TotalCNVMin","PoissonCNVMax","PoissonCNVMin","ReferenceCopies","UnknownCopies","Threshold1","Threshold2","Threshold3",
+//            "ThresholdSigmaAbove","ThresholdSigmaBelow","ReferenceUsed","Ratio","TotalRatioMax","TotalRatioMin","PoissonRatioMax",
+//            "PoissonRatioMin","Fractional Abundance","TotalFractionalAbundanceMax","TotalFractionalAbundanceMin",
+//            "PoissonFractionalAbundanceMax","PoissonFractionalAbundanceMin","MeanAmplitudeOfPositives","MeanAmplitudeOfNegatives",
+//            "MeanAmplitudeTotal","ExperimentComments","MergedWells","TotalConfidenceMax68","TotalConfidenceMin68",
+//            "PoissonConfidenceMax68","PoissonConfidenceMin68","TotalCNVMax68","TotalCNVMin68","PoissonCNVMax68","PoissonCNVMin68",
+//            "TotalRatioMax68","TotalRatioMin68","PoissonRatioMax68","PoissonRatioMin68","TotalFractionalAbundanceMax68",
+//            "TotalFractionalAbundanceMin68","PoissonFractionalAbundanceMax68","PoissonFractionalAbundanceMin68","TiltCorrected",
+//            "Ch1+Ch2+","Ch1+Ch2-","Ch1-Ch2+","Ch1-Ch2-","Ch3+Ch4+","Ch3+Ch4-","Ch3-Ch4+","Ch3-Ch4-","Ch5+Ch6+","Ch5+Ch6-","Ch5-Ch6+","Ch5-Ch6-");
+private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well", "Sample description 1", "Sample description 2",
+        "Status","Experiment", "SampleType","TargetType","Supermix","DyeName(s)", "TotalConfMax","TotalConfMin","PoissonConfMax",
+        "PoissonConfMin","Positives","Negatives","CNV","TotalCNVMax", "TotalCNVMin","PoissonCNVMax","PoissonCNVMin","ReferenceCopies",
+        "UnknownCopies","Threshold1","Threshold2","Threshold3", "ThresholdSigmaAbove","ThresholdSigmaBelow","ReferenceUsed",
+        "Ratio","TotalRatioMax","TotalRatioMin","PoissonRatioMax", "PoissonRatioMin", "Fractional Abundance", "TotalFractionalAbundanceMax",
+        "TotalFractionalAbundanceMin", "PoissonFractionalAbundanceMax", "PoissonFractionalAbundanceMin","MeanAmplitudeOfPositives",
+        "MeanAmplitudeOfNegatives", "MeanAmplitudeTotal", "ExperimentComments","MergedWells","TotalConfidenceMax68",
+        "TotalConfidenceMin68", "PoissonConfidenceMax68", "PoissonConfidenceMin68","TotalCNVMax68","TotalCNVMin68",
+        "PoissonCNVMax68","PoissonCNVMin68", "TotalRatioMax68", "TotalRatioMin68","PoissonRatioMax68","PoissonRatioMin68",
+        "TotalFractionalAbundanceMax68", "TotalFractionalAbundanceMin68", "PoissonFractionalAbundanceMax68",
+        "PoissonFractionalAbundanceMin68", "Ch1+Ch2+","Ch1+Ch2-","Ch1-Ch2+", "Ch1-Ch2-","Ch3+Ch4+","Ch3+Ch4-",
+        "Ch3-Ch4+","Ch3-Ch4-","Ch5+Ch6+","Ch5+Ch6-","Ch5-Ch6+","Ch5-Ch6-");
+
     IgoLimsPluginUtils igoUtils = new IgoLimsPluginUtils();
     DdPcrResultsProcessor resultsProcessor = new DdPcrResultsProcessor();
 
@@ -52,6 +82,13 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
             List<String> dataInFiles = igoUtils.readDataFromFiles(filesWithDigitalPcrRawData, clientCallback);
+            String[] QXResultSheetType = {"QX200", "QX600"};
+            qxResultType = clientCallback.showOptionDialog("QX Manager Type", "Which QX result type have you uploaded?", QXResultSheetType, 0);
+            logInfo("qxResultType = " + qxResultType);
+            boolean isQX200 = true;
+            if (qxResultType == 1) {
+                isQX200 = false;
+            }
             if (!isValidFile(filesWithDigitalPcrRawData, dataInFiles)) {
                 return new PluginResult(false);
             }
@@ -69,22 +106,30 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
             //read data from file and create new ddpcr assay results.
             for (String file : filesWithDigitalPcrRawData) {
                 List<String> fileData = igoUtils.readDataFromCsvFile(clientCallback.readBytes(file));
-                Map<String, Integer> headerValueMap = igoUtils.getCsvHeaderValueMap(fileData);
-                List<List<String>> channel1Data = getChannel1Data(fileData, headerValueMap);
-                List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap);
-                List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap);
+                Map<String, Integer> headerValueMap = igoUtils.getCsvHeaderValueMap(fileData, pluginLogger);
+                List<List<String>> channel1Data = getChannel1Data(fileData, headerValueMap, isQX200);
+                List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap, isQX200);
+                List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200, pluginLogger);
                 logInfo("Flattened data");
-                Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData);
+                Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData, isQX200);
                 logInfo(groupedData.toString());
-                List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1", user);
-                if (attachedProtocolRecords.isEmpty()) {
-                    clientCallback.displayError("No attached 'DdPcrProtocol1' records found attached to this task.");
-                    logError("No attached 'DdPcrProtocol1' records found attached to this task.");
+                logInfo("grouped data size = " + groupedData.size());
+                List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1SixChannels", user);
+                List<DataRecord> attachedProtocolRecordsQX200 = activeTask.getAttachedDataRecords("DdPcrProtocol1", user);
+                if (attachedProtocolRecords.isEmpty() && attachedProtocolRecordsQX200.isEmpty()) {
+                    clientCallback.displayError("No attached 'DdPcrProtocol1SixChannels' or 'DdPcrProtocol1' records found attached to this task.");
+                    logError("No attached 'DdPcrProtocol1SixChannels'/'DdPcrProtocol1' records found attached to this task.");
                     return new PluginResult(false);
                 }
-                List<Map<String, Object>> analyzedData = runDataAnalysisForAssays(groupedData, attachedProtocolRecords);
+                List<Map<String, Object>> analyzedData = new LinkedList<>();
+                if (!attachedProtocolRecords.isEmpty()) {
+                    analyzedData = runDataAnalysisForAssays(groupedData, attachedProtocolRecords, isQX200);
+                }
+                else {
+                    analyzedData = runDataAnalysisForAssays(groupedData, attachedProtocolRecordsQX200, isQX200);
+                }
                 List<DataRecord> attachedSampleRecords = activeTask.getAttachedDataRecords("Sample", user);
-                if (attachedProtocolRecords.isEmpty()) {
+                if (attachedSampleRecords.isEmpty()) {
                     clientCallback.displayError("No attached 'Sample' records found attached to this task.");
                     logError("No attached 'Sample' records found attached to this task.");
                     return new PluginResult(false);
@@ -120,10 +165,20 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 logError(String.format("Uploaded file '%s' is not a '.csv' file", name));
                 return false;
             }
-            if (!igoUtils.csvFileContainsRequiredHeaders(fileData, expectedRawResultsHeaders)) {
-                clientCallback.displayError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
-                logError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
-                return false;
+            logInfo("file data = " + Arrays.asList(fileData.get(0).split(",")));
+            if (qxResultType == 0) {
+                if (!igoUtils.csvFileContainsRequiredHeaders(fileData, expectedQx200RawResultsHeaders, pluginLogger)) {
+                    clientCallback.displayError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
+                    logError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
+                    return false;
+                }
+            }
+            else {
+                if (!igoUtils.csvFileContainsRequiredHeaders(fileData, expectedQx600RawResultsHeaders, pluginLogger)) {
+                    clientCallback.displayError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
+                    logError(String.format("Uploaded file '%s' has incorrect header. Please check the file", name));
+                    return false;
+                }
             }
             if (!igoUtils.csvFileHasData(fileData)) {
                 clientCallback.displayError(String.format("Uploaded file '%s' has does not contain data. Please check the file", name));
@@ -136,20 +191,20 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
 
 
 
-    /**
-     * Remove duplicate headers when data from multiple files is combined
-     *
-     * @param data
-     */
-    private void removeDuplicateHeaderFromCombinedData(List<String> data) {
-        if (Arrays.asList(data.get(0).split(",")).containsAll(expectedRawResultsHeaders)) {
-            for (int i = 1; i < data.size(); i++) {
-                if (Arrays.asList(data.get(i).split(",")).containsAll(expectedRawResultsHeaders)) {
-                    data.remove(i);
-                }
-            }
-        }
-    }
+//    /**
+//     * Remove duplicate headers when data from multiple files is combined
+//     *
+//     * @param data
+//     */
+//    private void removeDuplicateHeaderFromCombinedData(List<String> data) {
+//        if (Arrays.asList(data.get(0).split(",")).containsAll(expectedRawResultsHeaders)) {
+//            for (int i = 1; i < data.size(); i++) {
+//                if (Arrays.asList(data.get(i).split(",")).containsAll(expectedRawResultsHeaders)) {
+//                    data.remove(i);
+//                }
+//            }
+//        }
+//    }
 
     /**
      * Get the data related to channel1 in the raw data under "TargetType" column in ddPCR results.
@@ -158,8 +213,8 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      * @param headerValueMap
      * @return data related to channel1 in the raw data under "TargetType" column in ddPCR results.
      */
-    private List<List<String>> getChannel1Data(List<String> fileData, Map<String, Integer> headerValueMap) {
-        return resultsProcessor.readChannel1Data(fileData, headerValueMap);
+    private List<List<String>> getChannel1Data(List<String> fileData, Map<String, Integer> headerValueMap, boolean isQX200) {
+        return resultsProcessor.readChannel1Data(fileData, headerValueMap, isQX200);
     }
 
     /**
@@ -167,8 +222,8 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      * @param headerValueMap
      * @return data related to channel2 in the raw data under "TargetType" column in ddPCR results.
      */
-    private List<List<String>> getChannel2Data(List<String> fileData, Map<String, Integer> headerValueMap) {
-        return resultsProcessor.readChannel2Data(fileData, headerValueMap);
+    private List<List<String>> getChannel2Data(List<String> fileData, Map<String, Integer> headerValueMap, boolean isQX200) {
+        return resultsProcessor.readChannel2Data(fileData, headerValueMap, isQX200);
     }
 
     /**
@@ -179,8 +234,8 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      * @param headerValueMap
      * @return Channel1 and Channel2 combined data.
      */
-    private List<Map<String, Object>> flattenChannel1AndChannel2Data(List<List<String>> channel1Data, List<List<String>> channel2Data, Map<String, Integer> headerValueMap) {
-        return resultsProcessor.concatenateChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap);
+    private List<Map<String, Object>> flattenChannel1AndChannel2Data(List<List<String>> channel1Data, List<List<String>> channel2Data, Map<String, Integer> headerValueMap, boolean isQX200, PluginLogger logger) {
+        return resultsProcessor.concatenateChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200, logger);
     }
 
     /**
@@ -189,8 +244,8 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      * @param flatData
      * @return data grouped by Sample and Target values.
      */
-    private Map<String, List<Map<String, Object>>> groupResultsBySampleAndAssay(List<Map<String, Object>> flatData) {
-        return resultsProcessor.aggregateResultsBySampleAndAssay(flatData);
+    private Map<String, List<Map<String, Object>>> groupResultsBySampleAndAssay(List<Map<String, Object>> flatData, boolean QX200) {
+        return resultsProcessor.aggregateResultsBySampleAndAssay(flatData, QX200);
     }
 
     /**
@@ -225,11 +280,18 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws RemoteException
      */
-    private Double getTotalInputForSample(String sampleName, String assayName, List<DataRecord> protocolRecords) {
+    private Double getTotalInputForSample(String sampleName, String assayName, List<DataRecord> protocolRecords, boolean QX200) {
         for (DataRecord record : protocolRecords) {
             try {
                 Object sampleNameOnProtocol = record.getValue("OtherSampleId", user);
-                Object assayOnProtocol = record.getValue("Ch1Target", user);
+                Object assayOnProtocol = null;
+                if (QX200) {
+                    assayOnProtocol = record.getValue("Ch1Target", user);
+                }
+                else { //QX600
+                    assayOnProtocol = record.getValue("TargetName", user);
+                }
+
                 Object igoSampleIdOnProtocol = record.getStringVal("SampleId", user);
                 if (sampleNameOnProtocol != null && assayOnProtocol != null && sampleName.equalsIgnoreCase(sampleNameOnProtocol.toString())
                         && assayName.equalsIgnoreCase(assayOnProtocol.toString())) {
@@ -285,6 +347,12 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
         return resultsProcessor.calculateHumanPercentage(dropletCountMutation, dropletCountWildType);
     }
 
+    public Comparator<Map<Object, Object>> mapComparator = new Comparator<Map<Object, Object>>() {
+        public int compare(Map<Object, Object> m1, Map<Object, Object> m2) {
+            return m1.get("sample").toString().compareTo(m2.get("sample").toString());
+        }
+    };
+
     /**
      * Calculate final result values from the raw data.
      *
@@ -294,7 +362,7 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
      * @throws NotFound
      * @throws RemoteException
      */
-    private List<Map<String, Object>> runDataAnalysisForAssays(Map<String, List<Map<String, Object>>> groupedData, List<DataRecord> protocolRecords){
+    private List<Map<String, Object>> runDataAnalysisForAssays(Map<String, List<Map<String, Object>>> groupedData, List<DataRecord> protocolRecords, boolean QX200){
         logInfo("Analyzing ddPCR Results.");
         List<Map<String, Object>> analyzedDataValues = new ArrayList<>();
         // from protocol records read igo id
@@ -308,8 +376,15 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 Map<String, Object> analyzedData = new HashMap<>();
                 String sampleName = key.split("/")[0];
                 String target = key.split("/")[1];
+                if (target.contains("Gene:")) {
+                    target = target.split("Gene:")[1];
+                }
+                else if (target.contains("Ref:")) {
+                    logInfo("Skipping target = " + target);
+                    continue;
+                }
                 String whereClause = "OtherSampleId = '" + sampleName + "'";
-                logInfo("WhereClause: " + whereClause);
+                logInfo("whereClause: " + whereClause);
                 int reactionCount = 1;
                 List<DataRecord> ddpcrprtcl2Recs = dataRecordManager.queryDataRecords("DdPcrProtocol2", whereClause, user);
                 if (ddpcrprtcl2Recs.size() > 0) {
@@ -328,14 +403,13 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                 analyzedData.put("FractionalAbundance", (Double) getAverage(groupedData.get(key), "FractionalAbundance") * 100.00);
                 analyzedData.put("ConcentrationMutation", getSum(groupedData.get(key), "ConcentrationMutation") * 20); //Copies Gene
                 analyzedData.put("ConcentrationWildType", getSum(groupedData.get(key), "ConcentrationWildType") * 20); // Copies Ref
+                logInfo("Grouped data key is: " + key);
                 analyzedData.put("Channel1PosChannel2Pos", getSum(groupedData.get(key), "Channel1PosChannel2Pos"));
                 analyzedData.put("Channel1PosChannel2Neg", getSum(groupedData.get(key), "Channel1PosChannel2Neg"));
                 analyzedData.put("Channel1NegChannel2Pos", getSum(groupedData.get(key), "Channel1NegChannel2Pos"));
                 Double dropletCountMutation = (Double) analyzedData.get("Channel1PosChannel2Pos") + (Double) analyzedData.get("Channel1PosChannel2Neg");
                 Double dropletCountWildType = (Double) analyzedData.get("Channel1PosChannel2Pos") + (Double) analyzedData.get("Channel1NegChannel2Pos");
                 Double totalDnaDetected = calculateTotalDnaDetected(getAverage(groupedData.get(key), "ConcentrationMutation"), getAverage(groupedData.get(key),"ConcentrationWildType"));
-                logInfo("concenteration gene = " + (Double) analyzedData.get("ConcentrationMutation") / 20);
-                logInfo("concentration ref = " + (Double) analyzedData.get("ConcentrationWildType") / 20);
                 analyzedData.put("DropletCountMutation", dropletCountMutation);
                 analyzedData.put("DropletCountWildType", dropletCountWildType);
                 analyzedData.put("TotalDnaDetected", totalDnaDetected);
@@ -346,9 +420,9 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
                     Double humanPercentage = calculateHumanPercentage((Double) analyzedData.get("ConcentrationMutation"), (Double) analyzedData.get("ConcentrationWildType"));
                     analyzedData.put("HumanPercentage", humanPercentage);
                 }
-                analyzedData.put("TotalInput", getTotalInputForSample(sampleName, target, protocolRecords));
+                analyzedData.put("TotalInput", getTotalInputForSample(sampleName, target, protocolRecords, QX200));
                 analyzedDataValues.add(analyzedData);
-        }
+            }
         } catch (NotFound | RemoteException | IoError | ServerException e) {
             throw new RuntimeException(e);
         }

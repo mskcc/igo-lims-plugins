@@ -76,7 +76,7 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
 
-            Map<String, Integer> headerValuesMap = commonMethods.getCsvHeaderValueMap(fileData);
+            Map<String, Integer> headerValuesMap = commonMethods.getCsvHeaderValueMap(fileData, pluginLogger);
             if (fileDataHasDuplicateRecords(fileData, headerValuesMap, plateVolumeFile)) {
                 return new PluginResult(false);
             }
@@ -137,7 +137,7 @@ public class PlateSampleVolumeImporter extends DefaultGenericPlugin {
             clientCallback.displayError(String.format("File '%s' has invalid header values. File header should have '%s'", fileName, expectedFileHeaderValues.toString()));
             return false;
         }
-        if (!commonMethods.allRowsInCsvFileHasValidData(fileData, headerWithMustHaveValuesInRow)) {
+        if (!commonMethods.allRowsInCsvFileHasValidData(fileData, headerWithMustHaveValuesInRow, pluginLogger)) {
             clientCallback.displayError(String.format("Some of the rows in file '%s' have missing data under column %s.\n" +
                     "All rows in file must have values under these columns.", fileName, headerWithMustHaveValuesInRow.toString()));
             return false;
