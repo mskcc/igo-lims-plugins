@@ -417,7 +417,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                 analyzedData.put("Ratio", ratio);
                 analyzedData.put("AcceptedDroplets", getSum(groupedData.get(key), "AcceptedDroplets"));
                 if (target.equalsIgnoreCase(HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME)) {
-                    Double humanPercentage = calculateHumanPercentage(dropletCountMutation, dropletCountWildType);
+                    Double humanPercentage = calculateHumanPercentage((Double) analyzedData.get("ConcentrationMutation"), (Double) analyzedData.get("ConcentrationWildType"));
                     analyzedData.put("HumanPercentage", humanPercentage);
                 }
                 analyzedData.put("TotalInput", getTotalInputForSample(sampleName, target, protocolRecords, QX200));
