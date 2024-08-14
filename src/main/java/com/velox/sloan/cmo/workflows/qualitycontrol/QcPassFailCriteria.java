@@ -87,13 +87,10 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
 
             Map<String, Integer> recipeToVolCoefficient = new HashMap<>()
             {{
-                put("ampliconseq", 50);
-                put("chipseq", 50);
-//                put("dna_chip", 50);
-//                put("dna_cunt&run", 50);
-//                put("user_chip", 50);
-//                put("user_cut&run", 50);
-                put("impact505", 50);
+                put("dna_amplicon", 50);
+                put("dna_chip", 50);
+                put("dna_cut&run", 50);
+                put("hc_impact", 50);
                 put("ddpcr", 20);
             }};
             for (DataRecord sample : attachedSamples) {
@@ -112,8 +109,8 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                 if (volume > recipeToVolCoefficient.get(recipe.trim().toLowerCase())) {
                     mass = concentration * recipeToVolCoefficient.get(recipe.trim().toLowerCase());
                 }
-                if (recipe.trim().equalsIgnoreCase("ampliconseq")) {
-                    logInfo("ampliconseq logic!");
+                if (recipe.trim().equalsIgnoreCase("dna_amplicon") || recipe.trim().equalsIgnoreCase("dna_cut&run")) {
+                    logInfo("dna amplicon or dna cut&run logic!");
                     if (mass >= 100) {
                         for (DataRecord qcReport : qcReports) {
                             if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
@@ -158,9 +155,9 @@ public class QcPassFailCriteria extends DefaultGenericPlugin {
                         }
                     }
 
-                } else if (recipe.trim().equalsIgnoreCase("impact505")) {
+                } else if (recipe.trim().equalsIgnoreCase("hc_impact")) {
                     if (sampleType.equalsIgnoreCase("cfDNA")) {
-                        logInfo("recipe impact505, sample type cfdna");
+                        logInfo("recipe hc_impact, sample type cfdna");
                         if (mass >= 100) {
                             for (DataRecord qcReport : qcReports) {
                                 if (igoId.equals(qcReport.getStringVal("SampleId", user))) {
