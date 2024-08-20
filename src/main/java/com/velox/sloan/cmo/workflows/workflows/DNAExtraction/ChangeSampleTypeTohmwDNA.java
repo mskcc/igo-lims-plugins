@@ -39,14 +39,23 @@ public class ChangeSampleTypeTohmwDNA extends DefaultGenericPlugin {
             logInfo("dnaExtractionExpriments size = " + dnaExtractionExpriments.size());
             // always one experiment level record is created for all samples on the current workflow
             Boolean isONT = dnaExtractionExpriments.get(0).getBooleanVal("IsONT", user);
+            Boolean isUhmwDNA = dnaExtractionExpriments.get(0).getBooleanVal("IsUHMWDNA", user);
             logInfo("isONT = " + isONT);
+            logInfo("isUHMWDNA = " + isUhmwDNA);
             if (isONT) {
                 logInfo("isONT = true, changing extraction sample type");
                 dnaExtractionExpriments.get(0).setDataField("ExtractionSampleType", "hmwDNA", user);
-
                 for (DataRecord sample : samples) {
                     logInfo("isONT = true, changing sample type");
                     sample.setDataField("ExemplarSampleType", "hmwDNA", user);
+                }
+            }
+            else if (isUhmwDNA) {
+                logInfo("isUhmwDNA = true, changing extraction sample type");
+                dnaExtractionExpriments.get(0).setDataField("ExtractionSampleType", "uhmwDNA", user);
+                for (DataRecord sample : samples) {
+                    logInfo("isUhmwDNA = true, changing sample type");
+                    sample.setDataField("ExemplarSampleType", "uhmwDNA", user);
                 }
             }
         } catch (InvalidValue | IoError |NotFound | com.velox.api.util.ServerException | RemoteException e) {
