@@ -416,7 +416,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                 Double ratio = getRatio(Double.valueOf(analyzedData.get("ConcentrationMutation").toString()), Double.valueOf(analyzedData.get("ConcentrationWildType").toString()));
                 analyzedData.put("Ratio", ratio);
                 analyzedData.put("AcceptedDroplets", getSum(groupedData.get(key), "AcceptedDroplets"));
-                if (target.equalsIgnoreCase(HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME) ||  target.equalsIgnoreCase("PTGER2_Human")) {
+                if (target.equalsIgnoreCase(HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME) ||  target.contains("Human_PTGER2") || target.contains("Mouse_PTGER2")) {
                     Double humanPercentage = calculateHumanPercentage((Double) analyzedData.get("ConcentrationMutation"), (Double) analyzedData.get("ConcentrationWildType"));
                     analyzedData.put("HumanPercentage", humanPercentage);
                 }
