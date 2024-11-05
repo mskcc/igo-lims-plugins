@@ -337,7 +337,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
      */
     private Map<String, Object> setAssignedIndicesDataRecordFieldValues(DataRecord indexBarcode, DataRecord indexAssignmentConfig,
                                                                         Double minVolInAdapterPlate, Double maxPlateVolume,
-                                                                        Integer plateSize, String sampleType, boolean isTCRseq, boolean isCrisprOrAmpliconSeq) throws NotFound,
+                                                                        Integer plateSize, String sampleType, boolean isTCRseq, boolean isCrisprOrAmpliconSeq, String recipe) throws NotFound,
             RemoteException, InvalidValue, IoError, ServerException {
         Double sampleInputAmount = 0.0;
         if (indexBarcode.getValue("InitialInput", user) != null && indexBarcode.getStringVal("InitialInput", user).length() > 0) {
@@ -356,9 +356,18 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         String adapterSourceRow = autoHelper.getAdapterRowPosition(wellPosition);
         String adapterSourceCol = autoHelper.getAdapterColPosition(wellPosition);
         Double adapterStartConc = indexAssignmentConfig.getDoubleVal("AdapterConcentration", user);
-
-        Double adapterVolume = autoHelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType, isTCRseq, isCrisprOrAmpliconSeq);
-        Double waterVolume = autoHelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume, sampleType,isCrisprOrAmpliconSeq);
+        Double adapterVolume = 0.0;
+        Double waterVolume = 0.0;
+        logInfo("recipe is = " + recipe);
+        if (recipe.toLowerCase().contains("atac")) {
+            logInfo("atac recipe sample gets 4ul adapter vol and 0 water.");
+            adapterVolume = 4.0;
+            waterVolume = 0.0;
+        }
+        else {
+            adapterVolume = autoHelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType, isTCRseq, isCrisprOrAmpliconSeq);
+            waterVolume = autoHelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume, sampleType, isCrisprOrAmpliconSeq);
+        }
         Double actualTargetAdapterConc = adapterStartConc / ((waterVolume + adapterVolume) / adapterVolume);
         setUpdatedIndexAssignmentConfigVol(indexAssignmentConfig, adapterVolume);
         Map<String, Object> indexAssignmentValues = new HashMap<>();
@@ -471,7 +480,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
             DataRecord indexAssignmentConfig = indexAssignmentConfigs.get(i);
             DataRecord indexBarcodeProtocolRecord = indexAssignmentProtocolRecordsSortedColumnWise.get(j);
             Map<String, Object> indexAssignmentValues = setAssignedIndicesDataRecordFieldValues(indexBarcodeProtocolRecord,
-                    indexAssignmentConfig, minAdapterVol, maxPlateVolume, plateSize, sampleType, isTCRseq, isCrisprOrAmpliconSeq);
+                    indexAssignmentConfig, minAdapterVol, maxPlateVolume, plateSize, sampleType, isTCRseq, isCrisprOrAmpliconSeq, recipes.get(0));
             indexBarcodeProtocolRecord.setFields(indexAssignmentValues, user);
             indexAssignmentConfigPlatesToUse.add(indexAssignmentConfig.getStringVal("AdapterPlateId", user));
             if (i == indexAssignmentConfigs.size() - 1 && j <= indexAssignmentProtocolRecordsSortedColumnWise.size()) {
