@@ -48,15 +48,14 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
             if (qxVesrsion == 1) {
                 twoChannels = false;
             }
-
+            int numOfChannels = 2;
+            if (!twoChannels) {
+                numOfChannels = 6;
+            }
             activeTask.getTask().getTaskOptions().put("DUPLICATE RECORDS CREATED", "");
             logInfo("Added the duplicated task option to this step!");
-            if (!twoChannels) {
-                for (int i = 1; i <= 6; i++) {
 
-                }
-            }
-            else {
+            for (int i = 1; i < numOfChannels; i++) {
                 for (DataRecord sixChannelRec : attachedDdpcrSixChannels) {
                     dataFieldValueMap.put("Aliq1StartingVolume", sixChannelRec.getValue("Aliq1StartingVolume", user));
                     dataFieldValueMap.put("Aliq1StartingConcentration", sixChannelRec.getValue("Aliq1StartingConcentration", user));
