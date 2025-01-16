@@ -29,7 +29,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
     }
     @Override
     public boolean shouldRun() throws RemoteException {
-        return !activeTask.getTask().getTaskOptions().containsKey("DUPLICATE RECORDS CREATED") &&
+        return !activeTask.getTask().getTaskOptions().containsValue("DUPLICATE RECORDS CREATED") &&
                 activeTask.getTask().getTaskOptions().containsKey("CREATE NEW SIX CHANNELS RECORDS");
     }
 
