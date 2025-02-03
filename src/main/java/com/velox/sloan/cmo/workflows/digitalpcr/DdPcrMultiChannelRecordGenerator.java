@@ -22,7 +22,6 @@ import java.util.Map;
  * @author mirhajf
 * */
 public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
-    //public int qxVesrsion = 0;
     public DdPcrMultiChannelRecordGenerator() {
         setTaskEntry(true);
         setOrder(PluginOrder.MIDDLE.getOrder());
