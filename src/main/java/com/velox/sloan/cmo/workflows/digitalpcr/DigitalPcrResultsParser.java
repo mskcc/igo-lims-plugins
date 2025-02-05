@@ -399,7 +399,12 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                 logInfo("reactionCount = " + reactionCount);
                 analyzedData.put("Assay", target);
                 analyzedData.put("OtherSampleId", sampleName);
-                analyzedData.put("CNV", getAverage(groupedData.get(key), "CNV"));
+                if (getSum(groupedData.get(key), "ConcentrationWildType") != 0.0) {
+                    analyzedData.put("CNV", (getSum(groupedData.get(key), "ConcentrationMutation")/getSum(groupedData.get(key), "ConcentrationWildType")) * 2);
+                }
+                else {
+                    analyzedData.put("CNV", 0.0);
+                }
                 analyzedData.put("FractionalAbundance", (Double) getAverage(groupedData.get(key), "FractionalAbundance") * 100.00);
                 analyzedData.put("ConcentrationMutation", getSum(groupedData.get(key), "ConcentrationMutation") * 20); //Copies Gene
                 analyzedData.put("ConcentrationWildType", getSum(groupedData.get(key), "ConcentrationWildType") * 20); // Copies Ref
