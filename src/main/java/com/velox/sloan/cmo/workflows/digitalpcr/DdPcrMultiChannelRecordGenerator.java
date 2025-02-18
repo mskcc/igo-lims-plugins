@@ -28,7 +28,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
     }
     @Override
     public boolean shouldRun() throws RemoteException {
-        return !activeTask.getTask().getTaskOptions().containsValue("DUPLICATE RECORDS CREATED") &&
+        return !activeTask.getTask().getTaskOptions().containsKey("DUPLICATE RECORDS CREATED") &&
                 activeTask.getTask().getTaskOptions().containsKey("CREATE NEW SIX CHANNELS RECORDS");
     }
 
@@ -51,11 +51,14 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
             if (!twoChannels) {
                 numOfChannels = 6;
             }
-            activeTask.getTask().getTaskOptions().put("DUPLICATE RECORDS CREATED", "");
+            this.activeTask.getTask().getTaskOptions().put("DUPLICATE RECORDS CREATED", "");
             logInfo("Added the duplicated task option to this step!");
 
-            for (int i = 1; i < numOfChannels; i++) {
-                for (DataRecord sixChannelRec : attachedDdpcrSixChannels) {
+            for (DataRecord sixChannelRec : attachedDdpcrSixChannels) {
+                boolean firstTime = true;
+                String target = "";
+                String reference = "";
+                for (int i = 1; i < numOfChannels; i++) {
                     dataFieldValueMap.put("Aliq1StartingVolume", sixChannelRec.getValue("Aliq1StartingVolume", user));
                     dataFieldValueMap.put("Aliq1StartingConcentration", sixChannelRec.getValue("Aliq1StartingConcentration", user));
                     dataFieldValueMap.put("Aliq1TargetMass", sixChannelRec.getValue("Aliq1TargetMass", user));
@@ -83,28 +86,44 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                     dataFieldValueMap.put("Aliq1IsNewControl", sixChannelRec.getBooleanVal("Aliq1IsNewControl", user));
 
                     if (sixChannelRec.getBooleanVal("Aliq1IsNewControl", user) == Boolean.FALSE) {
-                        String[] targetReference = sixChannelRec.getStringVal("TargetName", user).split(",");
-                        if (targetReference.length < 2) {
-                            clientCallback.displayError("Please include target and reference targets separated by comma; like: target, reference");
+                        if (firstTime) {
+                            String[] targetReference = new String[2];
+                            targetReference = sixChannelRec.getStringVal("TargetName", user).split(",");
+                            logInfo("Target name is = " + sixChannelRec.getStringVal("TargetName", user));
+
+                            if (targetReference.length < 2) {
+                                clientCallback.displayError("Please include target and reference targets separated by comma; like: target, reference");
+                            }
+                            target = targetReference[0].trim();
+                            reference = targetReference[1].trim();
+                            firstTime = false;
                         }
-                        String target = targetReference[0].trim();
-                        String reference = targetReference[1].trim();
+//                        target = targetReference[0].trim();
+//                        reference = targetReference[1].trim();
                         sixChannelRec.setDataField("TargetName", target, user);
                         //sixChannelRec.setDataField("SignalCh1", "FAM", user);
                         dataFieldValueMap.put("TargetName", reference);
-                        //dataFieldValueMap.put("SignalCh2", "HEX");
                     }
+                    //dataFieldValueMap.put("SignalCh2", "HEX");
                     dataFieldValueMap.put("TargetType", "Unknown");
                     //dataFieldValueMap.put("ReferenceCopies", "2");
                     //sixChannelRec.setDataField("ReferenceCopies", "1", user);
                     sixChannelRec.setDataField("SignalCh1", "FAM", user);
-                    dataFieldValueMap.put("SignalCh2", "HEX");
                     if (!twoChannels) {
-                        dataFieldValueMap.put("SignalCh3", "Cy5");
-                        dataFieldValueMap.put("SignalCh4", "Cy5.5");
-                        dataFieldValueMap.put("SignalCh5", "ROX");
-                        dataFieldValueMap.put("SignalCh6", "ATTO 590");
+                        if (i == 2) {
+                            dataFieldValueMap.put("SignalCh2", "HEX");
+                        } else if (i == 3) {
+                            dataFieldValueMap.put("SignalCh3", "Cy5");
+                        } else if (i == 4) {
+                            dataFieldValueMap.put("SignalCh4", "Cy5.5");
+                        } else if (i == 5) {
+                            dataFieldValueMap.put("SignalCh5", "ROX");
+                        }
+                        else {
+                            dataFieldValueMap.put("SignalCh6", "ATTO 590");
+                        }
                     } else { // two channels
+                        dataFieldValueMap.put("SignalCh2", "HEX");
                         dataFieldValueMap.put("SignalCh3", sixChannelRec.getValue("SignalCh3", user));
                         dataFieldValueMap.put("SignalCh4", sixChannelRec.getValue("SignalCh4", user));
                         dataFieldValueMap.put("SignalCh5", sixChannelRec.getValue("SignalCh5", user));
