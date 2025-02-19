@@ -108,22 +108,46 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                     dataFieldValueMap.put("TargetType", "Unknown");
                     //dataFieldValueMap.put("ReferenceCopies", "2");
                     //sixChannelRec.setDataField("ReferenceCopies", "1", user);
+
                     sixChannelRec.setDataField("SignalCh1", "FAM", user);
+
+                    if (i == 1) {
+                        dataFieldValueMap.put("SignalCh1", "None");
+                        dataFieldValueMap.put("SignalCh2", "HEX");
+                        dataFieldValueMap.put("SignalCh3", "None");
+                        dataFieldValueMap.put("SignalCh4", "None");
+                        dataFieldValueMap.put("SignalCh5", "None");
+                        dataFieldValueMap.put("SignalCh6", "None");
+                    }
+                    logInfo("i is: " + i);
                     if (!twoChannels) {
                         if (i == 2) {
-                            dataFieldValueMap.put("SignalCh2", "HEX");
-                        } else if (i == 3) {
+                            dataFieldValueMap.put("SignalCh2", "None");
                             dataFieldValueMap.put("SignalCh3", "Cy5");
-                        } else if (i == 4) {
+                            dataFieldValueMap.put("SignalCh4", "None");
+                            dataFieldValueMap.put("SignalCh5", "None");
+                            dataFieldValueMap.put("SignalCh6", "None");
+                        } else if (i == 3) {
+                            dataFieldValueMap.put("SignalCh2", "None");
+                            dataFieldValueMap.put("SignalCh3", "None");
                             dataFieldValueMap.put("SignalCh4", "Cy5.5");
-                        } else if (i == 5) {
+                            dataFieldValueMap.put("SignalCh5", "None");
+                            dataFieldValueMap.put("SignalCh6", "None");
+                        } else if (i == 4) {
+                            dataFieldValueMap.put("SignalCh2", "None");
+                            dataFieldValueMap.put("SignalCh3", "None");
+                            dataFieldValueMap.put("SignalCh4", "None");
                             dataFieldValueMap.put("SignalCh5", "ROX");
+                            dataFieldValueMap.put("SignalCh6", "None");
                         }
-                        else {
+                        else if (i == 5) {
+                            dataFieldValueMap.put("SignalCh2", "None");
+                            dataFieldValueMap.put("SignalCh3", "None");
+                            dataFieldValueMap.put("SignalCh4", "None");
+                            dataFieldValueMap.put("SignalCh5", "None");
                             dataFieldValueMap.put("SignalCh6", "ATTO 590");
                         }
                     } else { // two channels
-                        dataFieldValueMap.put("SignalCh2", "HEX");
                         dataFieldValueMap.put("SignalCh3", sixChannelRec.getValue("SignalCh3", user));
                         dataFieldValueMap.put("SignalCh4", sixChannelRec.getValue("SignalCh4", user));
                         dataFieldValueMap.put("SignalCh5", sixChannelRec.getValue("SignalCh5", user));
@@ -161,6 +185,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                             break;
                         }
                     }
+
                 }
             }
             activeTask.addAttachedDataRecords(ddPcrSixChannelRecords);
