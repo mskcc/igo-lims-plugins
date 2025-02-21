@@ -38,25 +38,30 @@ public class ChangeSampleTypeTohmwDNA extends DefaultGenericPlugin {
             List<DataRecord> dnaExtractionExpriments = activeTask.getAttachedDataRecords("DNAExtractionExperiment", user);
             logInfo("dnaExtractionExpriments size = " + dnaExtractionExpriments.size());
             // always one experiment level record is created for all samples on the current workflow
-            Boolean isONT = dnaExtractionExpriments.get(0).getBooleanVal("IsONT", user);
-            Boolean isUhmwDNA = dnaExtractionExpriments.get(0).getBooleanVal("IsUHMWDNA", user);
-            logInfo("isONT = " + isONT);
-            logInfo("isUHMWDNA = " + isUhmwDNA);
-            if (isONT) {
-                logInfo("isONT = true, changing extraction sample type");
-                dnaExtractionExpriments.get(0).setDataField("ExtractionSampleType", "hmwDNA", user);
-                for (DataRecord sample : samples) {
-                    logInfo("isONT = true, changing sample type");
-                    sample.setDataField("ExemplarSampleType", "hmwDNA", user);
-                }
-            }
-            else if (isUhmwDNA) {
-                logInfo("isUhmwDNA = true, changing extraction sample type");
-                dnaExtractionExpriments.get(0).setDataField("ExtractionSampleType", "uhmwDNA", user);
-                for (DataRecord sample : samples) {
-                    logInfo("isUhmwDNA = true, changing sample type");
-                    sample.setDataField("ExemplarSampleType", "uhmwDNA", user);
-                }
+            String dnaSampleType = dnaExtractionExpriments.get(0).getStringVal("dnaSampleType", user);
+//            Boolean isONT = dnaExtractionExpriments.get(0).getBooleanVal("IsONT", user);
+//            Boolean isUhmwDNA = dnaExtractionExpriments.get(0).getBooleanVal("IsUHMWDNA", user);
+//            logInfo("isONT = " + isONT);
+//            logInfo("isUHMWDNA = " + isUhmwDNA);
+//            if (isONT) {
+//                logInfo("isONT = true, changing extraction sample type");
+//                dnaExtractionExpriments.get(0).setDataField("ExtractionSampleType", "hmwDNA", user);
+//                for (DataRecord sample : samples) {
+//                    logInfo("isONT = true, changing sample type");
+//                    sample.setDataField("ExemplarSampleType", "hmwDNA", user);
+//                }
+//            }
+//            else if (isUhmwDNA) {
+//                logInfo("isUhmwDNA = true, changing extraction sample type");
+//                dnaExtractionExpriments.get(0).setDataField("ExtractionSampleType", "uhmwDNA", user);
+//                for (DataRecord sample : samples) {
+//                    logInfo("isUhmwDNA = true, changing sample type");
+//                    sample.setDataField("ExemplarSampleType", "uhmwDNA", user);
+//                }
+//            }
+            dnaExtractionExpriments.get(0).setDataField("ExtractionSampleType", dnaSampleType, user);
+            for (DataRecord sample : samples) {
+                sample.setDataField("ExemplarSampleType", dnaSampleType, user);
             }
         } catch (InvalidValue | IoError |NotFound | com.velox.api.util.ServerException | RemoteException e) {
             logError("An exception occurred while setting sample type to hmwDNA", e);
