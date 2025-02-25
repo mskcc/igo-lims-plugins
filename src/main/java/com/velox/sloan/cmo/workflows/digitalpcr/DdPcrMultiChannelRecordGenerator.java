@@ -86,20 +86,21 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                     dataFieldValueMap.put("Aliq1IsNewControl", sixChannelRec.getBooleanVal("Aliq1IsNewControl", user));
 
                     if (sixChannelRec.getBooleanVal("Aliq1IsNewControl", user) == Boolean.FALSE) {
+                        String[] targetReference = new String[numOfChannels];
                         if (firstTime) {
-                            String[] targetReference = new String[2];
+                            //targetReference = new String[numOfChannels];
                             targetReference = sixChannelRec.getStringVal("TargetName", user).split(",");
                             logInfo("Target name is = " + sixChannelRec.getStringVal("TargetName", user));
 
                             if (targetReference.length < 2) {
                                 clientCallback.displayError("Please include target and reference targets separated by comma; like: target, reference");
                             }
-                            target = targetReference[0].trim();
-                            reference = targetReference[1].trim();
+//                            target = targetReference[0].trim();
+//                            reference = targetReference[i].trim();
                             firstTime = false;
                         }
-//                        target = targetReference[0].trim();
-//                        reference = targetReference[1].trim();
+                        target = targetReference[0].trim();
+                        reference = targetReference[i].trim();
                         sixChannelRec.setDataField("TargetName", target, user);
                         //sixChannelRec.setDataField("SignalCh1", "FAM", user);
                         dataFieldValueMap.put("TargetName", reference);
