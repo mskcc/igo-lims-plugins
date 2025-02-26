@@ -58,6 +58,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                 boolean firstTime = true;
                 String target = "";
                 String reference = "";
+                String[] targetReference = new String[numOfChannels];
                 for (int i = 1; i < numOfChannels; i++) {
                     dataFieldValueMap.put("Aliq1StartingVolume", sixChannelRec.getValue("Aliq1StartingVolume", user));
                     dataFieldValueMap.put("Aliq1StartingConcentration", sixChannelRec.getValue("Aliq1StartingConcentration", user));
@@ -75,8 +76,6 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                     dataFieldValueMap.put("Sampledescription3", sixChannelRec.getValue("Sampledescription3", user));
                     dataFieldValueMap.put("Sampledescription4", sixChannelRec.getValue("Sampledescription4", user));
                     sixChannelRec.setDataField("ExemplarSampleType", "Unknown", user);
-//                dataFieldValueMap.put("ExperimentType", "Rare Event Detection (RED)");
-//                sixChannelRec.setDataField("ExperimentType", "Rare Event Detection (RED)", user);
                     dataFieldValueMap.put("AssayType", "Single Target per Channel");
                     sixChannelRec.setDataField("AssayType", "Single Target per Channel", user);
                     dataFieldValueMap.put("SupermixName", sixChannelRec.getValue("SupermixName", user));
@@ -85,31 +84,22 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                     dataFieldValueMap.put("Aliq1ControlType", sixChannelRec.getStringVal("Aliq1ControlType", user));
                     dataFieldValueMap.put("Aliq1IsNewControl", sixChannelRec.getBooleanVal("Aliq1IsNewControl", user));
 
-                    if (sixChannelRec.getBooleanVal("Aliq1IsNewControl", user) == Boolean.FALSE) {
-                        String[] targetReference = new String[numOfChannels];
+                    //if (sixChannelRec.getBooleanVal("Aliq1IsNewControl", user) == Boolean.FALSE) {
                         if (firstTime) {
-                            //targetReference = new String[numOfChannels];
                             targetReference = sixChannelRec.getStringVal("TargetName", user).split(",");
                             logInfo("Target name is = " + sixChannelRec.getStringVal("TargetName", user));
 
                             if (targetReference.length < 2) {
                                 clientCallback.displayError("Please include target and reference targets separated by comma; like: target, reference");
                             }
-//                            target = targetReference[0].trim();
-//                            reference = targetReference[i].trim();
                             firstTime = false;
                         }
                         target = targetReference[0].trim();
                         reference = targetReference[i].trim();
                         sixChannelRec.setDataField("TargetName", target, user);
-                        //sixChannelRec.setDataField("SignalCh1", "FAM", user);
                         dataFieldValueMap.put("TargetName", reference);
-                    }
-                    //dataFieldValueMap.put("SignalCh2", "HEX");
+                    //}
                     dataFieldValueMap.put("TargetType", "Unknown");
-                    //dataFieldValueMap.put("ReferenceCopies", "2");
-                    //sixChannelRec.setDataField("ReferenceCopies", "1", user);
-
                     sixChannelRec.setDataField("SignalCh1", "FAM", user);
 
                     if (i == 1) {
