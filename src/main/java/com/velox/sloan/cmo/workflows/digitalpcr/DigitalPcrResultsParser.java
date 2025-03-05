@@ -12,6 +12,7 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
+import javax.swing.plaf.SplitPaneUI;
 import java.io.IOException;
 import java.rmi.RemoteException;
 import java.util.*;
@@ -107,11 +108,20 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
             for (String file : filesWithDigitalPcrRawData) {
                 List<String> fileData = igoUtils.readDataFromCsvFile(clientCallback.readBytes(file));
                 Map<String, Integer> headerValueMap = igoUtils.getCsvHeaderValueMap(fileData, pluginLogger);
-                List<List<String>> channel1Data = getChannel1Data(fileData, headerValueMap, isQX200);
-                List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap, isQX200);
-                List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200, pluginLogger);
-                logInfo("Flattened data");
-                Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData, isQX200);
+                List<Map<String, Object>> combinedChannelsData = new ArrayList<>();
+                if (isQX200) {
+                    List<List<String>> channel1Data = getChannel1Data(fileData, headerValueMap, isQX200);
+                    List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap, isQX200);
+                    combinedChannelsData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200, pluginLogger);
+                    logInfo("Flattened QX200 data");
+                }
+                else { // QX600
+                    List<List<List<String>>> allChannelsData = getAllChannelsData(fileData, headerValueMap, isQX200);
+                    combinedChannelsData = flattenAllChannels(allChannelsData, headerValueMap, isQX200, pluginLogger);
+                    logInfo("Flattened QX600 data");
+                }
+
+                Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(combinedChannelsData, isQX200);
                 logInfo(groupedData.toString());
                 logInfo("grouped data size = " + groupedData.size());
                 List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1SixChannels", user);
@@ -149,6 +159,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
         }
         return new PluginResult(true);
     }
+
 
     /**
      * Check if the passed file is a valid CSV file.
@@ -225,6 +236,9 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
     private List<List<String>> getChannel2Data(List<String> fileData, Map<String, Integer> headerValueMap, boolean isQX200) {
         return resultsProcessor.readChannel2Data(fileData, headerValueMap, isQX200);
     }
+    private List<List<List<String>>> getAllChannelsData(List<String> fileData, Map<String, Integer> headerValueMap, boolean isQX200) {
+        return resultsProcessor.readAllChannelsData(fileData, headerValueMap, isQX200);
+    }
 
     /**
      * Add Channel2 data to the rows containing Channel1 data as Concentration of the Reference.
@@ -238,6 +252,9 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
         return resultsProcessor.concatenateChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200, logger);
     }
 
+    private List<Map<String, Object>> flattenAllChannels(List<List<List<String>>> allChannels, Map<String, Integer> headerValueMap, boolean isQX200, PluginLogger logger) {
+        resultsProcessor.concatenateAllChannels(allChannels, headerValueMap, isQX200, logger);
+    }
     /**
      * Group the data based on Sample and Target values in the results.
      *

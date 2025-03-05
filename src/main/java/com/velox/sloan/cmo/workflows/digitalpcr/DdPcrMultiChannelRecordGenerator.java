@@ -51,8 +51,6 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
             if (!twoChannels) {
                 numOfChannels = 6;
             }
-            this.activeTask.getTask().getTaskOptions().put("DUPLICATE RECORDS CREATED", "");
-            logInfo("Added the duplicated task option to this step!");
 
             for (DataRecord sixChannelRec : attachedDdpcrSixChannels) {
                 boolean firstTime = true;
@@ -183,6 +181,8 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
         } catch (NotFound | IoError | InvalidValue e) {
             throw new RuntimeException(e);
         }
+        this.activeTask.getTask().getTaskOptions().put("DUPLICATE RECORDS CREATED", "");
+        logInfo("Added the duplicated task option to this step!");
         return new PluginResult(true);
     }
 }

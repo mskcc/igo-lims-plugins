@@ -14,10 +14,6 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
             if (isQX200) {
                 if (valuesInRow.get(headerValueMap.get("TargetType")).contains("Unknown")) {
                     channel1RawData.add(valuesInRow);
-                }            }
-            else { //QX600
-                if (valuesInRow.get(headerValueMap.get("DyeName(s)")).contains("FAM")) {
-                    channel1RawData.add(valuesInRow);
                 }
             }
         }
@@ -32,14 +28,24 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
             if (isQX200) {
                 if (valuesInRow.get(headerValueMap.get("TargetType")).contains("Ref")) {
                     channel2RawData.add(valuesInRow);
-                }            }
-            else { //QX600
-                if (valuesInRow.get(headerValueMap.get("DyeName(s)")).contains("HEX")) {
-                    channel2RawData.add(valuesInRow);
                 }
             }
         }
         return channel2RawData;
+    }
+
+    @Override
+    public List<List<List<String>>> readAllChannelsData(List<String> fileData, Map<String, Integer> headerValueMap, boolean isQX200) {
+        List<List<List<String>>> allChannelsRawData = new ArrayList<>();
+        List<List<String>> eachSampleChannels = new ArrayList<>();
+        for (String row : fileData) {
+            List<String> valuesInRow = Arrays.asList(row.split(","));
+            if (!isQX200) {
+                eachSampleChannels.add(valuesInRow);
+            }
+            allChannelsRawData.add(eachSampleChannels);
+        }
+        return allChannelsRawData;
     }
 
     @Override
@@ -118,6 +124,18 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                     flatData.add(sampleValues);
                 }
             }
+        }
+        return flatData;
+    }
+
+    public List<Map<String, Object>> concatenateAllChannels(List<List<List<String>>> allChannelsData, Map<String, Integer> headerValueMap, boolean isQX200, PluginLogger logger) {
+        List<Map<String, Object>> flatData = new ArrayList<>();
+        for (List<List<String>> eachSample : allChannelsData) {
+            Map<String, Object> sampleValues = new HashMap<>();
+            for (List<String> eachChannel : eachSample) {
+
+            }
+            flatData.add(sampleValues);
         }
         return flatData;
     }
