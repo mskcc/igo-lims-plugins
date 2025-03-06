@@ -253,7 +253,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
     }
 
     private List<Map<String, Object>> flattenAllChannels(List<List<List<String>>> allChannels, Map<String, Integer> headerValueMap, boolean isQX200, PluginLogger logger) {
-        resultsProcessor.concatenateAllChannels(allChannels, headerValueMap, isQX200, logger);
+        return resultsProcessor.concatenateAllChannels(allChannels, headerValueMap, isQX200, logger);
     }
     /**
      * Group the data based on Sample and Target values in the results.
