@@ -14,10 +14,6 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
             if (isQX200) {
                 if (valuesInRow.get(headerValueMap.get("TargetType")).contains("Unknown")) {
                     channel1RawData.add(valuesInRow);
-                }            }
-            else { //QX600
-                if (valuesInRow.get(headerValueMap.get("DyeName(s)")).contains("FAM")) {
-                    channel1RawData.add(valuesInRow);
                 }
             }
         }
@@ -32,14 +28,24 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
             if (isQX200) {
                 if (valuesInRow.get(headerValueMap.get("TargetType")).contains("Ref")) {
                     channel2RawData.add(valuesInRow);
-                }            }
-            else { //QX600
-                if (valuesInRow.get(headerValueMap.get("DyeName(s)")).contains("HEX")) {
-                    channel2RawData.add(valuesInRow);
                 }
             }
         }
         return channel2RawData;
+    }
+
+    @Override
+    public List<List<List<String>>> readAllChannelsData(List<String> fileData, Map<String, Integer> headerValueMap, boolean isQX200) {
+        List<List<List<String>>> allChannelsRawData = new ArrayList<>();
+        List<List<String>> eachSampleChannels = new ArrayList<>();
+        for (String row : fileData) {
+            List<String> valuesInRow = Arrays.asList(row.split(","));
+            if (!isQX200) {
+                eachSampleChannels.add(valuesInRow);
+            }
+            allChannelsRawData.add(eachSampleChannels);
+        }
+        return allChannelsRawData;
     }
 
     @Override
@@ -113,6 +119,65 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                         sampleValues.put("CNV", Double.parseDouble(s1.get(headerValueMap.get("CNV"))));
                     }
                     else {
+                        sampleValues.put("CNV", 0.0);
+                    }
+                    flatData.add(sampleValues);
+                }
+            }
+        }
+        return flatData;
+    }
+
+    public List<Map<String, Object>> concatenateAllChannels(List<List<List<String>>> allChannelsData, Map<String, Integer> headerValueMap, boolean isQX200, PluginLogger logger) {
+        List<Map<String, Object>> flatData = new ArrayList<>();
+        for (int i  = 0; i < allChannelsData.size(); i++) {
+            for (List<String> eachChannel : allChannelsData.get(i)) {
+                int index = headerValueMap.get("Conc(copies/µL)");
+                String targetWell = eachChannel.get(headerValueMap.get("Well"));
+                String targetSampleId = "";
+                String refSampleId = "";
+                String s2Well = "";
+                String refIndex = "";
+                String refConcentration = "";
+                if (i == 1) { // channel 2 is the reference
+                    s2Well = eachChannel.get(headerValueMap.get("Well"));
+                    refSampleId = eachChannel.get(headerValueMap.get("Sample description 2"));
+                    refIndex = eachChannel.get(index);
+                    refConcentration = eachChannel.get(headerValueMap.get("Conc(copies/µL)"));
+                }
+
+                if (s2Well.equalsIgnoreCase(targetWell) && refSampleId.equalsIgnoreCase(targetSampleId)) {
+                    Map<String, Object> sampleValues = new HashMap<>();
+                    sampleValues.put("Well", allChannelsData.get(i).get(headerValueMap.get("Well")));
+                    logger.logInfo("Conc(copies/µL): " + headerValueMap.get("Conc(copies/µL)"));
+                    logger.logInfo("s1 size = " + allChannelsData.get(i).size());
+                    logger.logInfo("header value map of Conc(Copies/µl) = " + headerValueMap.get("Conc(copies/µL)"));
+                    sampleValues.put("Sample", allChannelsData.get(i).get(headerValueMap.get("Sample description 2")));
+
+                    if (allChannelsData.get(i).get(index) != null && !allChannelsData.get(i).get(index).isEmpty() && !eachChannel.get(index).isBlank()) {
+                        sampleValues.put("ConcentrationMutation", Double.parseDouble(eachChannel.get(index)));
+                    }
+                    if (allChannelsData.get(1).get(index) != null && !allChannelsData.get(1).get(index).isEmpty() && !refIndex.isBlank()) {
+                        sampleValues.put("ConcentrationWildType", Double.parseDouble(refIndex));
+                    }
+                    sampleValues.put("AcceptedDroplets", Integer.parseInt(eachChannel.get(headerValueMap.get("Accepted Droplets"))));
+                    sampleValues.put("TargetGene", allChannelsData.get(i).get(headerValueMap.get("Target")));
+                    sampleValues.put("TargetRef", allChannelsData.get(1).get(headerValueMap.get("Target")));
+                    if ((Double.parseDouble(eachChannel.get(headerValueMap.get("Conc(copies/µL)"))) + Double.parseDouble(refConcentration)) == 0) {
+                        sampleValues.put("FractionalAbundance", 0.0);
+                    } else {
+                        Double fractionalAbundance = Double.parseDouble(eachChannel.get(headerValueMap.get("Conc(copies/µL)"))) /
+                                (Double.parseDouble(eachChannel.get(headerValueMap.get("Conc(copies/µL)"))) + Double.parseDouble(refConcentration));
+                        sampleValues.put("FractionalAbundance", fractionalAbundance);
+                    }
+
+                    logger.logInfo("s1.get(headerValueMap.get(\"Ch1+Ch2+\")) = " + allChannelsData.get(i).get(headerValueMap.get("Ch1+Ch2+")));
+                    sampleValues.put("Channel1PosChannel2Pos", Integer.parseInt(eachChannel.get(headerValueMap.get("Ch1+Ch2+"))));
+                    sampleValues.put("Channel1PosChannel2Neg", Integer.parseInt(eachChannel.get(headerValueMap.get("Ch1+Ch2-"))));
+                    sampleValues.put("Channel1NegChannel2Pos", Integer.parseInt(eachChannel.get(headerValueMap.get("Ch1-Ch2+"))));
+                    if (allChannelsData.get(i).get(headerValueMap.get("CNV")) != null && !allChannelsData.get(i).get(headerValueMap.get("CNV")).isEmpty() && !eachChannel.get(headerValueMap.get("CNV")).isBlank()) {
+                        sampleValues.put("CNV", Double.parseDouble(eachChannel.get(headerValueMap.get("CNV"))));
+                    } else {
                         sampleValues.put("CNV", 0.0);
                     }
                     flatData.add(sampleValues);
