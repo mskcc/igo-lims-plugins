@@ -29,6 +29,8 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
     private final static String IGO_ID_WITH_ALPHABETS_PATTERN = "^[0-9]+_[A-Z]+_[0-9]+.*$";  // sample id without alphabets
 
     public int qxResultType = 0;
+    String numOfChannels = "";
+    String reference = "";
 
     private final String HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME = "Mouse_Human_CNV_PTGER2";
 private final List<String> expectedQx200RawResultsHeaders = Arrays.asList("Well", "ExptType", "Experiment", "Sample", "TargetType", "Target",
@@ -116,8 +118,11 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                     logInfo("Flattened QX200 data");
                 }
                 else { // QX600
-                    List<List<List<String>>> allChannelsData = getAllChannelsData(fileData, headerValueMap, isQX200);
-                    combinedChannelsData = flattenAllChannels(allChannelsData, headerValueMap, isQX200, pluginLogger);
+                    numOfChannels = clientCallback.showInputDialog("How many channels used for this QX600 experiment?");
+                    reference = clientCallback.showInputDialog("Please enter the exact reference name:");
+                    List<List<String>> refChannelsData = getRefChannelsData(fileData, headerValueMap, numOfChannels, reference);
+                    List<List<String>> targetChannelsData = getTargetChannelsData(fileData, headerValueMap, numOfChannels, reference);
+                    combinedChannelsData = flattenRefTargetChannels(refChannelsData, targetChannelsData, headerValueMap, numOfChannels, pluginLogger);
                     logInfo("Flattened QX600 data");
                 }
 
@@ -236,8 +241,11 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
     private List<List<String>> getChannel2Data(List<String> fileData, Map<String, Integer> headerValueMap, boolean isQX200) {
         return resultsProcessor.readChannel2Data(fileData, headerValueMap, isQX200);
     }
-    private List<List<List<String>>> getAllChannelsData(List<String> fileData, Map<String, Integer> headerValueMap, boolean isQX200) {
-        return resultsProcessor.readAllChannelsData(fileData, headerValueMap, isQX200);
+    private List<List<String>> getRefChannelsData(List<String> fileData, Map<String, Integer> headerValueMap, String numOfChannels, String ref) {
+        return resultsProcessor.readRefChannelsData(fileData, headerValueMap, numOfChannels, ref);
+    }
+    private List<List<String>> getTargetChannelsData(List<String> fileData, Map<String, Integer> headerValueMap, String numOfChannels, String ref) {
+        return resultsProcessor.readTargetChannelsData(fileData, headerValueMap, numOfChannels, ref);
     }
 
     /**
@@ -252,8 +260,8 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
         return resultsProcessor.concatenateChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200, logger);
     }
 
-    private List<Map<String, Object>> flattenAllChannels(List<List<List<String>>> allChannels, Map<String, Integer> headerValueMap, boolean isQX200, PluginLogger logger) {
-        return resultsProcessor.concatenateAllChannels(allChannels, headerValueMap, isQX200, logger);
+    private List<Map<String, Object>> flattenRefTargetChannels(List<List<String>> refChannels, List<List<String>> targetChannels, Map<String, Integer> headerValueMap, String numOfChannels, PluginLogger logger) {
+        return resultsProcessor.concatenateRefTargetChannels(refChannels, targetChannels, headerValueMap, numOfChannels, logger);
     }
     /**
      * Group the data based on Sample and Target values in the results.

@@ -9,11 +9,12 @@ public interface DdPcrResultsReader {
     List<List<String>> readChannel1Data(List<String> fileData, Map<String, Integer> headerValueMap, boolean QX200);
 
     List<List<String>> readChannel2Data(List<String> fileData, Map<String, Integer> headerValueMap, boolean QX200);
-    List<List<List<String>>> readAllChannelsData(List<String> fileData, Map<String, Integer> headerValueMap, boolean isQX200);
+    List<List<String>> readRefChannelsData(List<String> fileData, Map<String, Integer> headerValueMap, String numOfChannels, String reference);
+    List<List<String>> readTargetChannelsData(List<String> fileData, Map<String, Integer> headerValueMap, String numOfChannels, String reference);
 
     List<Map<String, Object>> concatenateChannel1AndChannel2Data(List<List<String>> channel1Data, List<List<String>> channel2Data, Map<String, Integer> headerValueMap, boolean isQX200, PluginLogger logger);
 
-    List<Map<String, Object>> concatenateAllChannels(List<List<List<String>>> allChannels, Map<String, Integer> headerValueMap, boolean isQX200, PluginLogger logger);
+    List<Map<String, Object>> concatenateRefTargetChannels(List<List<String>> targetChannelsData, List<List<String>> refChannelsData, Map<String, Integer> headerValueMap, String numOfChannels, PluginLogger logger);
 
     Map<String, List<Map<String, Object>>> aggregateResultsBySampleAndAssay(List<Map<String, Object>> flatData, boolean QX200);
 
