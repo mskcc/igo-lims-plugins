@@ -178,7 +178,7 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                     }
                     sampleValues.put("AcceptedDroplets", Integer.parseInt(targetChannelsData.get(i).get(headerValueMap.get("Accepted Droplets"))));
                     sampleValues.put("TargetGene", targetChannelsData.get(i).get(headerValueMap.get("Target")));
-                    sampleValues.put("TargetRef", targetChannelsData.get(i).get(headerValueMap.get("Target")));
+                    sampleValues.put("TargetRef", refChannelsData.get(j).get(headerValueMap.get("Target")));
                     if ((Double.parseDouble(targetChannelsData.get(i).get(headerValueMap.get("Conc(copies/µL)"))) + Double.parseDouble(refConcentration)) == 0) {
                         sampleValues.put("FractionalAbundance", 0.0);
                     } else {
@@ -200,6 +200,7 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                 }
             }
         }
+        logger.logInfo("flatted data size = " + flatData.size());
         return flatData;
     }
 
@@ -214,14 +215,8 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                 keyValue = data.get("Sample").toString() + "/" + data.get("Target").toString();
             }
             else { //QX600
-                if (toggle) {
-                    keyValue = data.get("Sample").toString() + "/Gene:" + data.get("TargetGene").toString();
-                    toggle = false;
-                }
-                else {
-                    keyValue = data.get("Sample").toString() + "/Ref:" + data.get("TargetRef").toString();
-                    toggle = true;
-                }
+                keyValue = data.get("Sample").toString() + "/" + data.get("TargetGene").toString();
+                //keyValue = data.get("Sample").toString() + "/Ref:" + data.get("TargetRef").toString();
             }
             groupedData.putIfAbsent(keyValue, new ArrayList<>());
             groupedData.get(keyValue).add(data);
