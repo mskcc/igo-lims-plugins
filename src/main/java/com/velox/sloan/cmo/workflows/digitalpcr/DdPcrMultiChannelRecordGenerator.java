@@ -142,6 +142,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                         dataFieldValueMap.put("SignalCh5", sixChannelRec.getValue("SignalCh5", user));
                         dataFieldValueMap.put("SignalCh6", sixChannelRec.getValue("SignalCh6", user));
                         dataFieldValueMap.put("WellNotes", sixChannelRec.getValue("WellNotes", user));
+
                     }
                     dataFieldValueMap.put("Plot", sixChannelRec.getValue("Plot", user));
                     dataFieldValueMap.put("RdqConversionFactor", sixChannelRec.getValue("RdqConversionFactor", user));

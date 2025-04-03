@@ -34,8 +34,8 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
     }
 
     public PluginResult run() throws Throwable {
-
         try {
+            boolean isBetaChainOnly = clientCallback.showYesNoDialog("", "Is this experiment a beta chain only?");
             List<DataRecord> assignedIndices = activeTask.getAttachedDataRecords("IgoTcrSeqIndexBarcode", user);
             List<DataRecord> attachedSamplesWithControls = activeTask.getAttachedDataRecords("Sample", user);
             Set<String> setOfProjects = new HashSet<>();
@@ -108,12 +108,12 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
 
                 List<String[]> dataLines = new LinkedList<>();
                 logInfo("Generating alpha sheet..");
-                List<Map<String, String>> alphaValuesForReport = setFieldsForReport(alphaIndicesInfo);
+                List<Map<String, String>> alphaValuesForReport = setFieldsForReport(alphaIndicesInfo, isBetaChainOnly);
                 generateCSVData(headerForReport, alphaValuesForReport, dataLines, fileName, true);
 
                 dataLines.clear();
                 logInfo("Generating beta sheet..");
-                List<Map<String, String>> betaValuesForReport = setFieldsForReport(betaIndicesInfo);
+                List<Map<String, String>> betaValuesForReport = setFieldsForReport(betaIndicesInfo, isBetaChainOnly);
                 generateCSVData(headerForReport, betaValuesForReport, dataLines, fileName, false);
             }
 
@@ -141,20 +141,25 @@ public class CreateTCRseqManifestSheet extends DefaultGenericPlugin {
      * @throws RemoteException
      * @throws IoError
      */
-    private List<Map<String, String>> setFieldsForReport(List<DataRecord> manifestInfo){
+    private List<Map<String, String>> setFieldsForReport(List<DataRecord> manifestInfo, boolean betaChain){
         List<Map<String, String>> reportFieldValueMaps = new ArrayList<>();
         for (DataRecord record : manifestInfo) {
             Map<String, String> reportFieldValues = new HashMap<>();
             try {
                 Object[] sampleId = record.getValue("SampleId", user).toString().split("_");
                 String manifestSampleName = record.getValue("OtherSampleId", user).toString();
-                if (sampleId[sampleId.length - 1].toString().equals("1")) {
-                    logInfo("Appending _alpha");
-                    manifestSampleName += "_alpha";
-                }
-                else if (sampleId[sampleId.length - 1].toString().equals("2")) {
+                if (betaChain) {
                     logInfo("Appending _beta");
                     manifestSampleName += "_beta";
+                }
+                else {
+                    if (sampleId[sampleId.length - 1].toString().equals("1")) {
+                        logInfo("Appending _alpha");
+                        manifestSampleName += "_alpha";
+                    } else if (sampleId[sampleId.length - 1].toString().equals("2")) {
+                        logInfo("Appending _beta");
+                        manifestSampleName += "_beta";
+                    }
                 }
                 logInfo("manifestSampleName = " + manifestSampleName);
                 reportFieldValues.put("SampleName", manifestSampleName);
