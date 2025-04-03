@@ -14,10 +14,6 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
             if (isQX200) {
                 if (valuesInRow.get(headerValueMap.get("TargetType")).contains("Unknown")) {
                     channel1RawData.add(valuesInRow);
-                }            }
-            else { //QX600
-                if (valuesInRow.get(headerValueMap.get("DyeName(s)")).contains("FAM")) {
-                    channel1RawData.add(valuesInRow);
                 }
             }
         }
@@ -32,14 +28,33 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
             if (isQX200) {
                 if (valuesInRow.get(headerValueMap.get("TargetType")).contains("Ref")) {
                     channel2RawData.add(valuesInRow);
-                }            }
-            else { //QX600
-                if (valuesInRow.get(headerValueMap.get("DyeName(s)")).contains("HEX")) {
-                    channel2RawData.add(valuesInRow);
                 }
             }
         }
         return channel2RawData;
+    }
+
+    @Override
+    public List<List<String>> readRefChannelsData(List<String> fileData, Map<String, Integer> headerValueMap, String numOfChannels, String ref) {
+        List<List<String>> allChannelsRawData = new ArrayList<>();
+        for (String row : fileData) {
+            List<String> valuesInRow = Arrays.asList(row.split(","));
+            if (valuesInRow.get(headerValueMap.get("DyeName(s)")).equalsIgnoreCase(ref)) {
+                allChannelsRawData.add(valuesInRow);
+            }
+        }
+        return allChannelsRawData;
+    }
+    @Override
+    public List<List<String>> readTargetChannelsData(List<String> fileData, Map<String, Integer> headerValueMap, String numOfChannels, String ref) {
+        List<List<String>> allChannelsRawData = new ArrayList<>();
+        for (String row : fileData) {
+            List<String> valuesInRow = Arrays.asList(row.split(","));
+            if (!valuesInRow.get(headerValueMap.get("DyeName(s)")).equalsIgnoreCase(ref)) {
+                allChannelsRawData.add(valuesInRow);
+            }
+        }
+        return allChannelsRawData;
     }
 
     @Override
@@ -122,6 +137,73 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
         return flatData;
     }
 
+    public List<Map<String, Object>> concatenateRefTargetChannels(List<List<String>> targetChannelsData, List<List<String>> refChannelsData, Map<String, Integer> headerValueMap, String numOfChannels, PluginLogger logger) {
+        List<Map<String, Object>> flatData = new ArrayList<>();
+        logger.logInfo("Called concatenate all channels..");
+        logger.logInfo("refChannelsData size = " + refChannelsData.size());
+        logger.logInfo("targetChannelsData size = " + targetChannelsData.size());
+        for (int i  = 0; i < targetChannelsData.size(); i++) {
+            int index = headerValueMap.get("Conc(copies/µL)");
+            String targetWell = "";
+            String targetSampleId = "";
+            String refSampleId = "";
+            String refWell = "";
+            String refIndex = "";
+            String refConcentration = "";
+            logger.logInfo("Target name is: " + targetChannelsData.get(i).get(headerValueMap.get("DyeName(s)")));
+            for (int j = 0; j < refChannelsData.size(); j++) {
+                logger.logInfo("Ref name is: " + refChannelsData.get(j).get(headerValueMap.get("DyeName(s)")));
+                refSampleId = refChannelsData.get(j).get(headerValueMap.get("Sample description 2"));
+                refWell = refChannelsData.get(j).get(headerValueMap.get("Well"));
+                refIndex = refChannelsData.get(j).get(index);
+                refConcentration = refChannelsData.get(j).get(headerValueMap.get("Conc(copies/µL)"));
+                targetWell = targetChannelsData.get(i).get(headerValueMap.get("Well"));
+                targetSampleId = targetChannelsData.get(i).get(headerValueMap.get("Sample description 2"));
+
+                logger.logInfo("Ref well = " + refWell + ", target well = " + targetWell + "| ref sampleId = " + refSampleId + ", target sampleId = " + targetSampleId);
+                if (refWell.equalsIgnoreCase(targetWell) && refSampleId.equalsIgnoreCase(targetSampleId)) {
+                    logger.logInfo("iterating over same sample wells..");
+                    Map<String, Object> sampleValues = new HashMap<>();
+                    sampleValues.put("Well", targetChannelsData.get(i).get(headerValueMap.get("Well")));
+                    logger.logInfo("Conc(copies/µL): " + headerValueMap.get("Conc(copies/µL)"));
+                    logger.logInfo("target size = " + targetChannelsData.get(i).size());
+                    logger.logInfo("header value map of Conc(Copies/µl) = " + headerValueMap.get("Conc(copies/µL)"));
+                    sampleValues.put("Sample", targetChannelsData.get(i).get(headerValueMap.get("Sample description 2")));
+
+                    if (targetChannelsData.get(i).get(index) != null && !targetChannelsData.get(i).get(index).isEmpty() && !targetChannelsData.get(i).get(index).isBlank()) {
+                        sampleValues.put("ConcentrationMutation", Double.parseDouble(targetChannelsData.get(i).get(index)));
+                    }
+                    if (refChannelsData.get(j).get(index) != null && !refChannelsData.get(j).get(index).isEmpty() && !refChannelsData.get(j).get(index).isBlank()) {
+                        sampleValues.put("ConcentrationWildType", Double.parseDouble(refIndex));
+                    }
+                    sampleValues.put("AcceptedDroplets", Integer.parseInt(targetChannelsData.get(i).get(headerValueMap.get("Accepted Droplets"))));
+                    sampleValues.put("TargetGene", targetChannelsData.get(i).get(headerValueMap.get("Target")));
+                    sampleValues.put("TargetRef", refChannelsData.get(j).get(headerValueMap.get("Target")));
+                    if ((Double.parseDouble(targetChannelsData.get(i).get(headerValueMap.get("Conc(copies/µL)"))) + Double.parseDouble(refConcentration)) == 0) {
+                        sampleValues.put("FractionalAbundance", 0.0);
+                    } else {
+                        Double fractionalAbundance = Double.parseDouble(targetChannelsData.get(i).get(headerValueMap.get("Conc(copies/µL)"))) /
+                                (Double.parseDouble(targetChannelsData.get(i).get(headerValueMap.get("Conc(copies/µL)"))) + Double.parseDouble(refConcentration));
+                        sampleValues.put("FractionalAbundance", fractionalAbundance);
+                    }
+
+                    logger.logInfo("taregt channel .get(headerValueMap.get(\"Ch1+Ch2+\")) = " + targetChannelsData.get(i).get(headerValueMap.get("Ch1+Ch2+")));
+                    sampleValues.put("Channel1PosChannel2Pos", Integer.parseInt(targetChannelsData.get(i).get(headerValueMap.get("Ch1+Ch2+"))));
+                    sampleValues.put("Channel1PosChannel2Neg", Integer.parseInt(targetChannelsData.get(i).get(headerValueMap.get("Ch1+Ch2-"))));
+                    sampleValues.put("Channel1NegChannel2Pos", Integer.parseInt(targetChannelsData.get(i).get(headerValueMap.get("Ch1-Ch2+"))));
+                    if (targetChannelsData.get(i).get(headerValueMap.get("CNV")) != null && !targetChannelsData.get(i).get(headerValueMap.get("CNV")).isEmpty() && !targetChannelsData.get(i).get(headerValueMap.get("CNV")).isBlank()) {
+                        sampleValues.put("CNV", Double.parseDouble(targetChannelsData.get(i).get(headerValueMap.get("CNV"))));
+                    } else {
+                        sampleValues.put("CNV", 0.0);
+                    }
+                    flatData.add(sampleValues);
+                }
+            }
+        }
+        logger.logInfo("flatted data size = " + flatData.size());
+        return flatData;
+    }
+
     @Override
     public Map<String, List<Map<String, Object>>> aggregateResultsBySampleAndAssay(List<Map<String, Object>> flatData, boolean QX200) {
         Map<String, List<Map<String, Object>>> groupedData = new HashMap<>();
@@ -133,14 +215,8 @@ public class DdPcrResultsProcessor implements DdPcrResultsReader {
                 keyValue = data.get("Sample").toString() + "/" + data.get("Target").toString();
             }
             else { //QX600
-                if (toggle) {
-                    keyValue = data.get("Sample").toString() + "/Gene:" + data.get("TargetGene").toString();
-                    toggle = false;
-                }
-                else {
-                    keyValue = data.get("Sample").toString() + "/Ref:" + data.get("TargetRef").toString();
-                    toggle = true;
-                }
+                keyValue = data.get("Sample").toString() + "/" + data.get("TargetGene").toString();
+                //keyValue = data.get("Sample").toString() + "/Ref:" + data.get("TargetRef").toString();
             }
             groupedData.putIfAbsent(keyValue, new ArrayList<>());
             groupedData.get(keyValue).add(data);

@@ -12,6 +12,7 @@ import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sloan.cmo.workflows.IgoLimsPluginUtils.IgoLimsPluginUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
+import javax.swing.plaf.SplitPaneUI;
 import java.io.IOException;
 import java.rmi.RemoteException;
 import java.util.*;
@@ -28,6 +29,8 @@ public class DigitalPcrResultsParser extends DefaultGenericPlugin {
     private final static String IGO_ID_WITH_ALPHABETS_PATTERN = "^[0-9]+_[A-Z]+_[0-9]+.*$";  // sample id without alphabets
 
     public int qxResultType = 0;
+    String numOfChannels = "";
+    String reference = "";
 
     private final String HUMAN_MOUSE_PERCENTAGE_ASSAY_NAME = "Mouse_Human_CNV_PTGER2";
 private final List<String> expectedQx200RawResultsHeaders = Arrays.asList("Well", "ExptType", "Experiment", "Sample", "TargetType", "Target",
@@ -107,11 +110,23 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
             for (String file : filesWithDigitalPcrRawData) {
                 List<String> fileData = igoUtils.readDataFromCsvFile(clientCallback.readBytes(file));
                 Map<String, Integer> headerValueMap = igoUtils.getCsvHeaderValueMap(fileData, pluginLogger);
-                List<List<String>> channel1Data = getChannel1Data(fileData, headerValueMap, isQX200);
-                List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap, isQX200);
-                List<Map<String, Object>> channel1Channe2CombinedData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200, pluginLogger);
-                logInfo("Flattened data");
-                Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(channel1Channe2CombinedData, isQX200);
+                List<Map<String, Object>> combinedChannelsData = new ArrayList<>();
+                if (isQX200) {
+                    List<List<String>> channel1Data = getChannel1Data(fileData, headerValueMap, isQX200);
+                    List<List<String>> channel2Data = getChannel2Data(fileData, headerValueMap, isQX200);
+                    combinedChannelsData = flattenChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200, pluginLogger);
+                    logInfo("Flattened QX200 data");
+                }
+                else { // QX600
+                    numOfChannels = clientCallback.showInputDialog("How many channels used for this QX600 experiment?");
+                    reference = clientCallback.showInputDialog("Please enter the exact reference name:");
+                    List<List<String>> refChannelsData = getRefChannelsData(fileData, headerValueMap, numOfChannels, reference);
+                    List<List<String>> targetChannelsData = getTargetChannelsData(fileData, headerValueMap, numOfChannels, reference);
+                    combinedChannelsData = flattenRefTargetChannels(targetChannelsData, refChannelsData, headerValueMap, numOfChannels, pluginLogger);
+                    logInfo("Flattened QX600 data");
+                }
+
+                Map<String, List<Map<String, Object>>> groupedData = groupResultsBySampleAndAssay(combinedChannelsData, isQX200);
                 logInfo(groupedData.toString());
                 logInfo("grouped data size = " + groupedData.size());
                 List<DataRecord> attachedProtocolRecords = activeTask.getAttachedDataRecords("DdPcrProtocol1SixChannels", user);
@@ -134,7 +149,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                     logError("No attached 'Sample' records found attached to this task.");
                     return new PluginResult(false);
                 }
-                addResultsAsChildRecords(analyzedData, attachedSampleRecords);
+                addResultsAsChildRecords(analyzedData, attachedSampleRecords, isQX200);
             }
         } catch (RemoteException e) {
             String errMsg = String.format("Remote Exception Error while parsing DDPCR results file:\n%s", ExceptionUtils.getStackTrace(e));
@@ -149,6 +164,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
         }
         return new PluginResult(true);
     }
+
 
     /**
      * Check if the passed file is a valid CSV file.
@@ -225,6 +241,12 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
     private List<List<String>> getChannel2Data(List<String> fileData, Map<String, Integer> headerValueMap, boolean isQX200) {
         return resultsProcessor.readChannel2Data(fileData, headerValueMap, isQX200);
     }
+    private List<List<String>> getRefChannelsData(List<String> fileData, Map<String, Integer> headerValueMap, String numOfChannels, String ref) {
+        return resultsProcessor.readRefChannelsData(fileData, headerValueMap, numOfChannels, ref);
+    }
+    private List<List<String>> getTargetChannelsData(List<String> fileData, Map<String, Integer> headerValueMap, String numOfChannels, String ref) {
+        return resultsProcessor.readTargetChannelsData(fileData, headerValueMap, numOfChannels, ref);
+    }
 
     /**
      * Add Channel2 data to the rows containing Channel1 data as Concentration of the Reference.
@@ -238,6 +260,9 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
         return resultsProcessor.concatenateChannel1AndChannel2Data(channel1Data, channel2Data, headerValueMap, isQX200, logger);
     }
 
+    private List<Map<String, Object>> flattenRefTargetChannels(List<List<String>> targetChannels, List<List<String>> refChannels, Map<String, Integer> headerValueMap, String numOfChannels, PluginLogger logger) {
+        return resultsProcessor.concatenateRefTargetChannels(targetChannels, refChannels, headerValueMap, numOfChannels, logger);
+    }
     /**
      * Group the data based on Sample and Target values in the results.
      *
@@ -398,13 +423,13 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                 }
                 logInfo("reactionCount = " + reactionCount);
                 analyzedData.put("Assay", target);
-                analyzedData.put("OtherSampleId", sampleName);
-                if (getSum(groupedData.get(key), "ConcentrationWildType") != 0.0) {
-                    analyzedData.put("CNV", (getSum(groupedData.get(key), "ConcentrationMutation")/getSum(groupedData.get(key), "ConcentrationWildType")) * 2);
-                }
-                else {
-                    analyzedData.put("CNV", 0.0);
-                }
+                //if (QX200) {
+                    analyzedData.put("OtherSampleId", sampleName);
+                //}
+//                else {
+//                    analyzedData.put("SampleId", sampleName);
+//                }
+                analyzedData.put("CNV", getAverage(groupedData.get(key), "CNV"));
                 analyzedData.put("FractionalAbundance", (Double) getAverage(groupedData.get(key), "FractionalAbundance") * 100.00);
                 analyzedData.put("ConcentrationMutation", getSum(groupedData.get(key), "ConcentrationMutation") * 20); //Copies Gene
                 analyzedData.put("ConcentrationWildType", getSum(groupedData.get(key), "ConcentrationWildType") * 20); // Copies Ref
@@ -431,6 +456,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
         } catch (NotFound | RemoteException | IoError | ServerException e) {
             throw new RuntimeException(e);
         }
+        logInfo("analyzedDataValues size = " + analyzedDataValues.size());
         return analyzedDataValues;
     }
 
@@ -503,22 +529,38 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
      * @throws ServerException
      * @throws IoError
      */
-    private void addResultsAsChildRecords(List<Map<String, Object>> analyzedDataValues, List<DataRecord> attachedSamples) throws RemoteException, ServerException {
+    private void addResultsAsChildRecords(List<Map<String, Object>> analyzedDataValues, List<DataRecord> attachedSamples, boolean QX200) throws RemoteException, ServerException {
         List<DataRecord> recordsToAttachToTask = new ArrayList<>();
         logInfo(Integer.toString(analyzedDataValues.size()));
+        logInfo("QX200 = " + QX200);
         for (Map<String, Object> data : analyzedDataValues) {
             logInfo(data.toString());
-            String analyzedDataSampleId = data.get("OtherSampleId").toString();
+
+            String analyzedDataSampleId = "";
+            //if (QX200) {
+                analyzedDataSampleId = data.get("OtherSampleId").toString();
+//            }
+//            else {
+//                analyzedDataSampleId = data.get("SampleId").toString();
+//            }
             for (DataRecord sample : attachedSamples) {
                 try {
                     Object sampleId = sample.getValue("SampleId", user);
                     Object otherSampleId = sample.getValue("OtherSampleId", user);
+                    logInfo("analyzedDataSampleId = " + analyzedDataSampleId + " and sampleID = " + otherSampleId);
                     if (analyzedDataSampleId.equals(otherSampleId) && data.get("SampleId") == null) {
                         data.put("SampleId", sampleId);
-                        logInfo(data.toString());
+                        logInfo("Added sampleId value and attach the record " + data.toString());
                         DataRecord recordToAttach = sample.addChild(activeTask.getInputDataTypeName(), data, user);
                         recordsToAttachToTask.add(recordToAttach);
                     }
+
+//                    else if (!QX200 && analyzedDataSampleId.equals(sampleId) && data.get("SampleId") == null) {
+//                        data.put("SampleId", sampleId);
+//                        logInfo("Adding QX600 results as samples' child records; " + data.toString());
+//                        DataRecord recordToAttach = sample.addChild(activeTask.getInputDataTypeName(), data, user);
+//                        recordsToAttachToTask.add(recordToAttach);
+//                    }
                 } catch (RemoteException e) {
                     logError(String.format("RemoteException -> Error while setting child records on sample with recordid  '%d':\n%s", sample.getRecordId(), ExceptionUtils.getStackTrace(e)));
                 } catch (NotFound notFound) {
