@@ -40,17 +40,8 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
             Map<String, Object> dataFieldValueMap = new HashMap<>();
             List<DataRecord> ddPcrSixChannelRecords = new ArrayList<>();
 
-            String[] QXResultSheetType = {"Two Channels", "Six Channels"};
-            int qxVesrsion = clientCallback.showOptionDialog("QX600 Type", "How many channels are you running?", QXResultSheetType, 0);
-            logInfo("qx channels = " + qxVesrsion);
-            boolean twoChannels = true;
-            if (qxVesrsion == 1) {
-                twoChannels = false;
-            }
-            int numOfChannels = 2;
-            if (!twoChannels) {
-                numOfChannels = 6;
-            }
+            int numOfChannels = Integer.parseInt(clientCallback.showInputDialog("How many channels are you running?"));
+            logInfo("QX #channels = " + numOfChannels);
 
             for (DataRecord sixChannelRec : attachedDdpcrSixChannels) {
                 boolean firstTime = true;
@@ -99,7 +90,7 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                     //}
                     dataFieldValueMap.put("TargetType", "Unknown");
                     sixChannelRec.setDataField("SignalCh1", "FAM", user);
-
+                    logInfo("i is: " + i);
                     if (i == 1) {
                         dataFieldValueMap.put("SignalCh1", "None");
                         dataFieldValueMap.put("SignalCh2", "HEX");
@@ -107,43 +98,40 @@ public class DdPcrMultiChannelRecordGenerator extends DefaultGenericPlugin {
                         dataFieldValueMap.put("SignalCh4", "None");
                         dataFieldValueMap.put("SignalCh5", "None");
                         dataFieldValueMap.put("SignalCh6", "None");
+                    } else if (i == 2) {
+                        dataFieldValueMap.put("SignalCh2", "None");
+                        dataFieldValueMap.put("SignalCh3", "Cy5");
+                        dataFieldValueMap.put("SignalCh4", "None");
+                        dataFieldValueMap.put("SignalCh5", "None");
+                        dataFieldValueMap.put("SignalCh6", "None");
+                    } else if (i == 3) {
+                        dataFieldValueMap.put("SignalCh2", "None");
+                        dataFieldValueMap.put("SignalCh3", "None");
+                        dataFieldValueMap.put("SignalCh4", "Cy5.5");
+                        dataFieldValueMap.put("SignalCh5", "None");
+                        dataFieldValueMap.put("SignalCh6", "None");
+                    } else if (i == 4) {
+                        dataFieldValueMap.put("SignalCh2", "None");
+                        dataFieldValueMap.put("SignalCh3", "None");
+                        dataFieldValueMap.put("SignalCh4", "None");
+                        dataFieldValueMap.put("SignalCh5", "ROX");
+                        dataFieldValueMap.put("SignalCh6", "None");
                     }
-                    logInfo("i is: " + i);
-                    if (!twoChannels) {
-                        if (i == 2) {
-                            dataFieldValueMap.put("SignalCh2", "None");
-                            dataFieldValueMap.put("SignalCh3", "Cy5");
-                            dataFieldValueMap.put("SignalCh4", "None");
-                            dataFieldValueMap.put("SignalCh5", "None");
-                            dataFieldValueMap.put("SignalCh6", "None");
-                        } else if (i == 3) {
-                            dataFieldValueMap.put("SignalCh2", "None");
-                            dataFieldValueMap.put("SignalCh3", "None");
-                            dataFieldValueMap.put("SignalCh4", "Cy5.5");
-                            dataFieldValueMap.put("SignalCh5", "None");
-                            dataFieldValueMap.put("SignalCh6", "None");
-                        } else if (i == 4) {
-                            dataFieldValueMap.put("SignalCh2", "None");
-                            dataFieldValueMap.put("SignalCh3", "None");
-                            dataFieldValueMap.put("SignalCh4", "None");
-                            dataFieldValueMap.put("SignalCh5", "ROX");
-                            dataFieldValueMap.put("SignalCh6", "None");
-                        }
-                        else if (i == 5) {
-                            dataFieldValueMap.put("SignalCh2", "None");
-                            dataFieldValueMap.put("SignalCh3", "None");
-                            dataFieldValueMap.put("SignalCh4", "None");
-                            dataFieldValueMap.put("SignalCh5", "None");
-                            dataFieldValueMap.put("SignalCh6", "ATTO 590");
-                        }
-                    } else { // two channels
-                        dataFieldValueMap.put("SignalCh3", sixChannelRec.getValue("SignalCh3", user));
-                        dataFieldValueMap.put("SignalCh4", sixChannelRec.getValue("SignalCh4", user));
-                        dataFieldValueMap.put("SignalCh5", sixChannelRec.getValue("SignalCh5", user));
-                        dataFieldValueMap.put("SignalCh6", sixChannelRec.getValue("SignalCh6", user));
-                        dataFieldValueMap.put("WellNotes", sixChannelRec.getValue("WellNotes", user));
-
+                    else if (i == 5) {
+                        dataFieldValueMap.put("SignalCh2", "None");
+                        dataFieldValueMap.put("SignalCh3", "None");
+                        dataFieldValueMap.put("SignalCh4", "None");
+                        dataFieldValueMap.put("SignalCh5", "None");
+                        dataFieldValueMap.put("SignalCh6", "ATTO 590");
                     }
+//                     else { // two channels
+//                        dataFieldValueMap.put("SignalCh3", sixChannelRec.getValue("SignalCh3", user));
+//                        dataFieldValueMap.put("SignalCh4", sixChannelRec.getValue("SignalCh4", user));
+//                        dataFieldValueMap.put("SignalCh5", sixChannelRec.getValue("SignalCh5", user));
+//                        dataFieldValueMap.put("SignalCh6", sixChannelRec.getValue("SignalCh6", user));
+//                        dataFieldValueMap.put("WellNotes", sixChannelRec.getValue("WellNotes", user));
+//                    }
+                    dataFieldValueMap.put("WellNotes", sixChannelRec.getValue("WellNotes", user));
                     dataFieldValueMap.put("Plot", sixChannelRec.getValue("Plot", user));
                     dataFieldValueMap.put("RdqConversionFactor", sixChannelRec.getValue("RdqConversionFactor", user));
 
