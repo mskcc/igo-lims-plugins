@@ -28,10 +28,18 @@ public class GetPlatesForAProject extends DefaultGenericPlugin {
             List<DataRecord> requests = dataRecordManager.queryDataRecords("Request", "RequestId = '" + requestId + "'", user);
             DataRecord[] relatedSamples = requests.get(0).getChildrenOfType("Sample", user);
             Set<DataRecord> plates = new HashSet<>();
+            Set<DataRecord> racks = new HashSet<>();
             for (DataRecord sample: relatedSamples) {
-                plates.add(Arrays.asList(sample.getParentsOfType("Plate", user).get(0)).get(0));
+                if (sample.getParentsOfType("Plate", user) != null && sample.getParentsOfType("Plate", user).size() > 0) {
+                    plates.add(Arrays.asList(sample.getParentsOfType("Plate", user).get(0)).get(0));
+                }
+                String micronicTubeBarcode = sample.getStringVal("MicronicTubeBarcode", user);
+                if (sample.getParentsOfType("MicronicRack", user) != null && sample.getParentsOfType("MicronicRack", user).size() > 0) {
+                    racks.add(Arrays.asList(sample.getParentsOfType("MicronicRack", user).get(0)).get(0));
+                }
             }
             activeTask.addAttachedDataRecords(plates);
+            activeTask.addAttachedDataRecords(racks);
 
         } catch (Exception e) {
             clientCallback.displayError(String.format("An exception occurred while finding plates of the entered project ID:\n%s", ExceptionUtils.getStackTrace(e)));
