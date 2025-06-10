@@ -32,8 +32,6 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
     public SmartSeqSampleSplitter () {
         setTaskSubmit(true);
         setOrder(PluginOrder.LAST.getOrder());
-//        setTaskEntry(true);
-//        setOrder(PluginOrder.EARLY.getOrder());
     }
     @Override
     public boolean shouldRun() throws RemoteException {
