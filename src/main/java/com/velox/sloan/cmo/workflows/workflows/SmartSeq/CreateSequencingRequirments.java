@@ -36,7 +36,7 @@ public class CreateSequencingRequirments extends DefaultGenericPlugin {
                 values.put("sampleId", sampleId);
                 values.put("otherSampleId", otherSampleId);
                 values.put("SequencingRunType","PE100");
-                values.put("RequestedReads", "5-10M");
+                values.put("RequestedReads", "5");
                 values.put("TumorOrNormal", tumorOrNormal);
 
                 DataRecord newSeqReqRecord = dataRecordManager.addDataRecord("SeqRequirement", user);
