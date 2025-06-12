@@ -718,6 +718,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 qcRecord.put("TumorOrNormal", sample.getStringVal("TumorOrNormal", user));
                 qcRecord.put("Preservation", sample.getStringVal("Preservation", user));
                 qcRecord.put("Recipe", sample.getStringVal("Recipe", user));
+                qcRecord.put("SampleOrigin", sample.getStringVal("SampleOrigin", user));
                 List<DataRecord> listOfSamplesAncestors = sample.getAncestorsOfType("Sample", user);
                 if(listOfSamplesAncestors != null && listOfSamplesAncestors.size() > 0) {
                     qcRecord.put("SourceSampleId", listOfSamplesAncestors.get(0).getValue("SampleId", user));
@@ -788,6 +789,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 qcRecord.put("TotalMass", sample.getDoubleVal("TotalMass", user));
                 qcRecord.put("Preservation", sample.getStringVal("Preservation", user));
                 qcRecord.put("Recipe", sample.getStringVal("Recipe", user));
+                qcRecord.put("SampleOrigin", sample.getStringVal("SampleOrigin", user));
                 List<DataRecord> listOfSamplesAncestors = sample.getAncestorsOfType("Sample", user);
                 if(listOfSamplesAncestors != null && listOfSamplesAncestors.size() > 0) {
                     qcRecord.put("SourceSampleId", listOfSamplesAncestors.get(0).getValue("SampleId", user));
