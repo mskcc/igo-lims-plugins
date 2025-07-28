@@ -34,12 +34,13 @@ public class RequestFieldAutoSetter extends DefaultGenericPlugin {
     public RequestFieldAutoSetter() {
         setTaskEntry(true);
         //setUserGroupList(permittedUsers);
-        setOrder(PluginOrder.FIRST.getOrder());
+        setOrder(PluginOrder.LAST.getOrder());
     }
 
     @Override
     public boolean shouldRun() throws RemoteException, ServerException, NotFound {
         return activeTask.getTask().getTaskOptions().containsKey("SET REQUEST FIELDS AUTOMATICALLY")
+                && activeTask.getTask().getTaskOptions().containsKey("SET REQUEST FIELDS AUTOMATICALLY")
                 && activeTask.getStatus() != ActiveTask.COMPLETE;
     }
 
@@ -90,6 +91,7 @@ public class RequestFieldAutoSetter extends DefaultGenericPlugin {
                 }
                 dataRecordManager.storeAndCommit("Set NeedExtraction and SequencerType for RequestId: " + getRequestId(request), null, user);
             }
+            activeTask.getTask().getTaskOptions().put("REQUEST FIELDS SET AUTOMATICALLY", "");
         } catch (Exception e) {
             String errMsg = "Exception while setting Request fields: " + ExceptionUtils.getStackTrace(e);
             clientCallback.displayError(errMsg);
