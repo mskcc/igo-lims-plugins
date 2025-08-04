@@ -5,6 +5,7 @@ import com.velox.api.plugin.PluginResult;
 import com.velox.sapioutils.server.plugin.DefaultGenericPlugin;
 import com.velox.sapioutils.shared.enums.PluginOrder;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -12,7 +13,7 @@ public class CreateControls extends DefaultGenericPlugin {
     private List<String> controlTypes = Arrays.asList("Positive", "Negative", "CONTROL_RNA_5K", "CONTROL_RNA_20K", "CONTROL_RNA_100K", "Other");
     public CreateControls() {
         setTaskEntry(true);
-        setOrder(PluginOrder.EARLY.getOrder());
+        setOrder(PluginOrder.MIDDLE.getOrder());
     }
     @Override
     public boolean shouldRun() throws RemoteException {
@@ -20,26 +21,30 @@ public class CreateControls extends DefaultGenericPlugin {
                 && !activeTask.getTask().getTaskOptions().containsKey("Control Records Generated");
     }
     public PluginResult run() {
+        logInfo("Entered the add controls plugin!!");
         try {
-            List<DataRecord> samples = activeTask.getAttachedDataRecords("Sample", user);
-            String sampleType = samples.get(0).getStringVal("ExemplarSampleType", user);
-            String requestId = samples.get(0).getParentsOfType("Request", user).get(0).getStringVal("RequestId", user);
             List<String> controlList = clientCallback.showListDialog("Please Select All the Type of the Control(s) to Generate:", controlTypes, true, user);
             List<DataRecord> allControls = new LinkedList<>();
+            logInfo("controlList size = " + controlList.size());
             for (String control : controlList) {
+                List<DataRecord> existingControls = dataRecordManager.queryDataRecords("Sample", "IsControl" + Boolean.TRUE + " OtherSampleId like '%" + control + "%' ", user);
+                int lastCount = existingControls.size();
                 Map<String, Object> values = new HashMap<>();
                 values.put("Volume", 30);
-                values.put("SampleId", control + "_" + requestId);
+                values.put("SampleId", control + "_" + (lastCount + 1));
+                logInfo("control ID = " + values.get("SampleId"));
                 values.put("OtherSampleId", control);
-                values.put("ExemplarSampleType", sampleType);
+                values.put("ExemplarSampleType", "RNA");
                 DataRecord controlRec = dataRecordManager.addDataRecord("Sample", user);
                 controlRec.setFields(values, user);
                 allControls.add(controlRec);
+                logInfo("in the controls for loop!");
             }
             this.activeTask.addAttachedDataRecords(allControls);
             activeTask.getTask().getTaskOptions().put("Control Records Generated", "");
         }
         catch (Exception e) {
+            String errMsg = String.format("Remote Exception Error while generating control records:\n%s", e.getStackTrace());
             return new PluginResult(false);
         }
 
