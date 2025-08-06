@@ -119,7 +119,7 @@ private final List<String> expectedQx600RawResultsHeaders = Arrays.asList("Well"
                 }
                 else { // QX600
                     numOfChannels = clientCallback.showInputDialog("How many channels used for this QX600 experiment?");
-                    reference = clientCallback.showInputDialog("Please enter the exact reference name:");
+                    reference = clientCallback.showInputDialog("Please enter the exact Dye name of reference gene, e.g. HEX:");
                     List<List<String>> refChannelsData = getRefChannelsData(fileData, headerValueMap, numOfChannels, reference);
                     List<List<String>> targetChannelsData = getTargetChannelsData(fileData, headerValueMap, numOfChannels, reference);
                     combinedChannelsData = flattenRefTargetChannels(targetChannelsData, refChannelsData, headerValueMap, numOfChannels, pluginLogger);
