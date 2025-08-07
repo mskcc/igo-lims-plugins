@@ -27,20 +27,23 @@ public class CreateControls extends DefaultGenericPlugin {
             List<DataRecord> allControls = new LinkedList<>();
             logInfo("controlList size = " + controlList.size());
             for (String control : controlList) {
-                List<DataRecord> existingControls = dataRecordManager.queryDataRecords("Sample", "IsControl" + Boolean.TRUE + " OtherSampleId like '%" + control + "%' ", user);
+                List<DataRecord> existingControls = dataRecordManager.queryDataRecords("Sample", "IsControl = " + Boolean.TRUE + " AND OtherSampleId like '%" + control + "%' ", user);
                 int lastCount = existingControls.size();
+                logInfo("lastCount for control " + control + " is: " + lastCount);
                 Map<String, Object> values = new HashMap<>();
                 values.put("Volume", 30);
                 values.put("SampleId", control + "_" + (lastCount + 1));
                 logInfo("control ID = " + values.get("SampleId"));
                 values.put("OtherSampleId", control);
                 values.put("ExemplarSampleType", "RNA");
+                values.put("isControl", Boolean.TRUE);
                 DataRecord controlRec = dataRecordManager.addDataRecord("Sample", user);
                 controlRec.setFields(values, user);
                 allControls.add(controlRec);
                 logInfo("in the controls for loop!");
             }
             this.activeTask.addAttachedDataRecords(allControls);
+            //dataRecordManager.storeAndCommit("Ad RNA extraction control record", null, user);
             activeTask.getTask().getTaskOptions().put("Control Records Generated", "");
         }
         catch (Exception e) {
