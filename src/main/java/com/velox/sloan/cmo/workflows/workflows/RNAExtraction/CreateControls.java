@@ -8,7 +8,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.rmi.RemoteException;
+import java.text.SimpleDateFormat;
 import java.util.*;
+
+/**
+ * This plugin enables assignment of controls on a Micronic Rack.
+ *
+ * @author mirhajf
+ * */
 public class CreateControls extends DefaultGenericPlugin {
     private List<String> controlTypes = Arrays.asList("Positive", "Negative", "CONTROL_RNA_5K", "CONTROL_RNA_20K", "CONTROL_RNA_100K", "Other");
     public CreateControls() {
@@ -21,18 +28,18 @@ public class CreateControls extends DefaultGenericPlugin {
                 && !activeTask.getTask().getTaskOptions().containsKey("Control Records Generated");
     }
     public PluginResult run() {
-        logInfo("Entered the add controls plugin!!");
         try {
             List<String> controlList = clientCallback.showListDialog("Please Select All the Type of the Control(s) to Generate:", controlTypes, true, user);
             List<DataRecord> allControls = new LinkedList<>();
             logInfo("controlList size = " + controlList.size());
             for (String control : controlList) {
-                List<DataRecord> existingControls = dataRecordManager.queryDataRecords("Sample", "IsControl = " + Boolean.TRUE + " AND OtherSampleId like '%" + control + "%' ", user);
-                int lastCount = existingControls.size();
-                logInfo("lastCount for control " + control + " is: " + lastCount);
+                // The query below times out if multiple controls are selected due to the search delay on the sample table
+                //List<DataRecord> existingControls = dataRecordManager.queryDataRecords("Sample", "IsControl = " + Boolean.TRUE + " AND OtherSampleId like '%" + control + "%' ", user);
+                Date now = new Date();
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
                 Map<String, Object> values = new HashMap<>();
                 values.put("Volume", 30);
-                values.put("SampleId", control + "_" + (lastCount + 1));
+                values.put("SampleId", control + "_" + sdf.format(now));
                 logInfo("control ID = " + values.get("SampleId"));
                 values.put("OtherSampleId", control);
                 values.put("ExemplarSampleType", "RNA");
@@ -43,14 +50,12 @@ public class CreateControls extends DefaultGenericPlugin {
                 logInfo("in the controls for loop!");
             }
             this.activeTask.addAttachedDataRecords(allControls);
-            //dataRecordManager.storeAndCommit("Ad RNA extraction control record", null, user);
             activeTask.getTask().getTaskOptions().put("Control Records Generated", "");
         }
         catch (Exception e) {
             String errMsg = String.format("Remote Exception Error while generating control records:\n%s", e.getStackTrace());
             return new PluginResult(false);
         }
-
         return new PluginResult(true);
     }
 }
