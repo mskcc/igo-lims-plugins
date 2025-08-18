@@ -38,7 +38,6 @@ public class CreateSequencingRequirments extends DefaultGenericPlugin {
                 String otherSampleId = sample.getStringVal("OtherSampleId", user);
                 String tumorOrNormal = sample.getStringVal("TumorOrNormal", user);
                 values.put("SampleId", sampleId);
-                values.put("otherSampleId", otherSampleId);
                 values.put("SequencingRunType","PE100");
                 values.put("RequestedReads", "0.21");
                 values.put("MinimumReads", "0.21");
