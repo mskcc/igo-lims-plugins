@@ -31,13 +31,16 @@ public class CreateSequencingRequirments extends DefaultGenericPlugin {
             for (DataRecord sample : samples) {
                 Map<String, Object> values = new HashMap<>();
                 String sampleId = sample.getStringVal("SampleId", user);
+                String sampleName = sample.getStringVal("OtherSampleId", user);
                 String otherSampleId = sample.getStringVal("OtherSampleId", user);
                 String tumorOrNormal = sample.getStringVal("TumorOrNormal", user);
                 values.put("sampleId", sampleId);
                 values.put("otherSampleId", otherSampleId);
                 values.put("SequencingRunType","PE100");
-                values.put("RequestedReads", "5");
+                values.put("RequestedReads", "0.21");
+                values.put("MinimumReads", "0.21");
                 values.put("TumorOrNormal", tumorOrNormal);
+                values.put("OtherSampleId", sampleName);
 
                 DataRecord newSeqReqRecord = dataRecordManager.addDataRecord("SeqRequirement", user);
                 newSeqReqRecord.setFields(values, user);
@@ -46,6 +49,7 @@ public class CreateSequencingRequirments extends DefaultGenericPlugin {
 
             }
             this.activeTask.addAttachedDataRecords(seqReuirements);
+
             activeTask.getTask().getTaskOptions().put("_SEQ REQUIREMENTS CREATED", "");
         } catch (ServerException e) {
             String errMsg = String.format("ServerException while splitting SmartSeq samples:\n%s", ExceptionUtils.getStackTrace(e));
