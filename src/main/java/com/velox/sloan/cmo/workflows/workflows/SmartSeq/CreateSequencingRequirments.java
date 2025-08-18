@@ -12,7 +12,10 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import java.rmi.RemoteException;
 import java.rmi.ServerException;
 import java.util.*;
-
+/**
+ * This plugin is called in SMARTSeq library prep workflow to create sequencing requirements for individual samples.
+ * @author mirhajf
+ * */
 public class CreateSequencingRequirments extends DefaultGenericPlugin {
     public CreateSequencingRequirments() {
         setTaskEntry(true);
@@ -57,10 +60,6 @@ public class CreateSequencingRequirments extends DefaultGenericPlugin {
             logError(errMsg);
             return new PluginResult(false);
         }
-//        } catch (Exception e) {
-//            clientCallback.displayError(e.getMessage());
-//            return new PluginResult(false);
-//        }
         return new PluginResult(true);
     }
 }
