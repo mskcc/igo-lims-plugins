@@ -228,7 +228,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
 
             if(bankedSampleRecipeToCapturePanelMap.get(recipe) != null && bankedSampleRecipeToCapturePanelMap.get(recipe)
                     .size() == 1) {
-                //Don't ask!!
                 recipeToSelectedCapturePanel.put(recipe, bankedSampleRecipeToCapturePanelMap.get(recipe).first());
                 break;
             }
