@@ -272,7 +272,8 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
             return 0;
         }
         int nextIndexToUse = lastUsedIndexPosition + 1; //start with one index position after last index used.
-        if ((plateSize == 96 && nextIndexToUse > 8) || (plateSize == 384 && nextIndexToUse > 16)) {
+        if ((plateSize == 96 && indexAssignmentConfigs.get(lastUsedIndexPosition).getStringVal("WellId", user).toUpperCase().contains("H"))
+                || (plateSize == 384 && indexAssignmentConfigs.get(lastUsedIndexPosition).getStringVal("WellId", user).toUpperCase().contains("P"))) {
             for (int i = nextIndexToUse; i < indexAssignmentConfigs.size(); i++)
                 if (indexAssignmentConfigs.get(i).getStringVal("WellId", user).toUpperCase().contains("A")) {
                     return i;
