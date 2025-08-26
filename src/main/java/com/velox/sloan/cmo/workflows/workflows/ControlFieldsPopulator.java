@@ -23,9 +23,11 @@ import java.util.*;
  * Controls inherit the species and recipe from regular samples in the same workflow,
  * ensuring consistency and enabling automated processing.
  * 
- * @author IGO Development Team
+ * @author patelo2
  */
 public class ControlFieldsPopulator extends DefaultGenericPlugin {
+    
+  private static final String DUMMY_REQUEST_ID = "07000";
     
     /**
      * Constructor - sets plugin execution parameters
@@ -63,37 +65,50 @@ public class ControlFieldsPopulator extends DefaultGenericPlugin {
         try {
             List<DataRecord> samples = activeTask.getAttachedDataRecords("Sample", user);
             
+            // Step 1: Find species and recipe from non-control samples
             String species = "";
             String recipe = "";
             for (DataRecord sample : samples) {
                 Object isControl = sample.getValue("IsControl", user);
+                // Only process non-control samples (ignore IsControl = false samples completely)
                 if (isControl == null || !(Boolean) isControl) {
                     species = sample.getStringVal("Species", user);
                     recipe = sample.getStringVal("Recipe", user);
-                    break;
+                    if (species != null && recipe != null) {
+                        logInfo("Found species: " + species + ", recipe: " + recipe + " from non-control sample");
+                        break;
+                    }
                 }
             }
             
+            // Step 2: Populate control samples with species and recipe
             for (DataRecord sample : samples) {
                 Object isControl = sample.getValue("IsControl", user);
                 if (isControl != null && (Boolean) isControl) {
                     String sampleId = sample.getStringVal("SampleId", user);
                     sample.setDataField("Species", species, user);
                     sample.setDataField("Recipe", recipe, user);
-                    logInfo("Updated control: " + sampleId);
+                    logInfo("Updated control sample " + sampleId + " with species: " + species + ", recipe: " + recipe);
                 }
             }
             
+            // Step 3: Link all control samples to the constant dummy request record
             DataRecord dummyRecord = getDummyRecord();
             if (dummyRecord != null) {
                 for (DataRecord sample : samples) {
                     Object isControl = sample.getValue("IsControl", user);
                     if (isControl != null && (Boolean) isControl) {
+                        String sampleId = sample.getStringVal("SampleId", user);
                         dummyRecord.addChild(sample, user);
+                        logInfo("Linked control sample " + sampleId + " to dummy request record");
                     }
                 }
+            } else {
+                logError("Could not find or create dummy request record");
+                return new PluginResult(false);
             }
             
+            // Mark task as completed
             activeTask.getTask().getTaskOptions().put("_CONTROL FIELDS POPULATED", "");
             
         } catch (ServerException e) {
@@ -107,29 +122,27 @@ public class ControlFieldsPopulator extends DefaultGenericPlugin {
     }
     
     /**
-     * Gets or creates the constant dummy request record for linking controls.
+     * Gets the constant dummy request record for linking controls.
+     * This method queries for the existing dummy request record using the predefined RequestId.
+     * The dummy request record should already exist in the system.
      * 
-     * @return DataRecord representing the dummy request, or null if creation fails
+     * @return DataRecord representing the dummy request, or null if not found
      */
     private DataRecord getDummyRecord() {
         try {
             List<DataRecord> dummyRecords = dataRecordManager.queryDataRecords("Request", 
-                "RequestId = 'CONSTANT_DUMMY_REQUEST'", user);
+                "RequestId = '" + DUMMY_REQUEST_ID + "'", user);
             
             if (dummyRecords != null && !dummyRecords.isEmpty()) {
+                logInfo("Found existing dummy request record with ID: " + DUMMY_REQUEST_ID);
                 return dummyRecords.get(0);
+            } else {
+                logError("No dummy request record found with ID: " + DUMMY_REQUEST_ID + ". Please ensure the record exists in the system.");
+                return null;
             }
             
-            Map<String, Object> values = new HashMap<>();
-            values.put("RequestId", "CONSTANT_DUMMY_REQUEST");
-            values.put("IsDummy", true);
-            
-            DataRecord dummyRecord = dataRecordManager.addDataRecord("Request", user);
-            dummyRecord.setFields(values, user);
-            return dummyRecord;
-            
         } catch (Exception e) {
-            logError("Error with dummy record: " + e.getMessage());
+            logError("Error querying for dummy request record: " + e.getMessage());
         }
         return null;
     }
