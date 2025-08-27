@@ -80,7 +80,6 @@ public class ControlFieldsPopulator extends DefaultGenericPlugin {
                     }
                 }
             }
-            
             // Step 2: Populate control samples with species and recipe
             for (DataRecord sample : samples) {
                 Object isControl = sample.getValue("IsControl", user);
@@ -88,10 +87,10 @@ public class ControlFieldsPopulator extends DefaultGenericPlugin {
                     String sampleId = sample.getStringVal("SampleId", user);
                     sample.setDataField("Species", species, user);
                     sample.setDataField("Recipe", recipe, user);
+                    sample.setDataField("RequestId", DUMMY_REQUEST_ID, user);
                     logInfo("Updated control sample " + sampleId + " with species: " + species + ", recipe: " + recipe);
                 }
             }
-            
             // Step 3: Link all control samples to the constant dummy request record
             DataRecord dummyRecord = getDummyRecord();
             if (dummyRecord != null) {
