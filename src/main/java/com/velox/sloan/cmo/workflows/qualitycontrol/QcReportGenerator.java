@@ -31,6 +31,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
     private final String QC_TYPE_FOR_RIN = "bioanalyzer rna pico, bioanalyzer rna nano, tapestation rna screentape hisense sample table, tapestation rna screentape sample table";
     private final String QC_TYPE_FOR_A260280 = "nanodrop nano";
     private final String QC_TYPE_FOR_A260230 = "nanodrop nano";
+    private final String QC_TYPE_FOR_CALBRATED_CONCENTRATION = "quant-it";
     private final String QC_TYPE_FOR_AVERAGE_BP_SIZE = "TapeStation Compact Peak Table, TapeStation Compact Pico Region Table, " +
             "TapeStation D1000 Compact Region Table, TapeStation D1000 HiSense Compact Region Table, Bioanalyzer DNA High Sens Region Table";
     private final String TAPESTATION_QC_FOR_AVERAGE_BP_SIZE = "TapeStation Compact Peak Table, TapeStation Compact Pico Region Table, " +
@@ -688,6 +689,61 @@ public class QcReportGenerator extends DefaultGenericPlugin {
         return averageBasePairSize;
     }
 
+    private Double getBpSizeValue(String sampleId, List<DataRecord> qcRecords) {
+        List<DataRecord> qcRecordsWithBpSizeForSample;
+        qcRecordsWithBpSizeForSample = getQcRecordsByQcType(sampleId, qcRecords, QC_TYPE_FOR_AVERAGE_BP_SIZE);
+
+        double basePairSize = 0.0;
+        try {
+            if (!qcRecordsWithBpSizeForSample.isEmpty()) {
+                for (DataRecord qcRecord : qcRecordsWithBpSizeForSample) {
+                    if (qcRecord.getValue("sizeBp", user) != null && qcRecord.getValue("SampleId", user).equals(sampleId)) {
+                        basePairSize = qcRecord.getDoubleVal("sizeBp", user);
+                    }
+                }
+            }
+            if (qcRecordsWithBpSizeForSample.isEmpty() || basePairSize <= 0) {
+                clientCallback.displayWarning(String.format("BP Size value not found for '%s'.", sampleId));
+                logInfo(String.format("WARNING: BP Size value not found for '%s'.", sampleId));
+                return 0.0;
+            }
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException while getting 'sizeBp' Value for sample with Sample ID %s:\n%s", sampleId, ExceptionUtils.getStackTrace(e)));
+        } catch (NotFound notFound) {
+            logError(String.format("NotFound -> Missing 'sizeBp' Value for sample with Sample ID %s:\n%s", sampleId, ExceptionUtils.getStackTrace(notFound)));
+        } catch (ServerException se) {
+            logError(String.format("ServerException while getting 'sizeBp' Value for sample with Sample ID %s:\n%s", sampleId, ExceptionUtils.getStackTrace(se)));
+        }
+        return basePairSize;
+    }
+
+    private double getCalibConc(String sampleId, List<DataRecord> qcRecords) {
+        List<DataRecord> qcRecordsWithCalibConceForSample = getQcRecordsByQcType(sampleId, qcRecords, QC_TYPE_FOR_CALBRATED_CONCENTRATION);
+
+        double calibratedConcentration = 0.0;
+        try {
+            if (!qcRecordsWithCalibConceForSample.isEmpty()) {
+                for (DataRecord qcRecord : qcRecordsWithCalibConceForSample) {
+                    if (qcRecord.getValue("calibratedConcentration", user) != null && qcRecord.getValue("SampleId", user).equals(sampleId)) {
+                        calibratedConcentration = qcRecord.getDoubleVal("calibratedConcentration", user);
+                    }
+                }
+            }
+            if (qcRecordsWithCalibConceForSample.isEmpty() || calibratedConcentration <= 0) {
+                clientCallback.displayWarning(String.format("Calibrated concentration value not found for '%s'.", sampleId));
+                logInfo(String.format("WARNING: Calibrated concentration value not found for '%s'.", sampleId));
+                return 0.0;
+            }
+        } catch (RemoteException e) {
+            logError(String.format("RemoteException while getting 'calibrated concentration' Value for sample with Sample ID %s:\n%s", sampleId, ExceptionUtils.getStackTrace(e)));
+        } catch (NotFound notFound) {
+            logError(String.format("NotFound -> Missing 'calibrated concentration' Value for sample with Sample ID %s:\n%s", sampleId, ExceptionUtils.getStackTrace(notFound)));
+        } catch (ServerException se) {
+            logError(String.format("ServerException while getting 'calibrated concentration' Value for sample with Sample ID %s:\n%s", sampleId, ExceptionUtils.getStackTrace(se)));
+        }
+        return calibratedConcentration;
+    }
+
     /**
      * Create DNA QC REPORT DataRecords for Samples.
      *
@@ -726,6 +782,8 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 Double dinValue = getDinValueFromQcRecord(sampleId, qcDataRecords);
                 Double A260280 = getA260280FromQcRecord(sampleId, qcDataRecords);
                 Double A260230 = getA260230FromQcRecord(sampleId, qcDataRecords);
+                Double sizeBp = getBpSizeValue(sampleId, qcDataRecords);
+                Double calibratedConcentration = getCalibConc(sampleId, qcDataRecords);
                 String igoRecommendation = getIgoRecommendationValue(sampleId, qcProtocolRecords);
                 String comments = getQcCommentsValue(sampleId, qcProtocolRecords);
                 if (dinValue > 0) {
@@ -738,6 +796,12 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 if (A260280 > 0) {
                     qcRecord.put("A260280", A260280);
                     logInfo("A260280 is assigned to " + A260280);
+                }
+                if (sizeBp > 0) {
+                    qcRecord.put("sizeBp", sizeBp);
+                }
+                if (calibratedConcentration > 0) {
+                    qcRecord.put("calibratedConcentration", calibratedConcentration);
                 }
                 if (!StringUtils.isBlank(igoRecommendation)) {
                     qcRecord.put("IgoQcRecommendation", igoRecommendation);
