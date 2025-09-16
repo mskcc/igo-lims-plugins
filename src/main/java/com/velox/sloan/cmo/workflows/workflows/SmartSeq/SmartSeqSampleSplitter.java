@@ -153,20 +153,12 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
                     }
                 }
                 this.activeTask.removeTaskAttachment(sample.getRecordId());
-                logInfo("Removed the attached sample!!");
                 this.activeTask.addAttachedDataRecords(toGetAttached);
-                logInfo("Attached new splitted samples");
                 sample.setDataField("ExemplarSampleStatus", "Completed - Smart-Seq cDNA Preparation", user);
                 logInfo("Original sample status updated to: Completed - Smart-Seq cDNA Preparation");
                 activeWorkflow.getNext(activeTask).addAttachedDataRecords(toGetAttached);
-                logInfo("Add new attachments to the next step!");
-                //this.activeTask.removeTaskAttachment(sample.getRecordId());
-
             }
-
-
             activeTask.getTask().getTaskOptions().put("_SMARTSEQ SAMPLE SPLITTED", "");
-            logInfo("Task option updated!");
 
         } catch (NotFound | InvalidValue e) {
             String errMsg = String.format("Not Found or Invalid Value exception while splitting SmartSeq samples:\n%s", ExceptionUtils.getStackTrace(e));
@@ -187,7 +179,6 @@ public class SmartSeqSampleSplitter extends DefaultGenericPlugin {
         } catch (AlreadyExists e) {
             throw new RuntimeException(e);
         }
-        logInfo("Right before returning true for plugin result!");
         return new PluginResult(true);
     }
 }
