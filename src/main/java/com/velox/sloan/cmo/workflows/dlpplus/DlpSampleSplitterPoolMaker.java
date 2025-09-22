@@ -49,6 +49,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     String recipe = ""; // Recipe to assign to new pool and new child records
     String chipId = ""; // DLP chip ID
     Boolean usualControlLocation = Boolean.TRUE;
+    Boolean ifContinue = Boolean.TRUE;
     String[] positiveContorlChoises = {"184hTERT", "rpe1htert"};
     Map<String, String> seqRunTypeByQuadrant = new HashMap<>();
     private String DLP_SMARTCHIP_PATH = "/rtssdc/mohibullahlab/LIMS/DLP/SmartchipSheet/";
@@ -95,6 +96,12 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                         byte[] excelFileData = fillOutSmartChipSheetForMultiSamples(samplesAttachedToTask, file);
                         List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
                         if (!fileHasData(rowData, DLPSmartChipFile) || !hasValidHeader(rowData, DLP_UPLOAD_SHEET_EXPECTED_HEADERS, DLPSmartChipFile)) {
+                            return new PluginResult(false);
+                        }
+                        // add reminder to ask user to check SmartChip file
+                        ifContinue = clientCallback.showYesNoDialog("SmartChip File Check",
+                                "Review the smartchip file to see if all correct, and choose if you want to continue.");
+                        if (!ifContinue){
                             return new PluginResult(false);
                         }
                         clientCallback.displayInfo("This process Will take some time. Please be patient.");
@@ -157,6 +164,13 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                             if (!fileHasData(rowData, DLPSmartChipFile) || !hasValidHeader(rowData, DLP_UPLOAD_SHEET_EXPECTED_HEADERS, DLPSmartChipFile)) {
                                 return new PluginResult(false);
                             }
+                            // add reminder to ask user to check SmartChip file
+                            ifContinue = clientCallback.showYesNoDialog("SmartChip File Check",
+                                    "Review the smartchip file to see if all correct, and choose if you want to continue.");
+                            if (!ifContinue){
+                                return new PluginResult(false);
+                            }
+
                             clientCallback.displayInfo("This process Will take some time. Please be patient.");
                             HashMap<String, Integer> headerValuesMap = utils.getHeaderValuesMapFromExcelRowData(rowData);
 
@@ -945,6 +959,45 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     }
 
     /**
+     * Method to order sample list by sampleid.
+     *
+     * @param List<DataRecord> samples
+     * @return ordered List<DataRecord> samples
+     *
+     **/
+    private void sortSamples(List<DataRecord> samples) {
+        samples.sort((s1, s2) -> {
+            String id1 = s1.getStringVal("SampleId", user);
+            String id2 = s2.getStringVal("SampleId", user);
+
+            // --- Split at last underscore ---
+            int idx1 = id1.lastIndexOf('_');
+            int idx2 = id2.lastIndexOf('_');
+
+            String prefix1 = id1.substring(0, idx1);
+            String suffix1 = id1.substring(idx1 + 1);
+
+            String prefix2 = id2.substring(0, idx2);
+            String suffix2 = id2.substring(idx2 + 1);
+
+            // --- Compare prefix (lexicographically, since it can have letters/underscores) ---
+            int prefixCmp = prefix1.compareTo(prefix2);
+            if (prefixCmp != 0) {
+                return prefixCmp;
+            }
+
+            // --- Compare suffix (numeric if possible, else lexicographic) ---
+            try {
+                int s1Num = Integer.parseInt(suffix1);
+                int s2Num = Integer.parseInt(suffix2);
+                return Integer.compare(s1Num, s2Num);
+            } catch (NumberFormatException e) {
+                return suffix1.compareTo(suffix2);
+            }
+        });
+    }
+
+    /**
      * This method uses a template SmartChip sheet in the DLP folder on the shared drive and fill out a row for every single
      * well on the chip. Based on whether a well contains samples or a control the "condition" column gets populated with
      * sample names or positive/negative controls.
@@ -970,6 +1023,8 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             List<String> positiveControlLocations = new LinkedList<>();
             List<String> negativeControlLocations = new LinkedList<>();
             int i = 0;
+            // order samples object by sample ID
+            sortSamples(samples);
             for (DataRecord sample : samples) {
                 rowCount = 0;
                 String sampleId = sample.getStringVal("SampleId", user);
