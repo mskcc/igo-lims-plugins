@@ -967,8 +967,22 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
      **/
     private void sortSamples(List<DataRecord> samples) {
         samples.sort((s1, s2) -> {
-            String id1 = s1.getStringVal("SampleId", user);
-            String id2 = s2.getStringVal("SampleId", user);
+            String id1 = null;
+            try {
+                id1 = s1.getStringVal("SampleId", user);
+            } catch (NotFound e) {
+                throw new RuntimeException(e);
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
+            String id2 = null;
+            try {
+                id2 = s2.getStringVal("SampleId", user);
+            } catch (NotFound e) {
+                throw new RuntimeException(e);
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
 
             // --- Split at last underscore ---
             int idx1 = id1.lastIndexOf('_');
@@ -1024,10 +1038,15 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             List<String> negativeControlLocations = new LinkedList<>();
             int i = 0;
             // order samples object by sample ID
+            for (DataRecord sample : samples){
+                String sampleId = sample.getStringVal("SampleId", user);
+                logInfo(String.format("Pre-sorting sample %s", sampleId));
+            }
             sortSamples(samples);
             for (DataRecord sample : samples) {
                 rowCount = 0;
                 String sampleId = sample.getStringVal("SampleId", user);
+                logInfo(String.format("Processing sample %s", sampleId));
                 String sampleName = sample.getStringVal("OtherSampleId", user);
                 int selectedPositiveControl = 1;  //change the control default to RPE1 per single cell team requirment
                 String[] positiveLocations = {};
