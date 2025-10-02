@@ -35,7 +35,6 @@ public class CreateSequencingRequirments extends DefaultGenericPlugin {
                 Map<String, Object> values = new HashMap<>();
                 String sampleId = sample.getStringVal("SampleId", user);
                 String sampleName = sample.getStringVal("OtherSampleId", user);
-                String otherSampleId = sample.getStringVal("OtherSampleId", user);
                 String tumorOrNormal = sample.getStringVal("TumorOrNormal", user);
                 values.put("SampleId", sampleId);
                 values.put("SequencingRunType","PE100");
@@ -54,7 +53,7 @@ public class CreateSequencingRequirments extends DefaultGenericPlugin {
 
             activeTask.getTask().getTaskOptions().put("_SEQ REQUIREMENTS CREATED", "");
         } catch (ServerException e) {
-            String errMsg = String.format("ServerException while splitting SmartSeq samples:\n%s", ExceptionUtils.getStackTrace(e));
+            String errMsg = String.format("ServerException while setting sequencing requirements for SMARTSeq samples:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
             logError(errMsg);
             return new PluginResult(false);
