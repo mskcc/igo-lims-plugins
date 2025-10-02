@@ -32,7 +32,7 @@ public class CreateSeqReqForControls extends DefaultGenericPlugin {
             List<DataRecord> samples = activeTask.getAttachedDataRecords("Sample", user);
             List<DataRecord> seqReuirements = new LinkedList<>();
             for (DataRecord sample : samples) {
-                boolean isControl = sample.getBooleanVal("isControl", user);
+                boolean isControl = sample.getBooleanVal("IsControl", user);
                 if (isControl) {
                     Map<String, Object> values = new HashMap<>();
                     String sampleId = sample.getStringVal("SampleId", user);
