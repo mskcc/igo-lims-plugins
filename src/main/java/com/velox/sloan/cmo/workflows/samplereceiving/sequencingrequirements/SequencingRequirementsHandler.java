@@ -280,7 +280,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                             if (Objects.equals(sampleId, igoIdSr)) {
                                 reads = d.getValue("RequestedReads", user);
                                 coverage = d.getValue("RequestedCoverage", user);
-                                runType = d.getValue("RunType", user);
+                                runType = d.getValue("SequencingReadLength", user);
                                 if (!Objects.isNull(coverage)) {
                                     coverage = coverage.toString().replace("X", "").replace("x",
                                             "").trim();
