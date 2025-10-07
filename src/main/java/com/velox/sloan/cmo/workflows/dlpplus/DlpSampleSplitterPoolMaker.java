@@ -52,7 +52,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
     Boolean ifContinue = Boolean.TRUE;
     String[] positiveContorlChoises = {"184hTERT", "rpe1htert"};
     Map<String, String> seqRunTypeByQuadrant = new HashMap<>();
-    private String DLP_SMARTCHIP_PATH = "/rtssdc/mohibullahlab/LIMS/DLP/SmartchipSheet/";
+    private String DLP_SMARTCHIP_PATH = "/rtssdc/mohibullahlab/LIMS/DLP/SmartchipSheet/SmartChipResults_master_template.xls";
 
     public DlpSampleSplitterPoolMaker() {
         setTaskEntry(true);
@@ -73,128 +73,95 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                 clientCallback.displayError("No samples found attached to this task.");
                 return new PluginResult(false);
             }
-            File folder = new File(DLP_SMARTCHIP_PATH);
+            // per single cell team requirement, set cell type to Live by default 09032025
+            String cellTypeToProcess = "Live";
+            Object recipe = samplesAttachedToTask.get(0).getValue(SampleModel.RECIPE, user);
+            Object dlpRequestedReads = getDlpRequestedReads(recipe);
+            assert dlpRequestedReads != null;
+
+            // use a master template file instead of asking SC team to create a fake one each time
+            File file = new File(DLP_SMARTCHIP_PATH);
+            List<DataRecord> protocolAttachedToTask = activeTask.getAttachedDataRecords("DLPLibraryPreparationProtocol1", user);
+            // get chipId from the protocol in LIMS instead of Smartchip file
+            chipId = (String) protocolAttachedToTask.get(0).getValue("ChipID", user);
+            if (chipId.length() < 7) {
+                clientCallback.displayError("ChipID length is not correct. Please make sure the correct chipID is entered in previous step.");
+            }
+
             boolean multipleSamplesOnOneChip = clientCallback.showYesNoDialog("Multiple Samples",
                     "Are multiple samples on one chip?");
             // case for multiple sample on one chip
             if (multipleSamplesOnOneChip) {
-                File[] listOfFiles = folder.listFiles();
-                for (File file : listOfFiles) {
-                    if (file.getName().contains(samplesAttachedToTask.get(0).getStringVal("SampleId", user))
-                            && isValidExcelFile(file.getName())) {
-                        DLPSmartChipFile = file.getName();
-                        List<String> splitFileName = Arrays.asList(DLPSmartChipFile.replaceAll("\\s", "_").split("_|-|\\s"));
-                        String endOfFileName = splitFileName.get(splitFileName.size() - 1);
-                        chipId = endOfFileName.split("\\.")[0];
-                        if (chipId.equals("")) {
-                            clientCallback.displayError("ChipID cannot be empty. Please make sure the Smartchip " +
-                                    "sheet exists on the shared drive LIMS -> DLP -> SmartchipSheet/");
-                        }
-                        if (chipId.length() < 7) {
-                            clientCallback.displayError("ChipID length is not correct. Please make sure the correct chipID is in the Smartchip sheet file name.");
-                        }
-                        byte[] excelFileData = fillOutSmartChipSheetForMultiSamples(samplesAttachedToTask, file);
-                        List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
-                        if (!fileHasData(rowData, DLPSmartChipFile) || !hasValidHeader(rowData, DLP_UPLOAD_SHEET_EXPECTED_HEADERS, DLPSmartChipFile)) {
-                            return new PluginResult(false);
-                        }
-                        // add reminder to ask user to check SmartChip file
-                        ifContinue = clientCallback.showYesNoDialog("SmartChip File Check",
-                                "Review the smartchip file to see if all correct, and choose if you want to continue.");
-                        if (!ifContinue){
-                            return new PluginResult(false);
-                        }
-                        clientCallback.displayInfo("This process Will take some time. Please be patient.");
-                        HashMap<String, Integer> headerValuesMap = utils.getHeaderValuesMapFromExcelRowData(rowData);
-                        Map<String, List<Row>> rowsSeparatedBySampleMap = getRowsBySample(samplesAttachedToTask, rowData, headerValuesMap);
-
-                        // TODO: to remove
-                        if (rowsSeparatedBySampleMap.isEmpty()) {
-                            clientCallback.displayError(String.format("Did not find matching SAMPLE ID's for samples attached to the task in the template file.\nPlease make sure that file has correct Sample Info."));
-                            return new PluginResult(false);
-                        }
-                        // per single cell team requirement, set cell type to Live by default 09032025
-                        String cellTypeToProcess = "Live";
-                        Object recipe = samplesAttachedToTask.get(0).getValue(SampleModel.RECIPE, user);
-                        Object dlpRequestedReads = getDlpRequestedReads(recipe);
-                        Map<String, List<DataRecord>> newDlpSamples = createDlpSamplesAndProtocolRecords(rowsSeparatedBySampleMap, headerValuesMap, samplesAttachedToTask, cellTypeToProcess);
-                        assert dlpRequestedReads != null;
-                        createPools(newDlpSamples, (Double) dlpRequestedReads);
-                    }
+                byte[] excelFileData = fillOutSmartChipSheetForMultiSamples(samplesAttachedToTask, file);
+                List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
+                if (!fileHasData(rowData, DLPSmartChipFile) || !hasValidHeader(rowData, DLP_UPLOAD_SHEET_EXPECTED_HEADERS, DLPSmartChipFile)) {
+                    return new PluginResult(false);
                 }
+                // add reminder to ask user to check SmartChip file
+                ifContinue = clientCallback.showYesNoDialog("SmartChip File Check",
+                        "Review the smartchip file to see if all correct, and choose if you want to continue.");
+                if (!ifContinue){
+                    return new PluginResult(false);
+                }
+                clientCallback.displayInfo("This process Will take some time. Please be patient.");
+                HashMap<String, Integer> headerValuesMap = utils.getHeaderValuesMapFromExcelRowData(rowData);
+                Map<String, List<Row>> rowsSeparatedBySampleMap = getRowsBySample(samplesAttachedToTask, rowData, headerValuesMap);
+
+                // TODO: to remove
+                if (rowsSeparatedBySampleMap.isEmpty()) {
+                    clientCallback.displayError(String.format("Did not find matching SAMPLE ID's for samples attached to the task in the template file.\nPlease make sure that file has correct Sample Info."));
+                    return new PluginResult(false);
+                }
+                Map<String, List<DataRecord>> newDlpSamples = createDlpSamplesAndProtocolRecords(rowsSeparatedBySampleMap, headerValuesMap, samplesAttachedToTask, cellTypeToProcess);
+                createPools(newDlpSamples, (Double) dlpRequestedReads);
             }
             // case for single sample on one chip
             else {
-                for (DataRecord sample : samplesAttachedToTask) {
-                    String sampleId = sample.getStringVal("SampleId", user);
-                    File[] listOfFiles = folder.listFiles();
-                    for (File file : listOfFiles) {
-                        if (file.getName().contains(sampleId) && isValidExcelFile(file.getName())) {
-                            DLPSmartChipFile = file.getName();
-                            List<String> splitFileName = Arrays.asList(DLPSmartChipFile.replaceAll("\\s", "_").split("_|-|\\s"));
-                            String endOfFileName = splitFileName.get(splitFileName.size() - 1);
-                            chipId = endOfFileName.split("\\.")[0];  // get chipID from smartchipfile name, can this be changed to get from lims?
-                            if (chipId.equals("")) {
-                                clientCallback.displayError("ChipID cannot be empty. Please make sure the Smartchip " +
-                                        "sheet exists on the shared drive LIMS -> DLP -> SmartchipSheet/");
-                            }
-                            if (chipId.length() < 7) {
-                                clientCallback.displayError("ChipID length is not correct. Please make sure the correct chipID is in the Smartchip sheet file name.");
-                            }
-                            boolean controlExperiment = clientCallback.showYesNoDialog("Control Usage", String.format
-                                    ("Does experiment for sample %s have controls? Yes or No", sampleId));
-                            if (controlExperiment) {
-                                usualControlLocation = clientCallback.showYesNoDialog("Controls Locations",
-                                        String.format("Are the positive controls for sample %s located at the usual columns 5-8, Negative controls located at the column 3", sampleId));
-                            }
-                            String positiveControlLoc = "";
-                            String negativeControlLoc = "";
-                            if (!usualControlLocation) {
-                                positiveControlLoc = clientCallback.showInputDialog("Please enter the column(s) where POSITIVE CONTROLS are located, separated by '-':");
-                                negativeControlLoc = clientCallback.showInputDialog("Please enter the column(s) where NEGATIVE CONTROLS are located, separated by '-':");
-                            }
-                            else{
-                                positiveControlLoc = "5-6-7-8";
-                                negativeControlLoc = "3";
-                            }
-                            byte[] excelFileData = fillOutSmartChipSheet(sample, file, controlExperiment, usualControlLocation, positiveControlLoc, negativeControlLoc);
-                            logInfo("After exiting the fillOutSmartChipSheet function");
-                            List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
-
-                            if (!fileHasData(rowData, DLPSmartChipFile) || !hasValidHeader(rowData, DLP_UPLOAD_SHEET_EXPECTED_HEADERS, DLPSmartChipFile)) {
-                                return new PluginResult(false);
-                            }
-                            // add reminder to ask user to check SmartChip file
-                            ifContinue = clientCallback.showYesNoDialog("SmartChip File Check",
-                                    "Review the smartchip file to see if all correct, and choose if you want to continue.");
-                            if (!ifContinue){
-                                return new PluginResult(false);
-                            }
-
-                            clientCallback.displayInfo("This process Will take some time. Please be patient.");
-                            HashMap<String, Integer> headerValuesMap = utils.getHeaderValuesMapFromExcelRowData(rowData);
-
-                            Map<String, List<Row>> rowsSeparatedBySampleMap = getRowsBySample(samplesAttachedToTask, rowData, headerValuesMap);
-
-                            // TODO: to remove
-                            if (rowsSeparatedBySampleMap.isEmpty()) {
-                                clientCallback.displayError(String.format("Did not find matching SAMPLE ID's for samples attached to the task in the template file.\nPlease make sure that file has correct Sample Info."));
-                                return new PluginResult(false);
-                            }
-                            // per single cell team requirement, set cell type to Live by default 09032025
-                            String cellTypeToProcess = "Live";
-                            logInfo("selected cell type:" + cellTypeToProcess);
-                            Object recipe = samplesAttachedToTask.get(0).getValue(SampleModel.RECIPE, user);
-                            Object dlpRequestedReads = getDlpRequestedReads(recipe);
-                            logInfo("dlpRequestedReads= " + dlpRequestedReads);
-                            Map<String, List<DataRecord>> newDlpSamples = createDlpSamplesAndProtocolRecords(rowsSeparatedBySampleMap, headerValuesMap, samplesAttachedToTask, cellTypeToProcess);
-                            logInfo("After createDlpSamplesAndProtocolRecords function call");
-                            assert dlpRequestedReads != null;
-                            logInfo("After assert");
-                            createPools(newDlpSamples, (Double) dlpRequestedReads);
-                        }
-                    }
+                DataRecord sample = samplesAttachedToTask.get(0);
+                String sampleId = sample.getStringVal("SampleId", user);
+                boolean controlExperiment = clientCallback.showYesNoDialog("Control Usage", String.format
+                        ("Does experiment for sample %s have controls? Yes or No", sampleId));
+                if (controlExperiment) {
+                    usualControlLocation = clientCallback.showYesNoDialog("Controls Locations",
+                            String.format("Are the positive controls for sample %s located at the usual columns 5-8, Negative controls located at the column 3", sampleId));
                 }
+                String positiveControlLoc = "";
+                String negativeControlLoc = "";
+                if (!usualControlLocation) {
+                    positiveControlLoc = clientCallback.showInputDialog("Please enter the column(s) where POSITIVE CONTROLS are located, separated by '-':");
+                    negativeControlLoc = clientCallback.showInputDialog("Please enter the column(s) where NEGATIVE CONTROLS are located, separated by '-':");
+                }
+                else{
+                    positiveControlLoc = "5-6-7-8";
+                    negativeControlLoc = "3";
+                }
+                byte[] excelFileData = fillOutSmartChipSheet(sample, file, controlExperiment, usualControlLocation, positiveControlLoc, negativeControlLoc);
+                logInfo("After exiting the fillOutSmartChipSheet function");
+                List<Row> rowData = utils.getExcelSheetDataRows(excelFileData);
+
+                if (!fileHasData(rowData, DLPSmartChipFile) || !hasValidHeader(rowData, DLP_UPLOAD_SHEET_EXPECTED_HEADERS, DLPSmartChipFile)) {
+                    return new PluginResult(false);
+                }
+                // add reminder to ask user to check SmartChip file
+                ifContinue = clientCallback.showYesNoDialog("SmartChip File Check",
+                        "Review the smartchip file to see if all correct, and choose if you want to continue.");
+                if (!ifContinue){
+                    return new PluginResult(false);
+                }
+
+                clientCallback.displayInfo("This process Will take some time. Please be patient.");
+                HashMap<String, Integer> headerValuesMap = utils.getHeaderValuesMapFromExcelRowData(rowData);
+
+                Map<String, List<Row>> rowsSeparatedBySampleMap = getRowsBySample(samplesAttachedToTask, rowData, headerValuesMap);
+
+                // TODO: to remove
+                if (rowsSeparatedBySampleMap.isEmpty()) {
+                    clientCallback.displayError(String.format("Did not find matching SAMPLE ID's for samples attached to the task in the template file.\nPlease make sure that file has correct Sample Info."));
+                    return new PluginResult(false);
+                }
+                Map<String, List<DataRecord>> newDlpSamples = createDlpSamplesAndProtocolRecords(rowsSeparatedBySampleMap, headerValuesMap, samplesAttachedToTask, cellTypeToProcess);
+                logInfo("After createDlpSamplesAndProtocolRecords function call");
+                createPools(newDlpSamples, (Double) dlpRequestedReads);
             }
         }
 
@@ -409,14 +376,22 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
 
     /**
      * Method to get the DLP index ID using row and column position on Chip. A position on DLP chip always get the same Index ID
+     * Add condition based on recipe to distinguish whether primer is spotted by icell8
      *
      * @param rowNum
      * @param colNum
      * @return String IndexId
      */
-    private String getIndexId(String rowNum, String colNum) {
-        String rowId = Integer.toString((int) Double.parseDouble(rowNum));
-        String colId = Integer.toString((int) Double.parseDouble(colNum));
+    private String getIndexId(String rowNum, String colNum, String recipe) {
+        String rowId = "";
+        String colId = "";
+        if (recipe.equals("SC_SCD-WGS")){
+            rowId = Integer.toString(73 - (int) Double.parseDouble(colNum));
+            colId = Integer.toString((int) Double.parseDouble(rowNum));
+        } else {
+            rowId = Integer.toString((int) Double.parseDouble(rowNum));
+            colId = Integer.toString((int) Double.parseDouble(colNum));
+        }
         if (Integer.parseInt(rowId) <= 9) {
             rowId = "0" + rowId;
         }
@@ -756,7 +731,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
                         logInfo("dlp protocol 2 created: "  + dlpRecordValues.get("Aliq1ControlType"));
                         newDLPSample = createControlSampleRecord(sample, newSampleId, newOtherSampleId);
                     }
-                    String indexId = getIndexId(chipRow, chipColumn);
+                    String indexId = getIndexId(chipRow, chipColumn, recipe);
                     newDLPSample = addIndexBarcodeRecordAsChild(newDLPSample, indexId);
                     newlyCreatedChildSamplesByQuadrant.putIfAbsent(quadrant, new ArrayList<>());
                     newlyCreatedChildSamplesByQuadrant.get(quadrant).add(newDLPSample);
