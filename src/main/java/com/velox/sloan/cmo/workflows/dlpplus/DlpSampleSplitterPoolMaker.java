@@ -24,6 +24,7 @@ import org.mockito.internal.matchers.Null;
 
 import javax.xml.crypto.Data;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -98,6 +99,7 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
             }
 
             Set<String> flddata = ConstructDLPFieldFileSet(fldfile);
+            createFilterFile(flddata);
 
             boolean multipleSamplesOnOneChip = clientCallback.showYesNoDialog("Multiple Samples",
                     "Are multiple samples on one chip?");
@@ -590,6 +592,10 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
      * @throws NotFound
      */
     private String getSequencingRunType(DataRecord sample) throws RemoteException, IoError, NotFound, ServerException{
+        DataRecord[] currentSeqRequirements = sample.getChildrenOfType("SeqRequirement", user);
+        if (currentSeqRequirements.length > 0 && currentSeqRequirements[0].getValue("SequencingRunType", user) != null) {
+            return currentSeqRequirements[0].getStringVal("SequencingRunType", user);
+        }
         List<DataRecord> ancestorSamples = sample.getAncestorsOfType("Sample", user);
         if (!ancestorSamples.isEmpty()) {
             for (DataRecord samp : ancestorSamples) {
@@ -1060,6 +1066,41 @@ public class DlpSampleSplitterPoolMaker extends DefaultGenericPlugin {
         return null;
     }
 
+    /**
+     * This function build a filter file based on fld file data.
+     @param flddata fld file data
+     */
+    public void createFilterFile(Set<String> flddata) {
+        int size = 72; // 72x72 grid
+        String outputFile = "iCell8_FilterFile.csv";
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        for (int row = 1; row <= size; row++) {
+            StringBuilder line = new StringBuilder();
+            for (int col = 1; col <= size; col++) {
+                // convert iCell8 file position to fld file position
+                String key = (73 - col) + "/" + row;
+                String value = flddata.contains(key) ? "1" : "0";
+                line.append(value);
+                if (col < size) line.append(","); // comma between columns
+            }
+            line.append("\n");
+            try {
+                baos.write(line.toString().getBytes(StandardCharsets.UTF_8));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        try {
+            byte[] bytes = baos.toByteArray();
+            clientCallback.writeBytes(bytes, outputFile);
+        } catch (ServerException e) {
+            logError(String.format("RemoteException -> Error while exporting SmartChip report:\n%s",ExceptionUtils.getStackTrace(e)));
+        } catch (IOException e) {
+            logError(String.format("IOException -> Error while exporting SmartChip report:\n%s", ExceptionUtils.getStackTrace(e)));
+        }
+
+    }
     /**
      * This method uses a template SmartChip sheet in the DLP folder on the shared drive and fill out a row for every single
      * well on the chip. Based on whether a well contains samples or a control the "condition" column gets populated with
