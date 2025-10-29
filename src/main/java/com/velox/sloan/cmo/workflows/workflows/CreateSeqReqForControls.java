@@ -17,7 +17,7 @@ import java.util.Map;
 public class CreateSeqReqForControls extends DefaultGenericPlugin {
     public CreateSeqReqForControls() {
         setTaskEntry(true);
-        setOrder(PluginOrder.EARLY.getOrder());
+        setOrder(PluginOrder.LATE.getOrder());
     }
     @Override
     public boolean shouldRun() throws RemoteException {
@@ -29,6 +29,7 @@ public class CreateSeqReqForControls extends DefaultGenericPlugin {
         try {
             List<DataRecord> coverageReqRefs = this.dataRecordManager.queryDataRecords("ApplicationReadCoverageRef",
                     "ReferenceOnly != 1 AND isControl = 1 ", this.user);
+            logInfo("coverageReqRefs size = " + coverageReqRefs.size());
             List<DataRecord> samples = activeTask.getAttachedDataRecords("Sample", user);
             List<DataRecord> seqReuirements = new LinkedList<>();
             for (DataRecord sample : samples) {
@@ -41,13 +42,14 @@ public class CreateSeqReqForControls extends DefaultGenericPlugin {
                     String species = sample.getStringVal("Species", user);
                     for (DataRecord ref : coverageReqRefs) {
                         if (ref.getStringVal("PlatformApplication", user).equalsIgnoreCase(recipe)) {
+                            logInfo("recipe and the ref recipe are equal!");
                             values.put("SequencingRunType", ref.getStringVal("SequencingRunType", user));
-                            if (species.equalsIgnoreCase("Human")) {
-                                values.put("RequestedReads", ref.getStringVal("MillionReadsHuman", user));
-                            }
-                            else if (species.equalsIgnoreCase("Mouse")) {
-                                values.put("RequestedReads", ref.getStringVal("MillionReadsMouse", user));
-                            }
+                            //if (species.equalsIgnoreCase("Human")) {
+                                values.put("RequestedReads", ref.getDoubleVal("MillionReadsHuman", user));
+                            //}
+//                            else if (species.equalsIgnoreCase("Mouse")) {
+//                                values.put("RequestedReads", ref.getStringVal("MillionReadsMouse", user));
+//                            }
                         }
                     }
                     values.put("SampleId", sampleId);
