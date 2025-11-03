@@ -35,7 +35,6 @@ public class CreateSequencingRequirments extends DefaultGenericPlugin {
                 Map<String, Object> values = new HashMap<>();
                 String sampleId = sample.getStringVal("SampleId", user);
                 String sampleName = sample.getStringVal("OtherSampleId", user);
-                String otherSampleId = sample.getStringVal("OtherSampleId", user);
                 String tumorOrNormal = sample.getStringVal("TumorOrNormal", user);
                 values.put("SampleId", sampleId);
                 values.put("SequencingRunType","PE100");

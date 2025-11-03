@@ -265,17 +265,21 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
      * @param indexAssignmentConfigs
      * @return int
      */
-    private int getStartIndexAssignmentConfigPosition(int lastUsedIndexPosition, List<DataRecord> indexAssignmentConfigs) throws ServerException, NotFound, RemoteException {
+    private int getStartIndexAssignmentConfigPosition(int lastUsedIndexPosition, List<DataRecord> indexAssignmentConfigs,
+                                                      int plateSize) throws ServerException, NotFound, RemoteException {
         if (lastUsedIndexPosition >= indexAssignmentConfigs.size() - 1) {
             logInfo("Reached last Index, will start from first index position.");
             return 0;
         }
         int nextIndexToUse = lastUsedIndexPosition + 1; //start with one index position after last index used.
-        for (int i = nextIndexToUse; i < indexAssignmentConfigs.size(); i++)
-            if (indexAssignmentConfigs.get(i).getStringVal("WellId", user).toUpperCase().contains("A")) {
-                return i;
-            }
-        return 0;
+        if ((plateSize == 96 && indexAssignmentConfigs.get(lastUsedIndexPosition).getStringVal("WellId", user).toUpperCase().contains("H"))
+                || (plateSize == 384 && indexAssignmentConfigs.get(lastUsedIndexPosition).getStringVal("WellId", user).toUpperCase().contains("P"))) {
+            for (int i = nextIndexToUse; i < indexAssignmentConfigs.size(); i++)
+                if (indexAssignmentConfigs.get(i).getStringVal("WellId", user).toUpperCase().contains("A")) {
+                    return i;
+                }
+        }
+        return nextIndexToUse;
     }
 
     /**
@@ -474,7 +478,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         boolean isCrisprOrAmpliconSeq = recipes.stream().anyMatch(RECIPES_TO_USE_SPECIAL_ADAPTERS::contains);
         Integer positionOfLastUsedIndex = getPositionOfLastUsedIndex(indexAssignmentConfigs);
         Double maxPlateVolume = autoHelper.getMaxVolumeLimit(plateSize);
-        Integer updatedLastIndexUsed = getStartIndexAssignmentConfigPosition(positionOfLastUsedIndex, indexAssignmentConfigs);
+        Integer updatedLastIndexUsed = getStartIndexAssignmentConfigPosition(positionOfLastUsedIndex, indexAssignmentConfigs, plateSize);
         Set<String> indexAssignmentConfigPlatesToUse = new HashSet<>();
         for (int i = updatedLastIndexUsed, j = 0; i < indexAssignmentConfigs.size() && j < indexAssignmentProtocolRecordsSortedColumnWise.size(); i++, j++) {
             DataRecord indexAssignmentConfig = indexAssignmentConfigs.get(i);
