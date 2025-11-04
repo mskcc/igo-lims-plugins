@@ -27,7 +27,7 @@ import java.util.*;
  */
 public class ControlFieldsPopulator extends DefaultGenericPlugin {
     
-  private static final String DUMMY_REQUEST_ID = "07000";
+  private static final String DUMMY_REQUEST_ID = "06000_C";
     
     /**
      * Constructor - sets plugin execution parameters
