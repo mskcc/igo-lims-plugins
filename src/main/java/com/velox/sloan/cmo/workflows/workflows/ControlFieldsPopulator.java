@@ -45,8 +45,7 @@ public class ControlFieldsPopulator extends DefaultGenericPlugin {
      */
     @Override
     public boolean shouldRun() throws RemoteException {
-        return activeTask.getStatus() != ActiveTask.COMPLETE &&
-               activeTask.getTask().getTaskOptions().containsKey("POPULATE CONTROL FIELDS") &&
+        return activeTask.getTask().getTaskOptions().containsKey("POPULATE CONTROL FIELDS") &&
                !activeTask.getTask().getTaskOptions().containsKey("_CONTROL FIELDS POPULATED");
     }
     
