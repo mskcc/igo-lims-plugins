@@ -21,7 +21,7 @@ public class CreateSeqReqForControls extends DefaultGenericPlugin {
     }
     @Override
     public boolean shouldRun() throws RemoteException {
-        return activeTask.getStatus() != ActiveTask.COMPLETE && activeTask.getTask().getTaskOptions().containsKey("CREATE SEQ REQUIREMENTS FOR CONTROLS")
+        return activeTask.getTask().getTaskOptions().containsKey("CREATE SEQ REQUIREMENTS FOR CONTROLS")
                 && !activeTask.getTask().getTaskOptions().containsKey("_CONTROLS SEQ REQUIREMENTS CREATED");
     }
 
