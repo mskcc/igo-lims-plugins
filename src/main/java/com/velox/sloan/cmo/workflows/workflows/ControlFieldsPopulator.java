@@ -45,8 +45,8 @@ public class ControlFieldsPopulator extends DefaultGenericPlugin {
      */
     @Override
     public boolean shouldRun() throws RemoteException {
-        return activeTask.getTask().getTaskOptions().containsKey("POPULATE CONTROL FIELDS") &&
-               !activeTask.getTask().getTaskOptions().containsKey("_CONTROL FIELDS POPULATED");
+        return this.activeTask.getTask().getTaskOptions().containsKey("POPULATE CONTROL FIELDS") &&
+               !this.activeTask.getTask().getTaskOptions().containsKey("_CONTROL FIELDS POPULATED");
     }
     
     /**
@@ -107,8 +107,7 @@ public class ControlFieldsPopulator extends DefaultGenericPlugin {
             }
             
             // Mark task as completed
-            activeTask.getTask().getTaskOptions().put("_CONTROL FIELDS POPULATED", "");
-            
+            this.activeTask.getTask().getTaskOptions().put("_CONTROL FIELDS POPULATED", "");
         } catch (ServerException e) {
             String errMsg = String.format("ServerException while populating control fields:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
