@@ -17,12 +17,12 @@ import java.util.Map;
 public class CreateSeqReqForControls extends DefaultGenericPlugin {
     public CreateSeqReqForControls() {
         setTaskEntry(true);
-        setOrder(PluginOrder.LATE.getOrder());
+        setOrder(PluginOrder.LAST.getOrder());
     }
     @Override
     public boolean shouldRun() throws RemoteException {
-        return activeTask.getTask().getTaskOptions().containsKey("CREATE SEQ REQUIREMENTS FOR CONTROLS")
-                && !activeTask.getTask().getTaskOptions().containsKey("_CONTROLS SEQ REQUIREMENTS CREATED");
+        return this.activeTask.getTask().getTaskOptions().containsKey("CREATE SEQ REQUIREMENTS FOR CONTROLS")
+                && !this.activeTask.getTask().getTaskOptions().containsKey("_CONTROLS SEQ REQUIREMENTS CREATED");
     }
 
     public PluginResult run() throws Exception {
@@ -61,8 +61,7 @@ public class CreateSeqReqForControls extends DefaultGenericPlugin {
                 }
             }
             this.activeTask.addAttachedDataRecords(seqReuirements);
-
-            activeTask.getTask().getTaskOptions().put("_CONTROLS SEQ REQUIREMENTS CREATED", "");
+            this.activeTask.getTask().getTaskOptions().put("_CONTROLS SEQ REQUIREMENTS CREATED", "");
         } catch (ServerException e) {
             String errMsg = String.format("ServerException while setting sequencing requirements for controls:\n%s", ExceptionUtils.getStackTrace(e));
             clientCallback.displayError(errMsg);
