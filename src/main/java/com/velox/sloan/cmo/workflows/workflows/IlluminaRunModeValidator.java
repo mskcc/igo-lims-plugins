@@ -28,9 +28,9 @@ import java.util.stream.Collectors;
 public class IlluminaRunModeValidator extends DefaultGenericPlugin {
 
     private static final String TASK_OPTION_VALIDATE = "VALIDATE ILLUMINA RUN MODE";
-    private static final String TASK_OPTION_VALIDATED = "_ILLUMINA RUN MODE VALIDATED";
-    private static final String[] RUN_MODE_FIELDS = {"SequencerRunMode", "RunMode", "SequencingRunMode", "SequencingRunType"};
-    private static final String[] SEQUENCER_FIELDS = {"SequencerName", "Sequencer", "InstrumentName"};
+    private static final String DATA_TYPE_NAME = "IlluminaSeqExperiment";
+    private static final String RUN_MODE_FIELD = "SequencingRunMode";
+    private static final String[] SEQUENCER_FIELDS = {"Instrumentname", "SequencerInstrument"};
 
     private static final Map<String, Set<String>> RUN_MODE_TO_SEQUENCERS = buildRunModeMap();
 
@@ -42,14 +42,13 @@ public class IlluminaRunModeValidator extends DefaultGenericPlugin {
     @Override
     public boolean shouldRun() throws RemoteException {
         return activeTask.getStatus() != ActiveTask.COMPLETE
-                && activeTask.getTask().getTaskOptions().containsKey(TASK_OPTION_VALIDATE)
-                && !activeTask.getTask().getTaskOptions().containsKey(TASK_OPTION_VALIDATED);
+                && activeTask.getTask().getTaskOptions().containsKey(TASK_OPTION_VALIDATE);
     }
 
     @Override
     public PluginResult run() throws ServerException, RemoteException {
         try {
-            List<DataRecord> records = activeTask.getAttachedDataRecords(activeTask.getInputDataTypeName(), user);
+            List<DataRecord> records = activeTask.getAttachedDataRecords(DATA_TYPE_NAME, user);
             if (records.isEmpty()) {
                 clientCallback.displayWarning("No records attached to validate Illumina run modes.");
                 return new PluginResult(false);
@@ -58,7 +57,7 @@ public class IlluminaRunModeValidator extends DefaultGenericPlugin {
             List<String> issues = new ArrayList<>();
 
             for (DataRecord record : records) {
-                Optional<String> runModeOpt = getFirstPopulatedValue(record, RUN_MODE_FIELDS);
+                Optional<String> runModeOpt = getFieldValue(record, RUN_MODE_FIELD);
                 Optional<String> sequencerOpt = getFirstPopulatedValue(record, SEQUENCER_FIELDS);
 
                 if (!runModeOpt.isPresent()) {
@@ -116,7 +115,6 @@ public class IlluminaRunModeValidator extends DefaultGenericPlugin {
                 return new PluginResult(false);
             }
 
-            activeTask.getTask().getTaskOptions().put(TASK_OPTION_VALIDATED, "");
         } catch (Exception e) {
             logError(String.format("Error validating Illumina run modes: %s", e.getMessage()));
             clientCallback.displayError(String.format("Error validating Illumina Sequencing workflow:\n%s", e));
@@ -126,15 +124,23 @@ public class IlluminaRunModeValidator extends DefaultGenericPlugin {
         return new PluginResult(true);
     }
 
+    private Optional<String> getFieldValue(DataRecord record, String fieldName) {
+        try {
+            Object value = record.getValue(fieldName, user);
+            if (value != null && !StringUtils.isBlank(value.toString())) {
+                return Optional.of(value.toString());
+            }
+        } catch (Exception e) {
+            // Field not found or not accessible
+        }
+        return Optional.empty();
+    }
+
     private Optional<String> getFirstPopulatedValue(DataRecord record, String[] fieldNames) {
         for (String fieldName : fieldNames) {
-            try {
-                Object value = record.getValue(fieldName, user);
-                if (value != null && !StringUtils.isBlank(value.toString())) {
-                    return Optional.of(value.toString());
-                }
-            } catch (Exception e) {
-                // Field not found or not accessible, continue to next field
+            Optional<String> value = getFieldValue(record, fieldName);
+            if (value.isPresent()) {
+                return value;
             }
         }
         return Optional.empty();
