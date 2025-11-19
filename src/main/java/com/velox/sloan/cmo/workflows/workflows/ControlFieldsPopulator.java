@@ -67,14 +67,17 @@ public class ControlFieldsPopulator extends DefaultGenericPlugin {
             // Step 1: Find species and recipe from non-control samples
             String species = "";
             String recipe = "";
+            List<DataRecord> samplesAssignedProcess = new LinkedList<>();
             for (DataRecord sample : samples) {
                 Object isControl = sample.getValue("IsControl", user);
                 // Only process non-control samples (ignore IsControl = false samples completely)
                 if (isControl == null || !(Boolean) isControl) {
                     species = sample.getStringVal("Species", user);
                     recipe = sample.getStringVal("Recipe", user);
+                    samplesAssignedProcess = sample.getParentsOfType("AssignedProcess", user);
                     if (species != null && recipe != null) {
-                        logInfo("Found species: " + species + ", recipe: " + recipe + " from non-control sample");
+                        logInfo("Found species: " + species + ", recipe: " + recipe + ", process name: " +
+                                samplesAssignedProcess.get(0).getStringVal("ProcessName", user) + " from non-control sample");
                         break;
                     }
                 }
@@ -98,7 +101,9 @@ public class ControlFieldsPopulator extends DefaultGenericPlugin {
                     if (isControl != null && (Boolean) isControl) {
                         String sampleId = sample.getStringVal("SampleId", user);
                         dummyRecord.addChild(sample, user);
+                        samplesAssignedProcess.get(0).addChild(sample, user);
                         logInfo("Linked control sample " + sampleId + " to dummy request record");
+                        logInfo("Linked control sample " + sampleId + " to parent process record");
                     }
                 }
             } else {
