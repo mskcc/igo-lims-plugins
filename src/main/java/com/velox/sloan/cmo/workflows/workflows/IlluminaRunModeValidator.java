@@ -29,13 +29,10 @@ public class IlluminaRunModeValidator extends DefaultGenericPlugin {
 
     private static final String TASK_OPTION_VALIDATE = "VALIDATE ILLUMINA RUN MODE";
     private static final String DATA_TYPE_NAME = "IlluminaSeqExperiment";
-    private static final String RUN_MODE_FIELD = "SequencingRunMode";
-    private static final String[] SEQUENCER_FIELDS = {"Instrumentname", "SequencerInstrument"};
-
     private static final Map<String, Set<String>> RUN_MODE_TO_SEQUENCERS = buildRunModeMap();
 
     public IlluminaRunModeValidator() {
-        setTaskEntry(true);
+        setTaskSubmit(true);
         setOrder(PluginOrder.LAST.getOrder());
     }
 
@@ -57,57 +54,36 @@ public class IlluminaRunModeValidator extends DefaultGenericPlugin {
             List<String> issues = new ArrayList<>();
 
             for (DataRecord record : records) {
-                Optional<String> runModeOpt = getFieldValue(record, RUN_MODE_FIELD);
-                Optional<String> sequencerOpt = getFirstPopulatedValue(record, SEQUENCER_FIELDS);
+                String runModeOpt = record.getStringVal("SequencingRunMode", user);
+                String sequencerOpt = record.getStringVal("instrumentname", user);
+                logInfo("Validating RunMode: '" + runModeOpt + "', Instrument: '" + sequencerOpt + "'");
 
-                if (!runModeOpt.isPresent()) {
-                    issues.add(buildIssueMessage(record, "Illumina Sequencing Run Mode is required but not provided."));
-                    continue;
-                }
-
-                String normalizedRunMode = normalize(runModeOpt.get());
-                if (!RUN_MODE_TO_SEQUENCERS.containsKey(normalizedRunMode)) {
+                if (!RUN_MODE_TO_SEQUENCERS.containsKey(normalize(runModeOpt))) {
                     issues.add(buildIssueMessage(record, String.format(
                             "Invalid Illumina Sequencing Run Mode: '%s'.\n" +
                             "Please select a valid run mode from the approved list:\n%s",
-                            runModeOpt.get(),
+                            runModeOpt,
                             getApprovedRunModesList())));
                     continue;
                 }
 
-                Set<String> allowedSequencers = RUN_MODE_TO_SEQUENCERS.get(normalizedRunMode);
+                Set<String> allowedSequencers = RUN_MODE_TO_SEQUENCERS.get(normalize(runModeOpt));
                 if (allowedSequencers.isEmpty()) {
                     // Run mode validated, no specific sequencer restriction.
                     continue;
                 }
-
-                if (!sequencerOpt.isPresent()) {
-                    issues.add(buildIssueMessage(record, String.format(
-                            "Illumina Sequencer is required for run mode '%s'.\n" +
-                            "Please select one of the following sequencers: %s",
-                            runModeOpt.get(),
-                            String.join(", ", allowedSequencers))));
-                    continue;
-                }
-
-                List<String> submittedSequencers = splitValues(sequencerOpt.get());
-                List<String> invalidSequencers = submittedSequencers.stream()
-                        .filter(value -> !allowedSequencers.contains(normalize(value)))
-                        .collect(Collectors.toList());
-
-                if (!invalidSequencers.isEmpty()) {
-                    issues.add(buildIssueMessage(record, String.format(
-                            "Invalid Illumina Sequencer(s) for run mode '%s': %s\n" +
+                if (!allowedSequencers.contains(normalize(sequencerOpt))) {
+                    issues.add(String.format("Invalid Illumina Sequencer(s) for run mode: %s\n" +
                             "Allowed sequencers for this run mode: %s",
-                            runModeOpt.get(),
-                            String.join(", ", invalidSequencers),
-                            String.join(", ", allowedSequencers))));
+                            runModeOpt,
+                            String.join(", ", allowedSequencers)));
+
                 }
             }
 
             if (!issues.isEmpty()) {
                 String warningMessage = "⚠️ ILLUMINA SEQUENCING WORKFLOW VALIDATION FAILED ⚠️\n\n" +
-                        "The following validation errors were found:\n\n" +
+                        "The following validation error was found:\n\n" +
                         String.join("\n\n" + "─".repeat(80) + "\n\n", issues) +
                         "\n\n" + "─".repeat(80) + "\n\n" +
                         "Please correct these issues before proceeding with the Illumina Sequencing workflow.";
@@ -123,38 +99,8 @@ public class IlluminaRunModeValidator extends DefaultGenericPlugin {
 
         return new PluginResult(true);
     }
-
-    private Optional<String> getFieldValue(DataRecord record, String fieldName) {
-        try {
-            Object value = record.getValue(fieldName, user);
-            if (value != null && !StringUtils.isBlank(value.toString())) {
-                return Optional.of(value.toString());
-            }
-        } catch (Exception e) {
-            // Field not found or not accessible
-        }
-        return Optional.empty();
-    }
-
-    private Optional<String> getFirstPopulatedValue(DataRecord record, String[] fieldNames) {
-        for (String fieldName : fieldNames) {
-            Optional<String> value = getFieldValue(record, fieldName);
-            if (value.isPresent()) {
-                return value;
-            }
-        }
-        return Optional.empty();
-    }
-
     private static String normalize(String value) {
         return StringUtils.normalizeSpace(value).toUpperCase();
-    }
-
-    private List<String> splitValues(String value) {
-        return Arrays.stream(value.split(",|;|\\n"))
-                .map(String::trim)
-                .filter(StringUtils::isNotBlank)
-                .collect(Collectors.toList());
     }
 
     private String buildIssueMessage(DataRecord record, String detail) {
