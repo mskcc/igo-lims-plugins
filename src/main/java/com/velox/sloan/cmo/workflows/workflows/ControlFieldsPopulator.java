@@ -101,7 +101,7 @@ public class ControlFieldsPopulator extends DefaultGenericPlugin {
                     if (isControl != null && (Boolean) isControl) {
                         String sampleId = sample.getStringVal("SampleId", user);
                         dummyRecord.addChild(sample, user);
-                        samplesAssignedProcess.get(0).addChild(sample, user);
+                        //samplesAssignedProcess.get(0).addChild(sample, user);
                         logInfo("Linked control sample " + sampleId + " to dummy request record");
                         logInfo("Linked control sample " + sampleId + " to parent process record");
                     }
