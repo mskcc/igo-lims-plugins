@@ -252,7 +252,14 @@ public class QcReportGenerator extends DefaultGenericPlugin {
 
                 for(DataRecord psr : poolSeqReqs) {
                     logInfo("igo id: " + psr.getStringVal("SampleId", user));
-                    String idOfSample = psr.getStringVal("SampleId", user).split("_")[0] + "_" + psr.getStringVal("SampleId", user).split("_")[1];
+                    String idOfSample = "";
+                    String[] sampleIdParts = psr.getStringVal("SampleId", user).split("_");
+                    if (sampleIdParts != null && sampleIdParts.length >= 2) {
+                        idOfSample = sampleIdParts[0] + "_" + sampleIdParts[1];
+                    }
+                    else if (sampleIdParts != null && sampleIdParts.length >= 1) { // Controls: Neg-1234
+                        idOfSample = sampleIdParts[0];
+                    }
                     logInfo("id of the sample = " + idOfSample);
                     if (strOfPoolSampleIds.contains(idOfSample)) {
                         poolSeqReqExact.add(psr);
