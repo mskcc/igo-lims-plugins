@@ -82,7 +82,7 @@ public class ControlFieldsPopulator extends DefaultGenericPlugin {
                     }
                 }
             }
-            // Step 2: Populate control samples with species and recipe
+            // Step 2: Populate control samples with species and recipe and sample name
             for (DataRecord sample : samples) {
                 Object isControl = sample.getValue("IsControl", user);
                 if (isControl != null && (Boolean) isControl) {
@@ -90,6 +90,7 @@ public class ControlFieldsPopulator extends DefaultGenericPlugin {
                     sample.setDataField("Species", species, user);
                     sample.setDataField("Recipe", recipe, user);
                     sample.setDataField("RequestId", DUMMY_REQUEST_ID, user);
+                    sample.setDataField("OtherSampleId", sampleId, user);
                     logInfo("Updated control sample " + sampleId + " with species: " + species + ", recipe: " + recipe);
                 }
             }
