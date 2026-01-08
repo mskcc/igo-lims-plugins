@@ -280,7 +280,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                             if (Objects.equals(sampleId, igoIdSr)) {
                                 reads = d.getValue("RequestedReads", user);
                                 coverage = d.getValue("RequestedCoverage", user);
-                                runType = d.getValue("SequencingReadLength", user);
+                                runType = d.getValue("RunType", user);
                                 if (!Objects.isNull(coverage)) {
                                     coverage = coverage.toString().replace("X", "").replace("x",
                                             "").trim();
@@ -348,7 +348,6 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                 else if ((Objects.isNull(refRecipeToCoverageMap.get(recipe.toString())) ||
                                         refRecipeToCoverageMap.get(recipe.toString()).size() == 0) &&
                                         (Objects.isNull(reads) || reads.toString().trim().isEmpty())) {
-                                    this.logInfo("I thought it's ShallowWGS or CRISPR");
                                     seqReq.setDataField("RequestedReads", refRecipeToTranslatedReadsHumanMap.
                                             get(recipe.toString()), user);
 
