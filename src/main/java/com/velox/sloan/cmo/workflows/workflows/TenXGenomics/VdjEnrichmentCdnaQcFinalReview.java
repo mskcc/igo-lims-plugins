@@ -81,11 +81,11 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
 
             logInfo(String.format("Categorization: PASS=%d, TRY/FAILED=%d", samplesPass.size(), samplesToPendingQueue.size()));
 
-            // Move TRY/FAILED samples to Pending User Decision queue (automatic, no user confirmation)
+            // Move TRY/FAILED samples to Pending User Decision process queue
             if (!samplesToPendingQueue.isEmpty()) {
                 if (!moveSamplesToPendingQueue(samplesToPendingQueue)) {
-                    logError("Failed to move samples to Pending User Decision queue.");
-                    removeSamplesFromTask(samplesToPendingQueue);
+                    clientCallback.displayError("Failed to move TRY/FAILED samples to Pending User Decision queue. Please try again.");
+                    return new PluginResult(false);
                 }
             }
 
@@ -111,15 +111,39 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
     }
 
     /**
-     * Move samples to the Pending User Decision process queue by removing them from current task.
+     * Move samples to the Pending User Decision process queue.
+     * Creates a new AssignedProcess record and links samples to it.
      * @param samples List of samples to move
      * @return true if successful, false otherwise
      */
     private boolean moveSamplesToPendingQueue(List<DataRecord> samples) {
         try {
-            logInfo(String.format("Removing %d samples from current task to move to '%s' queue", samples.size(), PENDING_USER_DECISION_QUEUE));
+            logInfo(String.format("Assigning %d samples to '%s' process queue", samples.size(), PENDING_USER_DECISION_QUEUE));
+            
+            // Create a new AssignedProcess record for "Pending User Decision"
+            DataRecord assignedProcess = dataRecordManager.addDataRecord("AssignedProcess", user);
+            Map<String, Object> processValues = new HashMap<>();
+            processValues.put("ProcessName", PENDING_USER_DECISION_QUEUE);
+            assignedProcess.setFields(processValues, user);
+            
+            // Add each sample as a child of the AssignedProcess
+            for (DataRecord sample : samples) {
+                String sampleId = sample.getStringVal("SampleId", user);
+                assignedProcess.addChild(sample, user);
+                logInfo(String.format("Assigned sample %s to '%s' process queue", sampleId, PENDING_USER_DECISION_QUEUE));
+            }
+            
+            // Commit the changes
+            dataRecordManager.storeAndCommit(
+                String.format("Assigned %d samples to %s process queue", samples.size(), PENDING_USER_DECISION_QUEUE), 
+                null, 
+                user
+            );
+            
+            // Remove samples from current workflow task
             TaskUtilManager.removeRecordsFromTask(activeTask, samples);
-            logInfo(String.format("Successfully moved %d samples to '%s' queue", samples.size(), PENDING_USER_DECISION_QUEUE));
+            
+            logInfo(String.format("Successfully moved %d samples to '%s' process queue", samples.size(), PENDING_USER_DECISION_QUEUE));
             return true;
         } catch (Exception e) {
             logError(String.format("Error moving samples to pending queue: %s", ExceptionUtils.getStackTrace(e)));
@@ -225,16 +249,4 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
         return false;
     }
 
-    /**
-     * Remove samples from the current task.
-     * @param samples List of samples to remove
-     */
-    private void removeSamplesFromTask(List<DataRecord> samples) throws ServerException, RemoteException {
-        List<Long> recordIds = new ArrayList<>();
-        for (DataRecord sample : samples) {
-            recordIds.add(sample.getRecordId());
-        }
-        activeTask.removeTaskAttachments(recordIds);
-        logInfo(String.format("Removed %d samples from current task", samples.size()));
-    }
 }
