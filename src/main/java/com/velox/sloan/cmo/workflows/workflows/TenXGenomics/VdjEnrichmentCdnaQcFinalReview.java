@@ -130,6 +130,7 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
                 DataRecord assignedProcess = dataRecordManager.addDataRecord("AssignedProcess", user);
                 Map<String, Object> processValues = new HashMap<>();
                 processValues.put("ProcessName", PENDING_USER_DECISION_QUEUE);
+                processValues.put("ProcessStepNumber", 1);  // Required: must be between 1 and 100
                 processValues.put("SampleId", sampleId);
                 processValues.put("SampleRecordId", sampleRecordId);
                 processValues.put("OtherSampleId", otherSampleId);
