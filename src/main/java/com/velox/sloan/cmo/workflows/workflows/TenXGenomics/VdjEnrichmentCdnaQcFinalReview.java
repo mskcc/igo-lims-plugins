@@ -65,16 +65,16 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
                     continue;
                 }
 
-                String decision = getInvestigatorDecision(sample);
-                logInfo(String.format("Sample %s - Decision: '%s'", sampleId, decision));
+                String igoRecommendation = getIgoQcRecommendation(sample);
+                logInfo(String.format("Sample %s - IGO Recommendation: '%s'", sampleId, igoRecommendation));
 
-                if (isPassDecision(decision)) {
+                if (isPassDecision(igoRecommendation)) {
                     samplesPass.add(sample);
-                } else if (isTryDecision(decision) || isFailDecision(decision)) {
+                } else if (isTryDecision(igoRecommendation) || isFailDecision(igoRecommendation)) {
                     samplesToPendingQueue.add(sample);
                 } else {
-                    clientCallback.displayError(String.format("Sample %s has no IGOQC decision. Please set Pass/Try/Failed before proceeding.", sampleId));
-                    logError(String.format("Sample %s has invalid/missing decision '%s'", sampleId, decision));
+                    clientCallback.displayError(String.format("Sample %s has no IGO QC Recommendation. Please set Pass/Try/Failed before proceeding.", sampleId));
+                    logError(String.format("Sample %s has invalid/missing IGO recommendation '%s'", sampleId, igoRecommendation));
                     return new PluginResult(false);
                 }
             }
@@ -112,7 +112,7 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
 
     /**
      * Move samples to the Pending User Decision process queue.
-     * Creates a new AssignedProcess record and links samples to it.
+     * Creates ONE AssignedProcess record PER sample (one-to-one relationship).
      * @param samples List of samples to move
      * @return true if successful, false otherwise
      */
@@ -120,17 +120,26 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
         try {
             logInfo(String.format("Assigning %d samples to '%s' process queue", samples.size(), PENDING_USER_DECISION_QUEUE));
             
-            // Create a new AssignedProcess record for "Pending User Decision"
-            DataRecord assignedProcess = dataRecordManager.addDataRecord("AssignedProcess", user);
-            Map<String, Object> processValues = new HashMap<>();
-            processValues.put("ProcessName", PENDING_USER_DECISION_QUEUE);
-            assignedProcess.setFields(processValues, user);
-            
-            // Add each sample as a child of the AssignedProcess
+            // Create one AssignedProcess record per sample (one-to-one relationship)
             for (DataRecord sample : samples) {
                 String sampleId = sample.getStringVal("SampleId", user);
+                String otherSampleId = sample.getStringVal("OtherSampleId", user);
+                long sampleRecordId = sample.getRecordId();
+                
+                // Create a new AssignedProcess record for this sample
+                DataRecord assignedProcess = dataRecordManager.addDataRecord("AssignedProcess", user);
+                Map<String, Object> processValues = new HashMap<>();
+                processValues.put("ProcessName", PENDING_USER_DECISION_QUEUE);
+                processValues.put("SampleId", sampleId);
+                processValues.put("SampleRecordId", sampleRecordId);
+                processValues.put("OtherSampleId", otherSampleId);
+                processValues.put("Status", "Ready for - Pending User Decision");  // Status for Work Queue display
+                assignedProcess.setFields(processValues, user);
+                
+                // Add sample as child of AssignedProcess (AP is parent of Sample)
                 assignedProcess.addChild(sample, user);
-                logInfo(String.format("Assigned sample %s to '%s' process queue", sampleId, PENDING_USER_DECISION_QUEUE));
+                
+                logInfo(String.format("Created AssignedProcess for sample %s -> '%s' process queue", sampleId, PENDING_USER_DECISION_QUEUE));
             }
             
             // Commit the changes
@@ -152,11 +161,12 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
     }
 
     /**
-     * Get IGO Recommendation for a sample from its QCProtocol records.
+     * Get IGO QC Recommendation for a sample from its QCProtocol or QcReport records.
+     * Checks IGOQC field in QCProtocol and IgoQcRecommendation field in QcReportDna/Rna/Library.
      * @param sample DataRecord for the sample
-     * @return recommendation value or empty string if not found
+     * @return recommendation value (Pass/Try/Fail) or empty string if not found
      */
-    private String getInvestigatorDecision(DataRecord sample) {
+    private String getIgoQcRecommendation(DataRecord sample) {
         try {
             String sampleId = sample.getStringVal("SampleId", user);
 
@@ -165,6 +175,37 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
             for (DataRecord qcProtocol : qcProtocolRecords) {
                 String recommendation = getIgoRecommendationFromRecord(qcProtocol);
                 if (!StringUtils.isBlank(recommendation)) {
+                    logInfo(String.format("Found IGO recommendation '%s' in child QCProtocol for sample %s", recommendation, sampleId));
+                    return recommendation;
+                }
+            }
+
+            // Check child QcReportDna records
+            DataRecord[] qcReportDnaRecords = sample.getChildrenOfType("QcReportDna", user);
+            for (DataRecord qcReport : qcReportDnaRecords) {
+                String recommendation = getIgoRecommendationFromRecord(qcReport);
+                if (!StringUtils.isBlank(recommendation)) {
+                    logInfo(String.format("Found IGO recommendation '%s' in child QcReportDna for sample %s", recommendation, sampleId));
+                    return recommendation;
+                }
+            }
+
+            // Check child QcReportRna records
+            DataRecord[] qcReportRnaRecords = sample.getChildrenOfType("QcReportRna", user);
+            for (DataRecord qcReport : qcReportRnaRecords) {
+                String recommendation = getIgoRecommendationFromRecord(qcReport);
+                if (!StringUtils.isBlank(recommendation)) {
+                    logInfo(String.format("Found IGO recommendation '%s' in child QcReportRna for sample %s", recommendation, sampleId));
+                    return recommendation;
+                }
+            }
+
+            // Check child QcReportLibrary records
+            DataRecord[] qcReportLibraryRecords = sample.getChildrenOfType("QcReportLibrary", user);
+            for (DataRecord qcReport : qcReportLibraryRecords) {
+                String recommendation = getIgoRecommendationFromRecord(qcReport);
+                if (!StringUtils.isBlank(recommendation)) {
+                    logInfo(String.format("Found IGO recommendation '%s' in child QcReportLibrary for sample %s", recommendation, sampleId));
                     return recommendation;
                 }
             }
@@ -174,35 +215,76 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
             for (DataRecord qcProtocol : parentQcProtocols) {
                 String recommendation = getIgoRecommendationFromRecord(qcProtocol);
                 if (!StringUtils.isBlank(recommendation)) {
+                    logInfo(String.format("Found IGO recommendation '%s' in parent QCProtocol for sample %s", recommendation, sampleId));
                     return recommendation;
                 }
             }
 
-            // Query QCProtocol by SampleId as last resort
+            // Query QCProtocol by SampleId
             List<DataRecord> qcProtocols = dataRecordManager.queryDataRecords("QCProtocol", "SampleId = '" + sampleId + "'", user);
             for (DataRecord qcProtocol : qcProtocols) {
                 String recommendation = getIgoRecommendationFromRecord(qcProtocol);
                 if (!StringUtils.isBlank(recommendation)) {
+                    logInfo(String.format("Found IGO recommendation '%s' in queried QCProtocol for sample %s", recommendation, sampleId));
                     return recommendation;
                 }
             }
 
+            // Query QcReportDna by SampleId (fallback)
+            List<DataRecord> queriedQcReportDna = dataRecordManager.queryDataRecords("QcReportDna", "SampleId = '" + sampleId + "'", user);
+            for (DataRecord qcReport : queriedQcReportDna) {
+                String recommendation = getIgoRecommendationFromRecord(qcReport);
+                if (!StringUtils.isBlank(recommendation)) {
+                    logInfo(String.format("Found IGO recommendation '%s' in queried QcReportDna for sample %s", recommendation, sampleId));
+                    return recommendation;
+                }
+            }
+
+            // Query QcReportRna by SampleId (fallback)
+            List<DataRecord> queriedQcReportRna = dataRecordManager.queryDataRecords("QcReportRna", "SampleId = '" + sampleId + "'", user);
+            for (DataRecord qcReport : queriedQcReportRna) {
+                String recommendation = getIgoRecommendationFromRecord(qcReport);
+                if (!StringUtils.isBlank(recommendation)) {
+                    logInfo(String.format("Found IGO recommendation '%s' in queried QcReportRna for sample %s", recommendation, sampleId));
+                    return recommendation;
+                }
+            }
+
+            // Query QcReportLibrary by SampleId (fallback)
+            List<DataRecord> queriedQcReportLib = dataRecordManager.queryDataRecords("QcReportLibrary", "SampleId = '" + sampleId + "'", user);
+            for (DataRecord qcReport : queriedQcReportLib) {
+                String recommendation = getIgoRecommendationFromRecord(qcReport);
+                if (!StringUtils.isBlank(recommendation)) {
+                    logInfo(String.format("Found IGO recommendation '%s' in queried QcReportLibrary for sample %s", recommendation, sampleId));
+                    return recommendation;
+                }
+            }
+
+            logInfo(String.format("No IGO QC Recommendation found for sample %s", sampleId));
+
         } catch (NotFound | RemoteException | IoError | ServerException e) {
-            logError(String.format("Error getting decision for sample: %s", e.getMessage()));
+            logError(String.format("Error getting IGO QC Recommendation for sample: %s", e.getMessage()));
         }
         return "";
     }
 
     /**
-     * Check multiple possible field names for IGO Recommendation on a QCProtocol record.
-     * @param qcProtocol QCProtocol DataRecord
-     * @return recommendation value or empty string if not found
+     * Extract IGO QC Recommendation from a QC record.
+     * @param record QCProtocol or QcReport DataRecord
+     * @return IGO recommendation value (Pass/Try/Fail) or empty string if not found
      */
-    private String getIgoRecommendationFromRecord(DataRecord qcProtocol) {
-        String[] possibleFieldNames = {"IGOQC", "IgoQcRecommendation", "IgoRecommendation"};
+    private String getIgoRecommendationFromRecord(DataRecord record) {
+        // Field names for IGO QC Recommendation across different DataTypes
+        // Note: InvestigatorDecision is intentionally NOT included - it's a separate field
+        // where the PI/investigator can override IGO's recommendation
+        String[] possibleFieldNames = {
+            "IGOQC",                    // QCProtocol field
+            "IgoQcRecommendation",      // QcReportDna/Rna/Library field
+            "IgoRecommendation"         // Alternative name
+        };
         for (String fieldName : possibleFieldNames) {
             try {
-                Object value = qcProtocol.getValue(fieldName, user);
+                Object value = record.getValue(fieldName, user);
                 if (value != null && !StringUtils.isBlank(value.toString())) {
                     return value.toString().trim();
                 }
