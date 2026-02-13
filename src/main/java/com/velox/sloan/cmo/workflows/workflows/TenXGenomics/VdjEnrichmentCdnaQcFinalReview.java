@@ -126,21 +126,36 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
                 String otherSampleId = sample.getStringVal("OtherSampleId", user);
                 long sampleRecordId = sample.getRecordId();
                 
+                // Get RequestRecordId from the sample's parent Request
+                long requestRecordId = 0;
+                String requestId = sample.getStringVal("RequestId", user);
+                if (!StringUtils.isBlank(requestId)) {
+                    List<DataRecord> requests = dataRecordManager.queryDataRecords("Request", "RequestId = '" + requestId + "'", user);
+                    if (!requests.isEmpty()) {
+                        requestRecordId = requests.get(0).getRecordId();
+                    }
+                }
+                
                 // Create a new AssignedProcess record for this sample
                 DataRecord assignedProcess = dataRecordManager.addDataRecord("AssignedProcess", user);
                 Map<String, Object> processValues = new HashMap<>();
                 processValues.put("ProcessName", PENDING_USER_DECISION_QUEUE);
-                processValues.put("ProcessStepNumber", 1);  // Required: must be between 1 and 100
+                processValues.put("ProcessStepNumber", 1);
                 processValues.put("SampleId", sampleId);
                 processValues.put("SampleRecordId", sampleRecordId);
                 processValues.put("OtherSampleId", otherSampleId);
-                processValues.put("Status", "Ready for - Pending User Decision");  // Status for Work Queue display
+                processValues.put("RequestRecordId", requestRecordId);
+                processValues.put("Status", "Ready for - Pending User Decision");
                 assignedProcess.setFields(processValues, user);
                 
                 // Add sample as child of AssignedProcess (AP is parent of Sample)
                 assignedProcess.addChild(sample, user);
                 
-                logInfo(String.format("Created AssignedProcess for sample %s -> '%s' process queue", sampleId, PENDING_USER_DECISION_QUEUE));
+                // Update sample's ExemplarSampleStatus to reflect the new queue
+                sample.setDataField("ExemplarSampleStatus", "Ready for - Pending User Decision", user);
+                
+                logInfo(String.format("Created AssignedProcess for sample %s -> '%s' process queue (RequestRecordId: %d)", 
+                    sampleId, PENDING_USER_DECISION_QUEUE, requestRecordId));
             }
             
             // Commit the changes
