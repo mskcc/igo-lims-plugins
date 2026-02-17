@@ -165,8 +165,18 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
                 user
             );
             
-            // Remove samples from current workflow task
-            TaskUtilManager.removeRecordsFromTask(activeTask, samples);
+            // Remove samples from ALL tasks in the workflow (not just current task)
+            // Samples are queued for subsequent tasks, so we must remove from every task
+            List<ActiveTask> allWorkflowTasks = activeWorkflow.getActiveTaskList();
+            for (ActiveTask task : allWorkflowTasks) {
+                try {
+                    TaskUtilManager.removeRecordsFromTask(task, samples);
+                    logInfo(String.format("Removed %d samples from task '%s'", samples.size(), task.getTaskName()));
+                } catch (Exception ex) {
+                    // Some tasks may not have these samples attached — that's OK, continue
+                    logInfo(String.format("Note: Could not remove samples from task '%s': %s", task.getTaskName(), ex.getMessage()));
+                }
+            }
             
             logInfo(String.format("Successfully moved %d samples to '%s' process queue", samples.size(), PENDING_USER_DECISION_QUEUE));
             return true;
