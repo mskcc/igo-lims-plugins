@@ -165,8 +165,30 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
                 user
             );
             
-            // Remove samples from ALL tasks in the workflow (not just current task)
-            // Samples are queued for subsequent tasks, so we must remove from every task
+            // Build set of Try/Fail sample IDs for filtering protocol records
+            Set<String> pendingSampleIds = new HashSet<>();
+            for (DataRecord sample : samples) {
+                pendingSampleIds.add(sample.getStringVal("SampleId", user));
+            }
+
+            // Collect protocol records created for Try/Fail samples by CREATE PROTOCOLS ENTRY
+            
+            List<DataRecord> protocolsToRemove = new ArrayList<>();
+            try {
+                List<DataRecord> attachedProtocols = activeTask.getAttachedDataRecords("TenXLibraryPrepProtocol1", user);
+                for (DataRecord protocol : attachedProtocols) {
+                    String protocolSampleId = protocol.getStringVal("SampleId", user);
+                    if (pendingSampleIds.contains(protocolSampleId)) {
+                        protocolsToRemove.add(protocol);
+                        logInfo(String.format("Found orphaned protocol record %d for Try/Fail sample %s",
+                            protocol.getRecordId(), protocolSampleId));
+                    }
+                }
+            } catch (Exception ex) {
+                logInfo(String.format("Note: Could not retrieve TenXLibraryPrepProtocol1 records: %s", ex.getMessage()));
+            }
+
+            // Remove samples AND their protocol records from ALL tasks in the workflow
             List<ActiveTask> allWorkflowTasks = activeWorkflow.getActiveTaskList();
             for (ActiveTask task : allWorkflowTasks) {
                 try {
@@ -175,6 +197,15 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
                 } catch (Exception ex) {
                     // Some tasks may not have these samples attached — that's OK, continue
                     logInfo(String.format("Note: Could not remove samples from task '%s': %s", task.getTaskName(), ex.getMessage()));
+                }
+                // Also remove protocol records for Try/Fail samples
+                if (!protocolsToRemove.isEmpty()) {
+                    try {
+                        TaskUtilManager.removeRecordsFromTask(task, protocolsToRemove);
+                        logInfo(String.format("Removed %d protocol records from task '%s'", protocolsToRemove.size(), task.getTaskName()));
+                    } catch (Exception ex) {
+                        logInfo(String.format("Note: Could not remove protocol records from task '%s': %s", task.getTaskName(), ex.getMessage()));
+                    }
                 }
             }
             
