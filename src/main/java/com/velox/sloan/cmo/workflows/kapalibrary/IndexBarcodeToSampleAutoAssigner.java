@@ -359,8 +359,8 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         Double adapterVolume = 0.0;
         Double waterVolume = 0.0;
         logInfo("recipe is = " + recipe);
-        if (recipe.toLowerCase().contains("atac") || recipe.toLowerCase().contains("hc_access")) {
-            logInfo("ATAC or HC_ACCESS recipe sample gets 4ul adapter vol and 0 water.");
+        if (recipe.toLowerCase().contains("atac") || recipe.toLowerCase().contains("hc_access") || recipe.toLowerCase().contains("hc_cmoch")) {
+            logInfo("ATAC, HC_ACCESS, or HC_CMOCH recipe sample gets 4ul adapter vol and 0 water.");
             adapterVolume = 4.0;
             waterVolume = 0.0;
         }
