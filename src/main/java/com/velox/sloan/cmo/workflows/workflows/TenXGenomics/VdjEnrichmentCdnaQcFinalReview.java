@@ -219,7 +219,8 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
 
     /**
      * Get IGO QC Recommendation for a sample from its QCProtocol or QcReport records.
-     * Checks IGOQC field in QCProtocol and IgoQcRecommendation field in QcReportDna/Rna/Library.
+     * Checks child QCProtocol, QcReportDna, QcReportRna, and QcReportLibrary records,
+     * then parent QCProtocol records (QCProtocol can be linked as parent or child depending on the workflow step).
      * @param sample DataRecord for the sample
      * @return recommendation value (Pass/Try/Fail) or empty string if not found
      */
@@ -273,46 +274,6 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
                 String recommendation = getIgoRecommendationFromRecord(qcProtocol);
                 if (!StringUtils.isBlank(recommendation)) {
                     logInfo(String.format("Found IGO recommendation '%s' in parent QCProtocol for sample %s", recommendation, sampleId));
-                    return recommendation;
-                }
-            }
-
-            // Query QCProtocol by SampleId
-            List<DataRecord> qcProtocols = dataRecordManager.queryDataRecords("QCProtocol", "SampleId = '" + sampleId + "'", user);
-            for (DataRecord qcProtocol : qcProtocols) {
-                String recommendation = getIgoRecommendationFromRecord(qcProtocol);
-                if (!StringUtils.isBlank(recommendation)) {
-                    logInfo(String.format("Found IGO recommendation '%s' in queried QCProtocol for sample %s", recommendation, sampleId));
-                    return recommendation;
-                }
-            }
-
-            // Query QcReportDna by SampleId (fallback)
-            List<DataRecord> queriedQcReportDna = dataRecordManager.queryDataRecords("QcReportDna", "SampleId = '" + sampleId + "'", user);
-            for (DataRecord qcReport : queriedQcReportDna) {
-                String recommendation = getIgoRecommendationFromRecord(qcReport);
-                if (!StringUtils.isBlank(recommendation)) {
-                    logInfo(String.format("Found IGO recommendation '%s' in queried QcReportDna for sample %s", recommendation, sampleId));
-                    return recommendation;
-                }
-            }
-
-            // Query QcReportRna by SampleId (fallback)
-            List<DataRecord> queriedQcReportRna = dataRecordManager.queryDataRecords("QcReportRna", "SampleId = '" + sampleId + "'", user);
-            for (DataRecord qcReport : queriedQcReportRna) {
-                String recommendation = getIgoRecommendationFromRecord(qcReport);
-                if (!StringUtils.isBlank(recommendation)) {
-                    logInfo(String.format("Found IGO recommendation '%s' in queried QcReportRna for sample %s", recommendation, sampleId));
-                    return recommendation;
-                }
-            }
-
-            // Query QcReportLibrary by SampleId (fallback)
-            List<DataRecord> queriedQcReportLib = dataRecordManager.queryDataRecords("QcReportLibrary", "SampleId = '" + sampleId + "'", user);
-            for (DataRecord qcReport : queriedQcReportLib) {
-                String recommendation = getIgoRecommendationFromRecord(qcReport);
-                if (!StringUtils.isBlank(recommendation)) {
-                    logInfo(String.format("Found IGO recommendation '%s' in queried QcReportLibrary for sample %s", recommendation, sampleId));
                     return recommendation;
                 }
             }
