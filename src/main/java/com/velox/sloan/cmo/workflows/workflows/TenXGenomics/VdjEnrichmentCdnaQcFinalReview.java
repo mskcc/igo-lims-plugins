@@ -92,7 +92,7 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
             // Mark the final review as complete to prevent re-run
             activeTask.getTask().getTaskOptions().put("_VDJ_FINAL_REVIEW_COMPLETE", "");
 
-            logInfo(String.format("Final Review complete. PASS=%d (proceeding), TRY/FAILED=%d (moved to pending queue)", 
+            logInfo(String.format("Final Review complete. PASS=%d (proceeding), TRY/FAILED=%d (moved to pending queue)",
                     samplesPass.size(), samplesToPendingQueue.size()));
 
             return new PluginResult(true);
@@ -111,9 +111,14 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
     }
 
     /**
-     * Move samples to the Pending User Decision process queue.
-     * Creates ONE AssignedProcess record PER sample (one-to-one relationship).
-     * @param samples List of samples to move
+     * Move Try/Failed samples to the Pending User Decision process queue.
+     * For each sample, this method:
+     * 1. Creates one AssignedProcess record with ProcessName = 'Pending User Decision'.
+     * 2. Updates the sample's ExemplarSampleStatus to 'Ready for - Pending User Decision'.
+     * 3. Removes any orphaned TenXLibraryPrepProtocol1 records created by 'CREATE PROTOCOLS ENTRY'
+     *    for these samples, to prevent downstream errors in the aliquot maker.
+     * 4. Removes the samples and their protocol records from ALL tasks in the active workflow.
+     * @param samples List of Try/Failed samples to move
      * @return true if successful, false otherwise
      */
     private boolean moveSamplesToPendingQueue(List<DataRecord> samples) {
@@ -160,8 +165,8 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
             
             // Commit the changes
             dataRecordManager.storeAndCommit(
-                String.format("Assigned %d samples to %s process queue", samples.size(), PENDING_USER_DECISION_QUEUE), 
-                null, 
+                String.format("Assigned %d samples to %s process queue", samples.size(), PENDING_USER_DECISION_QUEUE),
+                null,
                 user
             );
             
@@ -218,9 +223,12 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
     }
 
     /**
-     * Get IGO QC Recommendation for a sample from its QCProtocol or QcReport records.
-     * Checks child QCProtocol, QcReportDna, QcReportRna, and QcReportLibrary records,
-     * then parent QCProtocol records (QCProtocol can be linked as parent or child depending on the workflow step).
+     * Get IGO QC Recommendation for a sample by querying QcReportDna directly by SampleId.
+     * QcReportDna is the only authoritative table for VDJ Enrichment cDNA QC — the IGO scientist
+     * sets the Pass/Try/Fail recommendation here after reviewing cDNA QC metrics.
+     * Direct query is used (rather than parent/child hierarchy traversal) because it is more
+     * reliable — a QC record may exist in the database without being formally linked to the
+     * Sample record via the LIMS data model hierarchy.
      * @param sample DataRecord for the sample
      * @return recommendation value (Pass/Try/Fail) or empty string if not found
      */
@@ -228,57 +236,18 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
         try {
             String sampleId = sample.getStringVal("SampleId", user);
 
-            // Check child QCProtocol records
-            DataRecord[] qcProtocolRecords = sample.getChildrenOfType("QCProtocol", user);
-            for (DataRecord qcProtocol : qcProtocolRecords) {
-                String recommendation = getIgoRecommendationFromRecord(qcProtocol);
-                if (!StringUtils.isBlank(recommendation)) {
-                    logInfo(String.format("Found IGO recommendation '%s' in child QCProtocol for sample %s", recommendation, sampleId));
-                    return recommendation;
-                }
-            }
-
-            // Check child QcReportDna records
-            DataRecord[] qcReportDnaRecords = sample.getChildrenOfType("QcReportDna", user);
-            for (DataRecord qcReport : qcReportDnaRecords) {
+            // QcReportDna is the only authoritative table for VDJ Enrichment cDNA QC
+            List<DataRecord> queriedQcReportDna = dataRecordManager.queryDataRecords(
+                "QcReportDna", "SampleId = '" + sampleId + "'", user);
+            for (DataRecord qcReport : queriedQcReportDna) {
                 String recommendation = getIgoRecommendationFromRecord(qcReport);
                 if (!StringUtils.isBlank(recommendation)) {
-                    logInfo(String.format("Found IGO recommendation '%s' in child QcReportDna for sample %s", recommendation, sampleId));
+                    logInfo(String.format("Found IGO recommendation '%s' via QcReportDna for sample %s", recommendation, sampleId));
                     return recommendation;
                 }
             }
 
-            // Check child QcReportRna records
-            DataRecord[] qcReportRnaRecords = sample.getChildrenOfType("QcReportRna", user);
-            for (DataRecord qcReport : qcReportRnaRecords) {
-                String recommendation = getIgoRecommendationFromRecord(qcReport);
-                if (!StringUtils.isBlank(recommendation)) {
-                    logInfo(String.format("Found IGO recommendation '%s' in child QcReportRna for sample %s", recommendation, sampleId));
-                    return recommendation;
-                }
-            }
-
-            // Check child QcReportLibrary records
-            DataRecord[] qcReportLibraryRecords = sample.getChildrenOfType("QcReportLibrary", user);
-            for (DataRecord qcReport : qcReportLibraryRecords) {
-                String recommendation = getIgoRecommendationFromRecord(qcReport);
-                if (!StringUtils.isBlank(recommendation)) {
-                    logInfo(String.format("Found IGO recommendation '%s' in child QcReportLibrary for sample %s", recommendation, sampleId));
-                    return recommendation;
-                }
-            }
-
-            // Check parent QCProtocol records
-            List<DataRecord> parentQcProtocols = sample.getParentsOfType("QCProtocol", user);
-            for (DataRecord qcProtocol : parentQcProtocols) {
-                String recommendation = getIgoRecommendationFromRecord(qcProtocol);
-                if (!StringUtils.isBlank(recommendation)) {
-                    logInfo(String.format("Found IGO recommendation '%s' in parent QCProtocol for sample %s", recommendation, sampleId));
-                    return recommendation;
-                }
-            }
-
-            logInfo(String.format("No IGO QC Recommendation found for sample %s", sampleId));
+            logInfo(String.format("No IGO QC Recommendation found in QcReportDna for sample %s", sampleId));
 
         } catch (NotFound | RemoteException | IoError | ServerException e) {
             logError(String.format("Error getting IGO QC Recommendation for sample: %s", e.getMessage()));
@@ -287,28 +256,20 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
     }
 
     /**
-     * Extract IGO QC Recommendation from a QC record.
-     * @param record QCProtocol or QcReport DataRecord
+     * Extract IGO QC Recommendation from a QcReportDna record.
+     * The DB field is IgoQcRecommendation 
+    
+     * @param record QcReportDna DataRecord
      * @return IGO recommendation value (Pass/Try/Fail) or empty string if not found
      */
     private String getIgoRecommendationFromRecord(DataRecord record) {
-        // Field names for IGO QC Recommendation across different DataTypes
-        // Note: InvestigatorDecision is intentionally NOT included - it's a separate field
-        // where the PI/investigator can override IGO's recommendation
-        String[] possibleFieldNames = {
-            "IGOQC",                    // QCProtocol field
-            "IgoQcRecommendation",      // QcReportDna/Rna/Library field
-            "IgoRecommendation"         // Alternative name
-        };
-        for (String fieldName : possibleFieldNames) {
-            try {
-                Object value = record.getValue(fieldName, user);
-                if (value != null && !StringUtils.isBlank(value.toString())) {
-                    return value.toString().trim();
-                }
-            } catch (NotFound | RemoteException e) {
-                // Field not found, try next one
+        try {
+            Object value = record.getValue("IgoQcRecommendation", user);
+            if (value != null && !StringUtils.isBlank(value.toString())) {
+                return value.toString().trim();
             }
+        } catch (NotFound | RemoteException e) {
+            // Field not found on this record
         }
         return "";
     }
