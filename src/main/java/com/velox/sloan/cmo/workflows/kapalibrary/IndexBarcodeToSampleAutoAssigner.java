@@ -360,8 +360,18 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
         Double waterVolume = 0.0;
         logInfo("recipe is = " + recipe);
         if (recipe.toLowerCase().contains("atac")) {
-            logInfo("atac recipe sample gets 4ul adapter vol and 0 water.");
+            logInfo("ATAC recipe sample gets 4ul adapter vol and 0 water.");
             adapterVolume = 4.0;
+            waterVolume = 0.0;
+        } else if (recipe.toLowerCase().contains("hc_access") || recipe.toLowerCase().contains("hc_cmoch")) {
+            // HC_ACCESS/HC_CMOCH: 96-well plate = 7.5ul, 384-well plate = 4ul
+            if (plateSize == 96) {
+                logInfo("HC_ACCESS or HC_CMOCH recipe with 96-well plate gets 7.5ul adapter vol and 0 water.");
+                adapterVolume = 7.5;
+            } else {
+                logInfo("HC_ACCESS or HC_CMOCH recipe with 384-well plate gets 4ul adapter vol and 0 water.");
+                adapterVolume = 4.0;
+            }
             waterVolume = 0.0;
         }
         else {

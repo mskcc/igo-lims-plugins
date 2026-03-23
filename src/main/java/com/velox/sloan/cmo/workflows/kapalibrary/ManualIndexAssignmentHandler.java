@@ -205,6 +205,21 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                     Double targetAdapterConc = autohelper.getCalculatedTargetAdapterConcentration(dnaInputAmount, plateSize, sampleType);
                     Double adapterVolume = autohelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType, isTCRseq, isCrisprOrAmpliconSeq);
                     Double waterVolume = autohelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume, sampleType, isCrisprOrAmpliconSeq);
+                    
+                    // Override volumes for ACCESS/HC_CMOCH recipes - use fixed volumes, no dilution
+                    if (aliquotRecipe.toLowerCase().contains("access") || aliquotRecipe.toLowerCase().contains("hc_cmoch")) {
+                        logInfo("ACCESS/HC_CMOCH recipe detected in manual assignment - using fixed adapter volumes");
+                        if (plateSize == 96) {
+                            adapterVolume = 7.5;  // 96-well plate: 7.5µL
+                            logInfo("96-well plate: setting adapter volume to 7.5µL");
+                        } else {
+                            adapterVolume = 4.0;  // 384-well plate: 4.0µL
+                            logInfo("384-well plate: setting adapter volume to 4.0µL");
+                        }
+                        waterVolume = 0.0;  // No water for ACCESS recipes
+                        logInfo("Setting water volume to 0µL for ACCESS recipe");
+                    }
+                    
                     Double actualTargetAdapterConc = adapterStartConc / ((waterVolume + adapterVolume) / adapterVolume);
                     //Double adapterConcentration = autohelper.getAdapterConcentration(indexConfig, adapterVolume, waterVolume);
                     setUpdatedIndexAssignmentConfigVol(indexConfig, adapterVolume);
