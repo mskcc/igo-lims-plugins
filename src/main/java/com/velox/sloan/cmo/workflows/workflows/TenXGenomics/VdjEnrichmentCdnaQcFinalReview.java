@@ -27,6 +27,9 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
     private static final List<String> FAIL_DECISIONS = Arrays.asList("Failed", "Fail");
     private static final String PENDING_USER_DECISION_QUEUE = "Pending User Decision";
 
+    // InvestigatorDecision values that mean "proceed with this TRY sample"
+    private static final List<String> PROCEED_INVESTIGATOR_DECISIONS = Arrays.asList("Continue processing");
+
     public VdjEnrichmentCdnaQcFinalReview() {
         setTaskEntry(true);
         setLine1Text("VDJ QC");
@@ -70,7 +73,23 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
 
                 if (isPassDecision(igoRecommendation)) {
                     samplesPass.add(sample);
-                } else if (isTryDecision(igoRecommendation) || isFailDecision(igoRecommendation)) {
+                } else if (isTryDecision(igoRecommendation)) {
+                    // If IGO said "Try" but the investigator already submitted a proceed decision,
+                    // treat the sample as Pass so it is not removed again on re-entry from
+                    // Pending User Decision queue. Scans all QcReportDna records newest-first so
+                    // a blank record created by a re-run of step 9 doesn't hide an older decision.
+                    String investigatorDecision = getInvestigatorDecision(sampleId);
+                    if (isProceedInvestigatorDecision(investigatorDecision)) {
+                        logInfo(String.format("Sample %s has IGO recommendation 'Try' but InvestigatorDecision is '%s' — updating DB to Passed and treating as Pass",
+                                sampleId, investigatorDecision));
+                        updateIgoQcRecommendationToPassed(sampleId);
+                        samplesPass.add(sample);
+                    } else {
+                        logInfo(String.format("Sample %s has IGO recommendation 'Try' and InvestigatorDecision is '%s' — moving to Pending User Decision",
+                                sampleId, investigatorDecision));
+                        samplesToPendingQueue.add(sample);
+                    }
+                } else if (isFailDecision(igoRecommendation)) {
                     samplesToPendingQueue.add(sample);
                 } else {
                     clientCallback.displayError(String.format("Sample %s has no IGO QC Recommendation. Please set Pass/Try/Failed before proceeding.", sampleId));
@@ -239,10 +258,15 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
             // QcReportDna is the only authoritative table for VDJ Enrichment cDNA QC
             List<DataRecord> queriedQcReportDna = dataRecordManager.queryDataRecords(
                 "QcReportDna", "SampleId = '" + sampleId + "'", user);
+
+            // Sort descending by RecordId so the most recent QC record is checked first
+            queriedQcReportDna.sort((a, b) -> Long.compare(b.getRecordId(), a.getRecordId()));
+
             for (DataRecord qcReport : queriedQcReportDna) {
                 String recommendation = getIgoRecommendationFromRecord(qcReport);
                 if (!StringUtils.isBlank(recommendation)) {
-                    logInfo(String.format("Found IGO recommendation '%s' via QcReportDna for sample %s", recommendation, sampleId));
+                    logInfo(String.format("Found IGO recommendation '%s' via QcReportDna (RecordId: %d) for sample %s",
+                            recommendation, qcReport.getRecordId(), sampleId));
                     return recommendation;
                 }
             }
@@ -251,6 +275,72 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
 
         } catch (NotFound | RemoteException | IoError | ServerException e) {
             logError(String.format("Error getting IGO QC Recommendation for sample: %s", e.getMessage()));
+        }
+        return "";
+    }
+
+    /**
+     * Update IgoQcRecommendation to "Passed" on the QcReportDna record that has the proceed
+     * InvestigatorDecision. Called when the investigator said "Continue processing" or
+     * "Already moved forward by IGO" so the DB stays consistent for future workflow runs.
+     */
+    private void updateIgoQcRecommendationToPassed(String sampleId) {
+        try {
+            List<DataRecord> qcRecords = dataRecordManager.queryDataRecords(
+                "QcReportDna", "SampleId = '" + sampleId + "'", user);
+            qcRecords.sort((a, b) -> Long.compare(b.getRecordId(), a.getRecordId()));
+
+            for (DataRecord qcRecord : qcRecords) {
+                try {
+                    Object decision = qcRecord.getValue("InvestigatorDecision", user);
+                    if (decision != null && isProceedInvestigatorDecision(decision.toString())) {
+                        qcRecord.setDataField("IgoQcRecommendation", "Passed", user);
+                        dataRecordManager.storeAndCommit(
+                            String.format("VDJ QC Final Review: updated IgoQcRecommendation to Passed for sample %s (InvestigatorDecision: %s)",
+                                sampleId, decision.toString().trim()),
+                            null, user);
+                        logInfo(String.format("Updated and committed IgoQcRecommendation to 'Passed' on QcReportDna RecordId %d for sample %s",
+                                qcRecord.getRecordId(), sampleId));
+                        return;
+                    }
+                } catch (NotFound | RemoteException e) {
+                    // Field not found on this record — continue to next
+                }
+            }
+            logInfo(String.format("No QcReportDna record with a proceed InvestigatorDecision found for sample %s — DB not updated", sampleId));
+        } catch (Exception e) {
+            logError(String.format("Error updating IgoQcRecommendation for sample %s: %s", sampleId, e.getMessage()));
+        }
+    }
+
+    /**
+     * Get InvestigatorDecision from the most recent QcReportDna record for a given SampleId.
+     * This is set when the investigator submits a decision from the Pending User Decision queue.
+     * @param sampleId the sample ID to look up
+     * @return InvestigatorDecision value (e.g. "Continue processing") or empty string if not found
+     */
+    private String getInvestigatorDecision(String sampleId) {
+        try {
+            List<DataRecord> qcRecords = dataRecordManager.queryDataRecords(
+                "QcReportDna", "SampleId = '" + sampleId + "'", user);
+
+            // Sort descending by RecordId so the most recent record is checked first
+            qcRecords.sort((a, b) -> Long.compare(b.getRecordId(), a.getRecordId()));
+
+            for (DataRecord qcRecord : qcRecords) {
+                try {
+                    Object value = qcRecord.getValue("InvestigatorDecision", user);
+                    if (value != null && !StringUtils.isBlank(value.toString())) {
+                        logInfo(String.format("Found InvestigatorDecision '%s' for sample %s (RecordId: %d)",
+                                value.toString().trim(), sampleId, qcRecord.getRecordId()));
+                        return value.toString().trim();
+                    }
+                } catch (NotFound | RemoteException e) {
+                    // Field not present on this record — continue to next
+                }
+            }
+        } catch (Exception e) {
+            logError(String.format("Error getting InvestigatorDecision for sample %s: %s", sampleId, e.getMessage()));
         }
         return "";
     }
@@ -306,6 +396,22 @@ public class VdjEnrichmentCdnaQcFinalReview extends DefaultGenericPlugin {
             if (decision.equalsIgnoreCase(failDecision)) {
                 return true;
             }
+        }
+        return false;
+    }
+
+    /**
+     * Check if an InvestigatorDecision value means "proceed with this TRY sample".
+     * Uses trimmed case-insensitive comparison to handle whitespace variants in the DB.
+     * Known proceed values: "Continue processing", "Already moved forward by IGO".
+     * All other values (blank, "Stop processing at this time", "Submit new iLab request",
+     * "Discarded", etc.) are treated as non-proceed — sample stays in Pending User Decision.
+     */
+    private boolean isProceedInvestigatorDecision(String decision) {
+        if (StringUtils.isBlank(decision)) return false;
+        String trimmed = decision.trim();
+        for (String proceed : PROCEED_INVESTIGATOR_DECISIONS) {
+            if (trimmed.equalsIgnoreCase(proceed)) return true;
         }
         return false;
     }
