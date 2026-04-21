@@ -121,7 +121,7 @@ public class IlluminaRunModeValidator extends DefaultGenericPlugin {
         addEntry(map, "HiSeq High Output");
         addEntry(map, "HiSeq Rapid Run");
         addEntry(map, "HiSeq X");
-        addEntry(map, "MiSeq", "AYYAN", "JOHNSAWYERS");
+        addEntry(map, "MiSeq", "AYYAN", "JOHNSAWYERS", "BOWIE");
         addEntry(map, "NextSeq");
         addEntry(map, "NextSeq 1000 P1", "AMELIE");
         addEntry(map, "NextSeq 1000 P2", "AMELIE");
