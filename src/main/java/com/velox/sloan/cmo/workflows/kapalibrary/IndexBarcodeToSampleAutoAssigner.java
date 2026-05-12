@@ -503,7 +503,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
             }
         }
         setLastIndexUsed(indexAssignmentConfigs, positionOfLastUsedIndex, updatedLastIndexUsed);
-        checkIndexAssignmentsForDepletedAdapters(indexAssignmentConfigs);
+        //checkIndexAssignmentsForDepletedAdapters(indexAssignmentConfigs);
         clientCallback.displayInfo(String.format("You need to use following adapter plates for this experiment:\n%s", StringUtils.join(indexAssignmentConfigPlatesToUse, "\n")));
         activeTask.getTask().getTaskOptions().put("_INDEXES_AUTO_ASIGNED", "");
     }
