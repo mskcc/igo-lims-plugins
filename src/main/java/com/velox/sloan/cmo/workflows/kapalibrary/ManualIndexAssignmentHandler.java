@@ -97,7 +97,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                             minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType, isTCRseq, species, aliquotRecipe);
 
                     logInfo("Value of setUpdatedIndexAssignmentStatus is: " + setUpdatedIndexAssignmentStatus);
-                    checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
+                    //checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
                     if (!setUpdatedIndexAssignmentStatus) {
                         String errMsg = String.format("The manual adapter assignment went wrong, 3 possible scenarios (if TCRseq application 2 & 3 apply):\n" +
                                 "1) No Active record found for Index ID. Please double check to avoid discrepancies.\n" +
@@ -112,7 +112,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                             minAdapterVolInPlate, maxPlateVolume, plateSize, sampleType, isTCRseq, species, aliquotRecipe);
 
                     logInfo("Value of setUpdatedIndexAssignmentStatus is: " + setUpdatedIndexAssignmentStatus);
-                    checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
+                    //checkIndexAssignmentsForDepletedAdapters(activeIndexAssignmentConfigs);
                     if (!setUpdatedIndexAssignmentStatus) {
                         String errMsg = String.format("The manual adapter assignment went wrong, 3 possible scenarios (if TCRseq application 2 & 3 apply):\n" +
                                 "1) No Active record found for Index ID. Please double check to avoid discrepancies.\n" +
@@ -222,7 +222,7 @@ public class ManualIndexAssignmentHandler extends DefaultGenericPlugin {
                     
                     Double actualTargetAdapterConc = adapterStartConc / ((waterVolume + adapterVolume) / adapterVolume);
                     //Double adapterConcentration = autohelper.getAdapterConcentration(indexConfig, adapterVolume, waterVolume);
-                    setUpdatedIndexAssignmentConfigVol(indexConfig, adapterVolume);
+                    //setUpdatedIndexAssignmentConfigVol(indexConfig, adapterVolume);
                     indexBarcodeRec.setDataField("BarcodePlateID", indexConfig.getStringVal("AdapterPlateId", user), user);
                     indexBarcodeRec.setDataField("IndexRow", adapterSourceRow, user);
                     indexBarcodeRec.setDataField("IndexCol", adapterSourceCol, user);

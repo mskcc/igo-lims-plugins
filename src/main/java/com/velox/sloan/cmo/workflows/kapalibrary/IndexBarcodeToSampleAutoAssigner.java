@@ -379,7 +379,7 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
             waterVolume = autoHelper.getVolumeOfWater(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, maxPlateVolume, sampleType, isCrisprOrAmpliconSeq);
         }
         Double actualTargetAdapterConc = adapterStartConc / ((waterVolume + adapterVolume) / adapterVolume);
-        setUpdatedIndexAssignmentConfigVol(indexAssignmentConfig, adapterVolume);
+        //setUpdatedIndexAssignmentConfigVol(indexAssignmentConfig, adapterVolume);
         Map<String, Object> indexAssignmentValues = new HashMap<>();
 
         indexAssignmentValues.put("IndexTag", indexTag);
