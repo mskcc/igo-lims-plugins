@@ -726,6 +726,7 @@ public class QcReportGenerator extends DefaultGenericPlugin {
                 qcRecord.put("Preservation", sample.getStringVal("Preservation", user));
                 qcRecord.put("Recipe", sample.getStringVal("Recipe", user));
                 qcRecord.put("SampleOrigin", sample.getStringVal("SampleOrigin", user));
+                qcRecord.put("Species", sample.getStringVal("Species", user));
                 List<DataRecord> listOfSamplesAncestors = sample.getAncestorsOfType("Sample", user);
                 if(listOfSamplesAncestors != null && listOfSamplesAncestors.size() > 0) {
                     qcRecord.put("SourceSampleId", listOfSamplesAncestors.get(0).getValue("SampleId", user));
