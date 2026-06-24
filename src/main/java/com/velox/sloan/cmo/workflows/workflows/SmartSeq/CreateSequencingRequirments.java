@@ -36,12 +36,16 @@ public class CreateSequencingRequirments extends DefaultGenericPlugin {
                 String sampleId = sample.getStringVal("SampleId", user);
                 String sampleName = sample.getStringVal("OtherSampleId", user);
                 String tumorOrNormal = sample.getStringVal("TumorOrNormal", user);
+                String recipe = sample.getStringVal("Recipe", user);
+                String cmoPatientId = sample.getStringVal("CmoPatientId", user);
                 values.put("SampleId", sampleId);
                 values.put("SequencingRunType","PE100");
                 values.put("RequestedReads", "0.21");
                 values.put("MinimumReads", "0.21");
                 values.put("TumorOrNormal", tumorOrNormal);
                 values.put("OtherSampleId", sampleName);
+                values.put("Recipe", recipe);
+                values.put("CmoPatientId", cmoPatientId);
 
                 DataRecord newSeqReqRecord = dataRecordManager.addDataRecord("SeqRequirement", user);
                 newSeqReqRecord.setFields(values, user);
