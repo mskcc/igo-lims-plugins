@@ -21,6 +21,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 /**
  * Plugin to populate Requested Reads for samples that require Coverage
@@ -50,7 +51,10 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
     public PluginResult run() {
         try {
             this.logInfo("Running sequencing requirements handler plugin");
-            List<DataRecord> coverageReqRefs = this.dataRecordManager.queryDataRecords("ApplicationReadCoverageRef", "ReferenceOnly != 1", this.user);
+            // 'ReferenceOnly IS NULL' is required: a newly added reference row often has no value for
+            // ReferenceOnly, and in SQL 'NULL != 1' evaluates to UNKNOWN, which silently drops the row.
+            List<DataRecord> coverageReqRefs = this.dataRecordManager.queryDataRecords("ApplicationReadCoverageRef",
+                    "ReferenceOnly IS NULL OR ReferenceOnly != 1", this.user);
             List<DataRecord> attachedSamples = this.activeTask.getAttachedDataRecords("Sample", this.user);
             List<DataRecord> seqRequirements = this.activeTask.getAttachedDataRecords("SeqRequirement", this.user);
             if (coverageReqRefs.isEmpty()) {
@@ -85,9 +89,17 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
             List<DataRecord> relatedBankedSampleInfo = this.getBankedSamples(attachedSamples);
             this.updateSeqReq(attachedSamples, relatedBankedSampleInfo, seqRequirements, coverageReqRefs, this.user, this.dataMgmtServer, logger);
             this.activeTask.getTask().getTaskOptions().put("SEQUENCING REQUIREMENTS UPDATED", "");
-        } catch (NotFound | ServerException | IoError | InvalidValue | RemoteException var6) {
-            this.logError(String.valueOf(var6.getStackTrace()));
-            return new PluginResult(true);
+        } catch (NotFound | ServerException | IoError | InvalidValue | RemoteException e) {
+            // Previously this logged 'String.valueOf(e.getStackTrace())' (an array identity hash, not a trace)
+            // and returned PluginResult(true), so a failed update looked like a successful one.
+            String errMsg = String.format("Failed to update sequencing requirements:\n%s", ExceptionUtils.getStackTrace(e));
+            this.logError(errMsg);
+            try {
+                this.clientCallback.displayError(errMsg);
+            } catch (ServerException | RemoteException ex) {
+                this.logError(ExceptionUtils.getStackTrace(ex));
+            }
+            return new PluginResult(false);
         }
         return new PluginResult(true);
     }
@@ -111,7 +123,15 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
             String whereClause = String.format("%s='%s' AND %s='%s'", "UserSampleID", userSampleId, "RequestId", requestId);
 //            this.logInfo("WHERE CLAUSE: " + whereClause);
 //            this.logInfo("I am in get banked sample query");
-            bankedSamples.add(this.dataRecordManager.queryDataRecords("BankedSample", whereClause, this.user).get(0));
+            List<DataRecord> matchingBankedSamples = this.dataRecordManager.queryDataRecords("BankedSample", whereClause, this.user);
+            if (matchingBankedSamples.isEmpty()) {
+                // Previously an unmatched sample threw IndexOutOfBoundsException here, which is not in the
+                // catch list of run() and therefore killed the plugin before anything was updated.
+                this.logInfo(String.format("No 'BankedSample' record found for UserSampleID '%s' and RequestId '%s'. " +
+                        "Reference table values will be used for this sample.", userSampleId, requestId));
+                continue;
+            }
+            bankedSamples.add(matchingBankedSamples.get(0));
         }
         return bankedSamples;
 
@@ -148,9 +168,16 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
         Map<String, Object> refRecipeToTranslatedReadsHumanMap = new HashMap<String, Object>();
         Map<String, Set<Object>> recipeToCapturePanelMap = new HashMap<String, Set<Object>>();
         Map<String, Object> recipeToSequencingRunTypeMap = new HashMap<String, Object>();
+        // First reference row seen per recipe, used for recipes that carry no Coverage/CapturePanel to match on.
+        Map<String, DataRecord> refRecipeToRecord = new HashMap<String, DataRecord>();
         while (refIter.hasNext()) {
             DataRecord ref = (DataRecord) refIter.next();
-            String refRecipe = ref.getValue("PlatformApplication", user).toString();
+            Object refRecipeValue = ref.getValue("PlatformApplication", user);
+            if (Objects.isNull(refRecipeValue) || StringUtils.isBlank(refRecipeValue.toString())) {
+                logger.logInfo("Skipping an 'ApplicationReadCoverageRef' row with a blank PlatformApplication.");
+                continue;
+            }
+            String refRecipe = refRecipeValue.toString();
             Object refCoverage = ref.getValue("Coverage", user);
             Object refCapturePanel = ref.getValue("CapturePanel", user);
             Object refSeqRunType = ref.getValue("SequencingRunType", user);
@@ -190,6 +217,9 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
             }
             if (!recipeToSequencingRunTypeMap.containsKey(refRecipe)) {
                 recipeToSequencingRunTypeMap.put(refRecipe, refSeqRunType);
+            }
+            if (!refRecipeToRecord.containsKey(refRecipe)) {
+                refRecipeToRecord.put(refRecipe, ref);
             }
         }
 
@@ -263,6 +293,10 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
 
                     else {
                         logger.logInfo("at sample: " + s.toString());
+                        // panelName and runType are instance fields; without this reset a sample inherits the
+                        // previous sample's panel/run type when its own banked sample does not supply one.
+                        this.panelName = null;
+                        this.runType = null;
                         Object igoId = s.getValue("SampleId", user);
                         Object sampleId = s.getValue("OtherSampleId", user);
                         Object species = s.getValue("Species", user);
@@ -274,6 +308,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                         DataRecord d = null;
                         DataRecord seqReq;
                         Object igoIdSr;
+                        boolean seqReqMatched = false;
                         while (banked.hasNext()) {
                             d = (DataRecord) banked.next();
                             igoIdSr = d.getValue("UserSampleID", user);
@@ -303,6 +338,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                             seqReq = (DataRecord) seqReqs1.next();
                             igoIdSr = seqReq.getValue("SampleId", user);
                             if (Objects.equals(igoIdSr, igoId)) {
+                                seqReqMatched = true;
                                 if (recipe.toString().equals("ImmunoSeq")) {
                                     if (Objects.nonNull(runType) && !runType.toString().trim().isEmpty()) {
                                         seqReq.setDataField("SequencingRunType", runType, user);
@@ -315,8 +351,15 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                 if (!Objects.isNull(runType) && !runType.toString().trim().isEmpty()) {
                                     seqReq.setDataField("SequencingRunType", runType, user);
                                 } else {
-                                    seqReq.setDataField("SequencingRunType", recipeToSequencingRunTypeMap
-                                            .get(recipe.toString()), user);
+                                    // Never write a null from a map miss: that clears the field and looks
+                                    // identical to 'the plugin did not populate anything'.
+                                    Object refRunType = recipeToSequencingRunTypeMap.get(recipe.toString());
+                                    if (Objects.nonNull(refRunType) && !refRunType.toString().trim().isEmpty()) {
+                                        seqReq.setDataField("SequencingRunType", refRunType, user);
+                                    } else {
+                                        logger.logInfo(String.format("No SequencingRunType in 'ApplicationReadCoverageRef' " +
+                                                "for recipe '%s'; leaving the existing value untouched.", recipe));
+                                    }
                                 }
 
                                 if (Objects.nonNull(reads) && !reads.toString().trim().isEmpty()) {
@@ -344,13 +387,22 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                     }
                                 }
 
-                                // ShallowWGS, CRISPR
+                                // ShallowWGS, CRISPR, TCR_AIR: the reference row has no Coverage to match on,
+                                // so the row itself is the answer. Copy every populated value from it.
                                 else if ((Objects.isNull(refRecipeToCoverageMap.get(recipe.toString())) ||
                                         refRecipeToCoverageMap.get(recipe.toString()).size() == 0) &&
                                         (Objects.isNull(reads) || reads.toString().trim().isEmpty())) {
-                                    seqReq.setDataField("RequestedReads", refRecipeToTranslatedReadsHumanMap.
-                                            get(recipe.toString()), user);
-
+                                    DataRecord directRef = refRecipeToRecord.get(recipe.toString());
+                                    if (Objects.isNull(directRef)) {
+                                        String errMsg = String.format("No 'ApplicationReadCoverageRef' row found for " +
+                                                        "recipe '%s'. Sequencing requirements for sample %s were left " +
+                                                        "unchanged. Check that the reference row exists and that its " +
+                                                        "ReferenceOnly flag is not set.", recipe, sampleId);
+                                        this.clientCallback.displayError(errMsg);
+                                        this.logError(errMsg);
+                                        continue;
+                                    }
+                                    this.applyRefRecordDirectly(seqReq, directRef, species, user, logger);
                                 } else if ((Objects.isNull(coverage) || coverage.toString().trim().isEmpty() ||
                                         coverage.toString().trim().equals("")) &&
                                         (Objects.isNull(seqReq.getValue("RequestedReads", user)) ||
@@ -395,8 +447,10 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                             }
 
                                         }
-                                        if (refRecipeToCoverageMap.get(recipe).size() > 0 &&
-                                                !Objects.isNull(refRecipeToCoverageMap.get(recipe.toString()))) {
+                                        // Null check has to come first: recipes with no Coverage in the reference
+                                        // table have no key in this map at all, so .size() threw NPE here.
+                                        Set<Object> refCoverages = refRecipeToCoverageMap.get(recipe.toString());
+                                        if (Objects.nonNull(refCoverages) && !refCoverages.isEmpty()) {
                                             seqReq.setDataField("CoverageTarget", refRecord.getValue(
                                                     "Coverage", user), user);
                                         }
@@ -441,8 +495,8 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                             }
 
                                         }
-                                        if (refRecipeToCoverageMap.get(recipe).size() > 0 &&
-                                                !Objects.isNull(refRecipeToCoverageMap.get(recipe))) {
+                                        Set<Object> refCoveragesForRecipe = refRecipeToCoverageMap.get(recipe.toString());
+                                        if (Objects.nonNull(refCoveragesForRecipe) && !refCoveragesForRecipe.isEmpty()) {
                                             seqReq.setDataField("CoverageTarget", refRecord.getValue(
                                                     "Coverage", user), user);
                                         }
@@ -450,10 +504,48 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                 }
                             }
                         }
+                        if (!seqReqMatched) {
+                            String errMsg = String.format("No attached 'SeqRequirement' record matches SampleId '%s' " +
+                                    "(sample %s), so no sequencing requirements were written for it.", igoId, sampleId);
+                            this.clientCallback.displayError(errMsg);
+                            this.logError(errMsg);
+                        }
                     }
                 }
                 return;
             }
+        }
+    }
+
+    /**
+     * Copies every populated value of an 'ApplicationReadCoverageRef' row onto a SequencingRequirements record.
+     * Used for recipes whose reference row carries no Coverage and no CapturePanel to match on (e.g. TCR_AIR,
+     * ShallowWGS, CRISPR): there is nothing to disambiguate, so the row itself is the answer.
+     * Blank reference values are never written, so an existing value is preserved rather than cleared.
+     *
+     * @param seqReq    SequencingRequirements record to update
+     * @param refRecord reference row for this recipe
+     * @param species   Species of the sample, used to pick the human or mouse read column
+     */
+    private void applyRefRecordDirectly(DataRecord seqReq, DataRecord refRecord, Object species, User user,
+                                        PluginLogger logger) throws NotFound, RemoteException, ServerException,
+            IoError, InvalidValue {
+        Object refReads = refRecord.getValue("MillionReadsHuman", user);
+        if (Objects.nonNull(species) && species.toString().equalsIgnoreCase("Mouse")) {
+            Object mouseReads = refRecord.getValue("MillionReadsMouse", user);
+            if (Objects.nonNull(mouseReads) && !mouseReads.toString().trim().isEmpty()) {
+                refReads = mouseReads;
+            }
+        }
+        if (Objects.nonNull(refReads) && !refReads.toString().trim().isEmpty()) {
+            seqReq.setDataField("RequestedReads", refReads, user);
+        } else {
+            logger.logInfo("Reference row carries no MillionReads value; RequestedReads left unchanged.");
+        }
+
+        Object refCoverage = refRecord.getValue("Coverage", user);
+        if (Objects.nonNull(refCoverage) && !refCoverage.toString().trim().isEmpty()) {
+            seqReq.setDataField("CoverageTarget", refCoverage, user);
         }
     }
 }

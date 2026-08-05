@@ -83,21 +83,25 @@ class CoverageToReadsUtil {
             logger.logInfo("dCoverage = coverage: " + Objects.equals(dCoverage, coverage));
 
 
+            // Reference rows with no Coverage value (e.g. TCR_AIR) used to throw NPE on dCoverage.toString().
+            String dCoverageStr = Objects.isNull(dCoverage) ? "" : dCoverage.toString().trim();
+            String coverageStr = Objects.isNull(coverage) ? "" : coverage.toString().trim();
+
             if (Objects.isNull(dPanel) || dPanel.toString().trim().isEmpty()) {
                 if (Objects.equals(dRecipe, recipe) && (Objects.nonNull(tumorOrNormal) || !tumorOrNormal.toString().trim()
                         .isEmpty()) && Objects.equals(dTumorOrNormal, tumorOrNormal)
-                        && dCoverage.toString().trim().equals(coverage.toString().trim())) {
+                        && dCoverageStr.equals(coverageStr)) {
                     return d;
                 }
                 else if((Objects.isNull(dTumorOrNormal) || dTumorOrNormal.toString().trim().isEmpty())) {
-                    if (Objects.equals(dRecipe, recipe) && dCoverage.toString().trim().equals(coverage.toString().trim())) {
+                    if (Objects.equals(dRecipe, recipe) && dCoverageStr.equals(coverageStr)) {
                         return d;
                     }
                 }
 
-            } else if (Objects.nonNull(dCoverage) && !coverage.toString().trim().isEmpty()) {
+            } else if (Objects.nonNull(dCoverage) && !coverageStr.isEmpty()) {
                 if (Objects.equals(dRecipe, recipe) && Objects.equals(dPanel, panel) &&
-                        dCoverage.toString().trim().equals(coverage.toString().trim())) {
+                        dCoverageStr.equals(coverageStr)) {
                     if(Objects.nonNull(dTumorOrNormal)) {
                         if(Objects.equals(dTumorOrNormal, tumorOrNormal)) {
                             return d;
