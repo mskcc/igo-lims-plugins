@@ -292,7 +292,7 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                     }
 
                     else {
-                        logger.logInfo("at sample: " + s.toString());
+                        logger.logInfo("at sample: " + s.getValue("SampleId", user));
                         // panelName and runType are instance fields; without this reset a sample inherits the
                         // previous sample's panel/run type when its own banked sample does not supply one.
                         this.panelName = null;
@@ -363,26 +363,22 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                                 }
 
                                 if (Objects.nonNull(reads) && !reads.toString().trim().isEmpty()) {
-                                    if (Objects.nonNull(runType) && !runType.toString().trim().isEmpty()) {
-                                        String minMaxRead = reads.toString().split(" ")[0];
-                                        Object[] minMax = new Object[2];
-                                        if (minMaxRead.contains("-")) {
-                                            minMax = (Object[]) minMaxRead.split("-");
-                                            seqReq.setDataField("RequestedReads", minMax[1], user);
-                                            seqReq.setDataField("MinimumReads", minMax[0], user);
-                                        } else { // no range
-                                            seqReq.setDataField("RequestedReads", minMaxRead, user);
+                                    Set<Object> refCoveragesForReads = refRecipeToCoverageMap.get(recipe.toString());
+                                    boolean useSubmittedReads = (Objects.nonNull(runType) && !runType.toString().trim().isEmpty())
+                                            || Objects.isNull(refCoveragesForReads) || refCoveragesForReads.isEmpty();
+                                    if (useSubmittedReads) {
+                                        Double[] minMax = parseRequestedReads(reads);
+                                        if (Objects.isNull(minMax)) {
+                                            String errMsg = String.format("Sample %s: could not read a numeric value " +
+                                                    "from the submitted Requested Reads '%s'. Please correct it on the " +
+                                                    "Banked Sample record.", sampleId, reads);
+                                            this.clientCallback.displayError(errMsg);
+                                            this.logError(errMsg);
+                                            continue;
                                         }
-                                    } else if (Objects.isNull(refRecipeToCoverageMap.get(recipe.toString())) ||
-                                            refRecipeToCoverageMap.get(recipe.toString()).size() == 0) {
-                                        String minMaxRead = reads.toString().split(" ")[0];
-                                        Object[] minMax = new Object[2];
-                                        if (minMaxRead.contains("-")) {
-                                            minMax = (Object[]) minMaxRead.split("-");
-                                            seqReq.setDataField("RequestedReads", minMax[1], user);
+                                        seqReq.setDataField("RequestedReads", minMax[1], user);
+                                        if (Objects.nonNull(minMax[0])) {
                                             seqReq.setDataField("MinimumReads", minMax[0], user);
-                                        } else { // no range
-                                            seqReq.setDataField("RequestedReads", minMaxRead, user);
                                         }
                                     }
                                 }
@@ -514,6 +510,34 @@ public class SequencingRequirementsHandler extends DefaultGenericPlugin {
                 }
                 return;
             }
+        }
+    }
+
+    /**
+     * Parses the free-text 'RequestedReads' a submitter enters on a Banked Sample into millions of reads.
+     * Handles '200', '>200M', '>=200 M', '1,000', '200 million', '40-50' and '40-50M'.
+     * Returns {minimum, requested}; minimum is null unless the value is a range. Returns null if unparseable.
+     */
+    static Double[] parseRequestedReads(Object reads) {
+        if (Objects.isNull(reads)) {
+            return null;
+        }
+        String value = reads.toString().toUpperCase()
+                .replace(",", "")
+                .replace("MILLION", "")
+                .replace("READS", "")
+                .replaceAll("^[<>~=≤≥]+", "")
+                .trim()
+                .split("\\s+")[0]
+                .replaceAll("M+$", "");
+        String[] parts = value.split("-");
+        try {
+            if (parts.length == 2) {
+                return new Double[]{Double.valueOf(parts[0]), Double.valueOf(parts[1])};
+            }
+            return new Double[]{null, Double.valueOf(parts[0])};
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 
