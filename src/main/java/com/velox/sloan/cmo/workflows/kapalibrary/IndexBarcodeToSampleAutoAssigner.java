@@ -373,6 +373,12 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                 adapterVolume = 4.0;
             }
             waterVolume = 0.0;
+        } else if (Arrays.stream(recipe.split(",")).anyMatch(r -> r.trim().equalsIgnoreCase("TCR_AIR"))) {
+            // Exact match per recipe token, so a joined recipe list still matches
+            // while near-names such as TCRseq-AIRR do not.
+            logInfo("TCR_AIR recipe sample gets 7.5ul adapter vol and 0 water.");
+            adapterVolume = 7.5;
+            waterVolume = 0.0;
         }
         else {
             adapterVolume = autoHelper.getAdapterInputVolume(adapterStartConc, minVolInAdapterPlate, targetAdapterConc, sampleType, isTCRseq, isCrisprOrAmpliconSeq);
