@@ -100,6 +100,13 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
                     }
                 }
 
+                IndexBarcodeRecordsForThisPlate = removeAlreadyAssignedBarcodes(IndexBarcodeRecordsForThisPlate);
+                if (IndexBarcodeRecordsForThisPlate.isEmpty()) {
+                    logInfo("All samples on this plate already have index assignments (e.g. manual assignment). Skipping auto assignment for the plate.");
+                    clientCallback.displayInfo("Samples on this plate already have index barcodes assigned. Auto assignment was skipped for them.");
+                    continue;
+                }
+
                 String taskOptionValueForIndexAssignment = activeTask.getTask().getTaskOptions().get("AUTOASSIGN INDEX BARCODES");
                 List<String> recipes = getUniqueSampleRecipes(Arrays.asList(samplesInThePlate));
 
@@ -134,6 +141,46 @@ public class IndexBarcodeToSampleAutoAssigner extends DefaultGenericPlugin {
             return new PluginResult(false);
         }
         return new PluginResult(true);
+    }
+
+    /**
+     * Drops barcode records whose sample already has an index assigned, either on the record itself
+     * or on another record of the same data type for the same SampleId (e.g. created by manual assignment).
+     * This prevents auto assignment from adding a second, conflicting index to a library.
+     *
+     * @param barcodes attached barcode records of one plate
+     * @return barcode records that still need an index
+     */
+    private List<DataRecord> removeAlreadyAssignedBarcodes(List<DataRecord> barcodes) throws Exception {
+        List<DataRecord> unassigned = new LinkedList<>();
+        for (DataRecord barcode : barcodes) {
+            if (hasIndexAssignment(barcode)) {
+                logInfo("Skipping auto assignment, index already assigned on record " + barcode.getRecordId());
+                continue;
+            }
+            String sampleId = barcode.getStringVal("SampleId", user);
+            boolean assignedElsewhere = false;
+            if (StringUtils.isNotBlank(sampleId)) {
+                List<DataRecord> sameSample = dataRecordManager.queryDataRecords(barcode.getDataTypeName(),
+                        "SampleId = '" + sampleId.replace("'", "''") + "'", user);
+                for (DataRecord other : sameSample) {
+                    if (other.getRecordId() != barcode.getRecordId() && hasIndexAssignment(other)) {
+                        assignedElsewhere = true;
+                        logInfo(String.format("Skipping auto assignment for sample %s, index already assigned on record %d", sampleId, other.getRecordId()));
+                        break;
+                    }
+                }
+            }
+            if (!assignedElsewhere) {
+                unassigned.add(barcode);
+            }
+        }
+        return unassigned;
+    }
+
+    private boolean hasIndexAssignment(DataRecord barcode) throws Exception {
+        return StringUtils.isNotBlank(barcode.getStringVal("IndexId", user))
+                || StringUtils.isNotBlank(barcode.getStringVal("BarcodePlateID", user));
     }
 
     /**
